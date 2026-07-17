@@ -10,7 +10,13 @@ targets:
     type: application
     platform: macOS
     sources:
-      - Ladder
+      # Slice contract markdown and colocated tests never compile into the app
+      # (Ladder/Profile/decisions/0001).
+      - path: Ladder
+        excludes:
+          - '**/*Tests.swift'
+          - '**/*.md'
+          - '**/decisions'
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mattalton.Ladder
@@ -26,6 +32,10 @@ targets:
     platform: macOS
     sources:
       - LadderTests
+      # Colocated slice tests (Ladder/Profile/decisions/0001).
+      - path: Ladder
+        includes:
+          - '**/*Tests.swift'
     dependencies:
       - target: Ladder
     settings:
