@@ -1,0 +1,45 @@
+name: Ladder
+options:
+  bundleIdPrefix: com.mattalton
+  deploymentTarget:
+    macOS: '26.0'
+  createIntermediateGroups: true
+
+targets:
+  Ladder:
+    type: application
+    platform: macOS
+    sources:
+      - Ladder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mattalton.Ladder
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSHumanReadableCopyright: ''
+        SWIFT_VERSION: '6.0'
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: '-'
+        ENABLE_HARDENED_RUNTIME: YES
+
+  LadderTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - LadderTests
+    dependencies:
+      - target: Ladder
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: '6.0'
+        TEST_HOST: '$(BUILT_PRODUCTS_DIR)/Ladder.app/Contents/MacOS/Ladder'
+        BUNDLE_LOADER: '$(TEST_HOST)'
+
+schemes:
+  Ladder:
+    build:
+      targets:
+        Ladder: all
+    test:
+      targets:
+        - LadderTests
