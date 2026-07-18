@@ -21,5 +21,16 @@ Acceptance criteria for behaviour live in each slice's SPEC.md (Speccle owns the
 2. No raw hex/fonts in views; all tests green headlessly; previews compile.
 3. `Prompts/` contains `import.md` and `tailor.md`, versioned.
 
+## Phase 2 slices *(build in order with `/feature`)*
+1. **pipeline-board** — `Stage` model + `Application` migration (`stages`, `appliedAt`, `source`, `notes`, status transitions) → applications board grouped by status with drag between columns → Stage CRUD on the application detail → app shell grows Profile/Applications navigation. Tracer: add a Stage to an exported Application, relaunch, it's still there.
+2. **calendar-sync** — read-only EventKit scan (manual + background refresh) → meeting-URL detection (Zoom/Meet/Teams) → match to Applications by company name / attendee domain → confirmation sheet creates or links a Stage, never silently. `CalendarSyncService` protocol + fixture mirror the `IntelligenceService` seam; calendar entitlement + usage string are born here.
+3. **timeline** — per-Application timeline: applied → heard back → each Stage → outcome, with elapsed-time annotations. Functional vocabulary only; the Summit View keepsake stays Phase 5.
+
+## Phase 2 exit criteria
+1. Fresh path: a calendar invite from a tracked company surfaces as a proposed Stage with zero typing; one confirmation later it appears on the board and the Application's timeline.
+2. Migration safety: relaunching over a Phase 1 store keeps every Application, each `cvSnapshot` byte-identical.
+3. Calendar posture: read-only access behind a protocol; the app stays fully usable when access is denied.
+4. No raw hex/fonts in views; all tests green headlessly with no calendar permission granted; previews compile.
+
 ## Later phases
-See ARCHITECTURE.md §4 for Phase 2–5 module definitions. Slice maps for those phases get drawn when the phase opens.
+See ARCHITECTURE.md §4 for Phase 3–5 module definitions. Slice maps for those phases get drawn when the phase opens.
