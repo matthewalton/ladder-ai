@@ -18,5 +18,8 @@ struct LadderApp: App {
         WindowGroup {
             ContentView(store: store)
         }
+        Settings {
+            SettingsView()
+        }
     }
 }

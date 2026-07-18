@@ -1,0 +1,14 @@
+{
+  "selections": [
+    {
+      "achievementID": "a1",
+      "rephrasing": "Drove CI build times down across every product target, tightening the platform feedback loop"
+    },
+    {
+      "achievementID": "a3",
+      "rephrasing": "Led cross-team incident response for a critical payments outage"
+    }
+  ],
+  "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],
+  "rationale": "CI and incident-response work map directly to the JD's platform-reliability focus; the sync engine achievement is a weaker fit."
+}
