@@ -49,7 +49,10 @@ Ladder/
     Services/     protocol definitions + implementations
   Profile/        Phase 1 slice: profile editor
   CVImport/       Phase 1 slice: CV import (PDF/docx → review → merge)
-  Pipeline/       Phase 2 (gated)
+  Tailor/         Phase 1 slice: JD → tailored, reviewed outcome
+  CVExport/       Phase 1 slice: CV render + export (owns the Application model)
+  PipelineBoard/  Phase 2 slice: Stage model, applications board, transitions
+                  (Phase 2 slices are siblings like this — no umbrella Pipeline/)
   Capture/        Phase 3 (gated)
   Intelligence/   Phase 4 (gated; protocol stub only for now)
   Journey/        Phase 5 (gated)

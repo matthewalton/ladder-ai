@@ -1,15 +1,33 @@
 import SwiftUI
 
-/// App shell. Phase 1: the Profile slice owns the window.
+/// The shell's two sections ([PIPEBOARD-14]): the Profile slice and the
+/// Applications board.
+enum AppSection: String, CaseIterable {
+    case profile
+    case applications
+}
+
+/// App shell. Phase 2: two sections — Profile keeps its Phase 1 window,
+/// Applications shows the pipeline board.
 struct ContentView: View {
     @Bindable var store: ProfileStore
+    @Bindable var pipelineStore: PipelineStore
+    @State private var section: AppSection = .profile
 
     var body: some View {
-        ProfileRootView(store: store)
+        TabView(selection: $section) {
+            Tab("Profile", systemImage: "person.crop.rectangle", value: AppSection.profile) {
+                ProfileRootView(store: store)
+            }
+            Tab("Applications", systemImage: "map", value: AppSection.applications) {
+                PipelineRootView(store: pipelineStore)
+            }
+        }
     }
 }
 
 #Preview {
     let store = try! ProfileStore(container: ProfileStore.container(inMemory: true))
-    return ContentView(store: store)
+    let pipelineStore = PipelineStore(container: store.container)
+    return ContentView(store: store, pipelineStore: pipelineStore)
 }
