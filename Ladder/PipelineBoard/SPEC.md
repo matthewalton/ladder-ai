@@ -15,7 +15,9 @@ The `Application` model is migrated in place in `Ladder/CVExport/src/`
 (decisions/0001) — cv-export's observable contract does not change, and its
 [CVEXPORT-11] round-trip stays green throughout. `Stage` stores its kind as a
 raw string (decisions/0002); the transition map and auto-advance rules are
-decisions/0003.
+decisions/0003. The board also owns the manual add (decisions/0004) — the
+second creation path beside cv-export's export, which remains the only path
+that attaches a CV.
 
 Out of scope: calendar matching (the calendar-sync slice consumes the
 `calendarEventID` and `meetingURL` fields this slice only stores), the
@@ -139,3 +141,36 @@ close and reopen.
 `asOf` — the parameter keeps the test deterministic. Rendered as the card's
 quiet elapsed-time footer ("12 days on trail", DESIGN.md §6); no progress
 bars, no percentages — that absence is visual-verify.
+
+## [PIPEBOARD-17] Manually adding an applied Application persists it with the chosen applied date
+
+The manual add (decisions/0004), through the store seam
+(`PipelineStore.createApplication`): company and role title as entered,
+optional source and notes, status `.applied`, `appliedAt` exactly the chosen
+date — backdating allowed, the form defaults to today. The created
+Application carries no CV: `cvSnapshot` and `cvSelectionRationale` nil,
+`jobDescription` empty — export stays the only path that attaches one
+([CVEXPORT-10]). A fresh context sees the row, so creation saved.
+
+## [PIPEBOARD-18] Manually adding a draft Application leaves its applied date unset
+
+The Draft choice in the add form: status `.draft`, `appliedAt` nil — the
+later draft → applied move stamps it ([PIPEBOARD-9], decisions/0003). Until
+this criterion nothing could create a draft at all.
+
+## [PIPEBOARD-19] A manual add with a blank company or role title is refused
+
+The store throws and persists nothing — a whitespace-only value counts as
+blank. The form disables its confirm action on the same rule, but the throw
+is the seam's guarantee, not the UI's (the [PIPEBOARD-6] stance). Duplicates
+are not refused: adding the same company and role twice creates two
+Applications, the [CVEXPORT-13] no-dedup stance.
+
+## [PIPEBOARD-20] The add-application form opens from the empty state and the shell toolbar
+
+Both affordances present the same sheet (decisions/0004): a + toolbar button
+in the Applications shell, and an action in the board's empty state — which
+previously had none, leaving an empty board creatable only via export. The
+measurable clause is that the form and both hosting roots render; button
+chrome, sheet presentation, and the updated empty-state copy are
+visual-verify.

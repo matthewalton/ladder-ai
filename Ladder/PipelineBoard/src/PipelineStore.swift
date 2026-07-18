@@ -5,6 +5,9 @@ enum PipelineStoreError: Error, Equatable {
     /// The move is outside the transition map (decisions/0003,
     /// [PIPEBOARD-6]).
     case illegalTransition(from: ApplicationStatus, to: ApplicationStatus)
+    /// A manual add with a blank company or role title ([PIPEBOARD-19]) —
+    /// whitespace-only counts as blank.
+    case blankField
 }
 
 /// MVVM-lite store for the pipeline board slice. All mutations save
@@ -47,6 +50,33 @@ final class PipelineStore {
     /// status matches, keeping `load()`'s newest-first order.
     func applications(in status: ApplicationStatus) -> [Application] {
         applications.filter { $0.status == status }
+    }
+
+    /// The manual add (decisions/0004): the board's own creation path — no
+    /// CV fields, export stays the only path that attaches one. A date means
+    /// applied with that date, backdating included ([PIPEBOARD-17]); nil
+    /// means draft, for the draft → applied stamp to fill later
+    /// ([PIPEBOARD-18]). No dedup, the [CVEXPORT-13] stance.
+    @discardableResult
+    func createApplication(
+        company: String, roleTitle: String,
+        source: String?, notes: String,
+        appliedAt: Date?
+    ) throws -> Application {
+        guard !company.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            !roleTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else {
+            throw PipelineStoreError.blankField
+        }
+        let application = Application(
+            company: company, roleTitle: roleTitle, jobDescription: "",
+            status: appliedAt == nil ? .draft : .applied,
+            source: source, appliedAt: appliedAt, notes: notes
+        )
+        context.insert(application)
+        try context.save()
+        try load()
+        return application
     }
 
     /// The transition map (decisions/0003): rejected and withdrawn are

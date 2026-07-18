@@ -31,6 +31,11 @@ The idempotent load-time pass that gives Phase 1 applied Applications their
 missing `appliedAt` from `createdAt`.
 _Avoid_: migration script, data fix, repair
 
+**Manual add**:
+Creating an Application from the board's add form rather than a CV export
+(decisions/0004) — the one creation path that attaches no CV.
+_Avoid_: quick add, manual entry, new application flow
+
 **Stage kind**:
 What sort of step a Stage is — a known kind (screen, recruiter, technical,
 system design, take-home, behavioral, final, offer) or a free-text other.

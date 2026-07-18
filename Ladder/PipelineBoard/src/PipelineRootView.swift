@@ -17,15 +17,28 @@ struct PipelineRootView: View {
     @State private var selection: PersistentIdentifier?
     @State private var showInspector = true
     @State private var contentPane: ContentPane = .board
+    @State private var isAddingApplication = false
 
     private var selectedApplication: Application? {
         selection.flatMap { store.application(for: $0) }
     }
 
     var body: some View {
-        if store.applications.isEmpty {
-            emptyState
-        } else {
+        Group {
+            if store.applications.isEmpty {
+                emptyState
+            } else {
+                shell
+            }
+        }
+        // Both affordances present the same sheet ([PIPEBOARD-20],
+        // decisions/0004).
+        .sheet(isPresented: $isAddingApplication) {
+            AddApplicationSheet(store: store)
+        }
+    }
+
+    private var shell: some View {
             NavigationSplitView {
                 List(store.applications, selection: $selection) { application in
                     VStack(alignment: .leading) {
@@ -49,6 +62,13 @@ struct PipelineRootView: View {
                     }
                 }
                 .toolbar {
+                    ToolbarItem {
+                        Button {
+                            isAddingApplication = true
+                        } label: {
+                            Label("Add application", systemImage: "plus")
+                        }
+                    }
                     ToolbarItem {
                         Picker("View", selection: $contentPane) {
                             ForEach(ContentPane.allCases, id: \.self) { pane in
@@ -78,7 +98,6 @@ struct PipelineRootView: View {
                         .padding()
                 }
             }
-        }
     }
 
     private var emptyState: some View {
@@ -86,9 +105,14 @@ struct PipelineRootView: View {
             Text("No applications on the trail yet.")
                 .font(.trailNarrative(.title2))
                 .foregroundStyle(Color.inkSoft)
-            Text("Tailor a CV from your Profile to start one.")
+            Text("Tailor a CV from your Profile, or add one by hand.")
                 .font(.callout)
                 .foregroundStyle(Color.inkSoft)
+            // The empty state's own affordance ([PIPEBOARD-20]) — the shell
+            // toolbar does not render here.
+            Button("Add application") {
+                isAddingApplication = true
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
