@@ -92,12 +92,14 @@ final class PipelineStore {
         to application: Application,
         kind: StageKind,
         scheduledAt: Date? = nil,
+        calendarEventID: String? = nil,
         meetingURL: URL? = nil,
         prepContext: String = ""
     ) throws -> Stage {
         let stage = Stage(
             kind: kind,
             scheduledAt: scheduledAt,
+            calendarEventID: calendarEventID,
             meetingURL: meetingURL,
             prepContext: prepContext,
             sortIndex: (application.stages.map(\.sortIndex).max() ?? -1) + 1

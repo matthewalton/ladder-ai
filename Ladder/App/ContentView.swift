@@ -12,6 +12,7 @@ enum AppSection: String, CaseIterable {
 struct ContentView: View {
     @Bindable var store: ProfileStore
     @Bindable var pipelineStore: PipelineStore
+    @Bindable var calendarStore: CalendarSyncStore
     @State private var section: AppSection = .profile
 
     var body: some View {
@@ -21,6 +22,11 @@ struct ContentView: View {
             }
             Tab("Applications", systemImage: "map", value: AppSection.applications) {
                 PipelineRootView(store: pipelineStore)
+                    // calendar-sync's strip: proposals, the manual check,
+                    // and the denied explainer ([CALSYNC-17]).
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        CalendarProposalsBar(store: calendarStore)
+                    }
             }
         }
     }
@@ -29,5 +35,8 @@ struct ContentView: View {
 #Preview {
     let store = try! ProfileStore(container: ProfileStore.container(inMemory: true))
     let pipelineStore = PipelineStore(container: store.container)
-    return ContentView(store: store, pipelineStore: pipelineStore)
+    let calendarStore = CalendarSyncStore(
+        pipeline: pipelineStore, service: FixtureCalendarSyncService()
+    )
+    return ContentView(store: store, pipelineStore: pipelineStore, calendarStore: calendarStore)
 }

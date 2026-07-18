@@ -36,7 +36,7 @@ final class ProfileStore {
     static func container(at url: URL? = nil, inMemory: Bool = false) throws -> ModelContainer {
         let schema = Schema([
             Profile.self, Role.self, Achievement.self, SkillTag.self, Application.self,
-            Stage.self,
+            Stage.self, DismissedEvent.self,
         ])
         let configuration: ModelConfiguration
         if inMemory {

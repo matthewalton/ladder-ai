@@ -17,6 +17,8 @@ targets:
           - '**/*Tests.swift'
           - '**/*.md'
           - '**/decisions'
+          # Referenced by CODE_SIGN_ENTITLEMENTS, not a build file
+          - '**/*.entitlements'
       # Versioned prompt files, loaded at runtime (CLAUDE.md: Prompts/ is
       # canonical; CVImport SPEC.md [CVIMPORT-13]).
       - path: Prompts
@@ -32,6 +34,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.mattalton.Ladder
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSHumanReadableCopyright: ''
+        # calendar-sync (CalendarSync decisions/0001): read-only posture,
+        # but reading needs the full-access tier. [CALSYNC-18] pins the copy.
+        CODE_SIGN_ENTITLEMENTS: Ladder/App/Ladder.entitlements
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "Ladder looks for interviews for jobs you're tracking — nothing more. It only reads: no event is ever added or changed, and nothing about your calendar leaves this Mac."
         SWIFT_VERSION: '6.0'
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: '-'

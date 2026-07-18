@@ -5,6 +5,7 @@ import SwiftUI
 struct LadderApp: App {
     private let store: ProfileStore
     private let pipelineStore: PipelineStore
+    private let calendarStore: CalendarSyncStore
 
     init() {
         do {
@@ -17,11 +18,25 @@ struct LadderApp: App {
         } catch {
             fatalError("Failed to open the Ladder store: \(error)")
         }
+        let service = EventKitCalendarSyncService()
+        calendarStore = CalendarSyncStore(pipeline: pipelineStore, service: service)
+        calendarStore.startObservingChanges()
+        // Launch never prompts (CalendarSync decisions/0001): scan only when
+        // access is already granted; the bar's check action is the explicit
+        // gesture that first requests it.
+        let calendarStore = calendarStore
+        Task { @MainActor in
+            if await service.accessState() == .granted {
+                await calendarStore.scan()
+            }
+        }
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView(store: store, pipelineStore: pipelineStore)
+            ContentView(
+                store: store, pipelineStore: pipelineStore, calendarStore: calendarStore
+            )
         }
         Settings {
             SettingsView()
