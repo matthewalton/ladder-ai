@@ -17,6 +17,10 @@ struct TailorResult: Equatable, Sendable, Decodable {
     /// selection must reference an achievement id from the payload
     /// (SPEC.md [TAILOR-8]).
     init(json: Data, validAchievementIDs: Set<String>) throws {
+        // A whole-response fence is presentation, not content — stripped so a
+        // formatting quirk never consumes the single repair request
+        // (SPEC.md [TAILOR-18]).
+        let json = FencedJSON.stripped(from: json)
         do {
             self = try JSONDecoder().decode(TailorResult.self, from: json)
         } catch {

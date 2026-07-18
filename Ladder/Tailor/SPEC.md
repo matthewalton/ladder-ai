@@ -145,3 +145,13 @@ header with the required `anthropic-version` header, and pins the model to the
 latest Sonnet (decisions/0003; exact model ID verified against current API
 docs at implement time). The prompt travels as the system prompt, the payload
 as the user message.
+
+## [TAILOR-18] A tailor result wrapped in a markdown code fence produces a review
+
+Live models mirror the fenced schema example in `Prompts/tailor.md` and wrap
+their JSON in a ```json fence despite the "only JSON" instruction — cv-import
+hit this live first ([CVIMPORT-18]). The fence is presentation, not content:
+it is stripped before validation (the shared `FencedJSON` helper), so a
+fenced-but-valid result reaches review without consuming the single repair
+request (decisions/0004) on a formatting quirk. The prompt also forbids
+fences explicitly, but tolerance must not depend on the model obeying.

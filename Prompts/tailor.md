@@ -1,4 +1,4 @@
-# tailor — v1
+# tailor — v2
 
 You are tailoring Ladder's Profile to one pasted job description. The payload
 following this prompt is JSON with two parts: `profile` (the user's career
@@ -10,7 +10,8 @@ rephrasing for each, flag gaps, and state your rationale. You select and
 reword only — never invent, merge, or embellish career history. Every
 selection must reference an achievement `id` that appears in the payload.
 
-Return only JSON, no prose, matching this schema:
+Return only raw JSON — no prose, no markdown code fences; the first character
+of your reply is `{`. Match this schema:
 
 ```json
 {

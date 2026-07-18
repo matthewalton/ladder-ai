@@ -384,4 +384,28 @@ struct TailorFlowTests {
         #expect(messages.first?["role"] as? String == "user")
         #expect(messages.first?["content"] as? String == "the payload", "the payload travels as the user message")
     }
+
+    @Test("[TAILOR-18] a tailor result wrapped in a markdown code fence produces a review")
+    func fencedResultProducesReview() async throws {
+        let profileStore = try makeProfileStore()
+        // The canned result, exactly as a live model fences it.
+        let bareJSON = try Data(contentsOf: #require(
+            Bundle.main.url(forResource: "tailor-result", withExtension: "json", subdirectory: "Fixtures"),
+            "tailor-result.json missing from the bundled Fixtures folder"
+        ))
+        let fenced = Data("```json\n\(String(decoding: bareJSON, as: UTF8.self))\n```".utf8)
+        let service = FixtureIntelligenceService(returning: fenced)
+        let store = makeTailorStore(profileStore: profileStore, service: service)
+
+        await store.startRun(jobDetails)
+
+        #expect(store.phase == .review)
+        let review = try #require(store.review)
+        #expect(review.items.map(\.achievement.text) == [
+            "Cut CI build times across every product target",
+            "Led incident response for the payments outage",
+        ], "the fenced result reads exactly as the bare one")
+        // The fence never costs the single repair request (decisions/0004).
+        #expect(await service.recordedRequests.count == 1)
+    }
 }
