@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// The add-first-role empty state: an existing Profile with zero roles
-/// (SPEC.md [PROFILE-10]). Copy per DESIGN.md §6; the Import CV action
-/// arrives with the cv-import slice, not here.
+/// (SPEC.md [PROFILE-10]). Copy per DESIGN.md §6; the Import CV action is the
+/// cv-import slice's entry point, anticipated by the [PROFILE-10] body.
 struct AddFirstRoleView: View {
     @Bindable var store: ProfileStore
     @State private var isAddingRole = false
+    @State private var isImportingCV = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -14,11 +15,18 @@ struct AddFirstRoleView: View {
                 .foregroundStyle(Color.inkSoft)
                 .multilineTextAlignment(.center)
 
-            Button("Add role") {
-                isAddingRole = true
+            HStack(spacing: 12) {
+                Button("Add role") {
+                    isAddingRole = true
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.pine)
+
+                Button("Import CV") {
+                    isImportingCV = true
+                }
+                .buttonStyle(.bordered)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.pine)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -28,6 +36,9 @@ struct AddFirstRoleView: View {
         }
         .sheet(isPresented: $isAddingRole) {
             RoleFormView(store: store)
+        }
+        .sheet(isPresented: $isImportingCV) {
+            ImportCVView(profileStore: store)
         }
     }
 }

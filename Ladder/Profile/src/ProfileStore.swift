@@ -112,6 +112,22 @@ final class ProfileStore {
         try context.save()
     }
 
+    /// The same store pathway as text edits carries impactMetric, tech, and
+    /// strengthNotes (SPEC.md [PROFILE-9] body).
+    func updateAchievementDetails(
+        _ achievement: Achievement,
+        impactMetric: String?,
+        tech: [String],
+        strengthNotes: String?
+    ) throws {
+        let profile = try requireProfile()
+        achievement.impactMetric = impactMetric
+        achievement.tech = tech
+        achievement.strengthNotes = strengthNotes
+        touch(profile)
+        try context.save()
+    }
+
     /// Achievement text is user-owned canon — this is the only place it
     /// changes (SPEC.md [PROFILE-9], root CONTEXT.md).
     func updateAchievementText(_ achievement: Achievement, to text: String) throws {

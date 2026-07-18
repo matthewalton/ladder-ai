@@ -36,7 +36,7 @@ _Avoid_: generating a CV, optimising
 ## Example dialogue
 
 > **Dev:** When someone imports a CV, do we create a new Profile?
-> **Expert:** Only if none exists — there's exactly one. Import proposes Roles and Achievements *into* the Profile, and nothing lands without the user confirming each item.
+> **Expert:** Never — the create-profile empty state is the only place a Profile is created, and import requires one to exist first. Import proposes Roles and Achievements *into* the Profile, and nothing lands without the user confirming each item.
 > **Dev:** And when they apply somewhere, we copy the Profile onto the Application?
 > **Expert:** No — tailoring selects and rephrases Achievements for that one job description. The Application stores the rendered PDF as an immutable snapshot and the selection rationale, but the Achievements themselves stay in the Profile, untouched.
 > **Dev:** So if an interview goes badly, the debrief compares the transcript against the Profile?

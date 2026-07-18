@@ -7,6 +7,7 @@ struct ProfileEditorView: View {
 
     @State private var selectedRole: Role?
     @State private var isAddingRole = false
+    @State private var isImportingCV = false
 
     private var sortedRoles: [Role] {
         (store.profile?.roles ?? []).sorted { $0.start > $1.start }
@@ -49,6 +50,11 @@ struct ProfileEditorView: View {
                         isAddingRole = true
                     }
                 }
+                ToolbarItem {
+                    Button("Import CV", systemImage: "arrow.down.document") {
+                        isImportingCV = true
+                    }
+                }
             }
         } detail: {
             if let role = selectedRole {
@@ -63,6 +69,9 @@ struct ProfileEditorView: View {
         }
         .sheet(isPresented: $isAddingRole) {
             RoleFormView(store: store)
+        }
+        .sheet(isPresented: $isImportingCV) {
+            ImportCVView(profileStore: store)
         }
     }
 }

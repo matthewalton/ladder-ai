@@ -47,7 +47,8 @@ Ladder/
     Models/       SwiftData models (ARCHITECTURE.md §3)
     DesignSystem/ Palette.swift, Typography.swift, Blaze shapes
     Services/     protocol definitions + implementations
-  Profile/        Phase 1: profile editor, import, tailor flow
+  Profile/        Phase 1 slice: profile editor
+  CVImport/       Phase 1 slice: CV import (PDF/docx → review → merge)
   Pipeline/       Phase 2 (gated)
   Capture/        Phase 3 (gated)
   Intelligence/   Phase 4 (gated; protocol stub only for now)

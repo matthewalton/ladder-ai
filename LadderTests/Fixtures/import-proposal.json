@@ -1,0 +1,48 @@
+{
+  "roles": [
+    {
+      "company": "Acme",
+      "title": "Senior Engineer",
+      "start": "2021-04",
+      "end": null,
+      "achievements": [
+        {
+          "text": "Cut CI build times across every product target",
+          "impactMetric": "reduced build time 40%",
+          "tech": ["Swift", "Bazel"],
+          "skills": ["Swift", "CI"]
+        },
+        {
+          "text": "Shipped the offline sync engine",
+          "impactMetric": null,
+          "tech": ["SwiftData"],
+          "skills": ["SwiftData"]
+        }
+      ]
+    },
+    {
+      "company": "Initech",
+      "title": "Engineer",
+      "start": "2018-09",
+      "end": "2021-03",
+      "achievements": [
+        {
+          "text": "Migrated the monolith's reporting stack to Python",
+          "impactMetric": null,
+          "tech": ["Python"],
+          "skills": ["Python"]
+        }
+      ]
+    }
+  ],
+  "notImportedSections": [
+    {
+      "name": "Education",
+      "content": "BSc Computer Science, University of Leeds, 2014-2017"
+    },
+    {
+      "name": "Projects",
+      "content": "Ladder — macOS interview companion (side project)"
+    }
+  ]
+}

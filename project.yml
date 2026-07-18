@@ -17,6 +17,16 @@ targets:
           - '**/*Tests.swift'
           - '**/*.md'
           - '**/decisions'
+      # Versioned prompt files, loaded at runtime (CLAUDE.md: Prompts/ is
+      # canonical; CVImport SPEC.md [CVIMPORT-13]).
+      - path: Prompts
+        type: folder
+        buildPhase: resources
+      # Canned fixture CVs + proposal JSON: the fixture-driven intelligence
+      # service reads these until live calls arrive with the tailor slice.
+      - path: LadderTests/Fixtures
+        type: folder
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mattalton.Ladder
@@ -31,7 +41,11 @@ targets:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - LadderTests
+      # Fixtures ship in the app bundle (see the Ladder target) and tests run
+      # in the app host, so they load from Bundle.main — not duplicated here.
+      - path: LadderTests
+        excludes:
+          - Fixtures
       # Colocated slice tests (Ladder/Profile/decisions/0001).
       - path: Ladder
         includes:
