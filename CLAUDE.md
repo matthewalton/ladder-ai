@@ -20,7 +20,7 @@ Features are built with the Speccle skills, not ad-hoc:
 
 Each feature slice owns its markdown contract (SPEC.md etc.); acceptance criteria live there, not in a global task list. Cross-cutting decisions become ADRs in `docs/adr/`; slice-local decisions go in the slice's `decisions/`. There is no DECISIONS.md.
 
-## Current phase: **1 — Profile + Tailor**
+## Current phase: **2 — Pipeline**
 Hard gate: do not create or modify anything under `Capture/`, `Intelligence/` (beyond the `IntelligenceService` protocol stub), or `Journey/`. Phase gates are defined in ARCHITECTURE.md §4 and only the human advances them (by editing this line).
 
 ## Project setup
