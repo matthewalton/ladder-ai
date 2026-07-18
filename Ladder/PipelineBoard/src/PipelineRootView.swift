@@ -7,8 +7,16 @@ import SwiftUI
 struct PipelineRootView: View {
     @Bindable var store: PipelineStore
 
+    /// The content toggle (Timeline CONTEXT.md): which view fills the
+    /// content pane — DESIGN.md §4 "content (Stage timeline or board)".
+    enum ContentPane: String, CaseIterable {
+        case board = "Board"
+        case timeline = "Timeline"
+    }
+
     @State private var selection: PersistentIdentifier?
     @State private var showInspector = true
+    @State private var contentPane: ContentPane = .board
 
     private var selectedApplication: Application? {
         selection.flatMap { store.application(for: $0) }
@@ -31,16 +39,33 @@ struct PipelineRootView: View {
                 }
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220)
             } detail: {
-                PipelineBoardView(store: store, selection: $selection)
-                    .toolbar {
-                        ToolbarItem {
-                            Button {
-                                showInspector.toggle()
-                            } label: {
-                                Label("Details", systemImage: "sidebar.trailing")
+                Group {
+                    // [TIMELINE-12]: the timeline needs a selection; losing
+                    // it falls back to the board.
+                    if contentPane == .timeline, let application = selectedApplication {
+                        ApplicationTimelineView(application: application)
+                    } else {
+                        PipelineBoardView(store: store, selection: $selection)
+                    }
+                }
+                .toolbar {
+                    ToolbarItem {
+                        Picker("View", selection: $contentPane) {
+                            ForEach(ContentPane.allCases, id: \.self) { pane in
+                                Text(pane.rawValue).tag(pane)
                             }
                         }
+                        .pickerStyle(.segmented)
+                        .disabled(selectedApplication == nil)
                     }
+                    ToolbarItem {
+                        Button {
+                            showInspector.toggle()
+                        } label: {
+                            Label("Details", systemImage: "sidebar.trailing")
+                        }
+                    }
+                }
             }
             .inspector(isPresented: $showInspector) {
                 if let application = selectedApplication {
