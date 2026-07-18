@@ -172,6 +172,8 @@ struct ImportCVView: View {
             "Importing needs your Anthropic API key. Add it in Settings — it's stored only in your Keychain."
         case .requestFailed(let detail):
             "The import request couldn't be completed (\(detail)). Check your connection and try again."
+        case .responseTruncated:
+            "The response was cut off at the model's length limit — your CV may be too long to import whole. Trying again won't help; try a shorter version of the CV."
         case .proposalInvalid(let reason):
             "The proposal didn't come back in a shape Ladder could read — \(reason). Nothing was changed."
         }

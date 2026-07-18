@@ -66,6 +66,10 @@ final class ImportStore {
                 response = try await service.complete(
                     IntelligenceRequest(prompt: prompt, payload: text)
                 )
+            } catch AnthropicIntelligenceService.LiveServiceError.truncated {
+                // A length problem, not a transport one — retrying truncates
+                // again at the same cap ([CVIMPORT-19], decisions/0006).
+                throw ImportError.responseTruncated
             } catch {
                 // Transport failure is not validation failure — the detail
                 // makes the retry informed ([CVIMPORT-16], decisions/0004).

@@ -166,5 +166,21 @@ their JSON in a ```json fence despite the "only JSON" instruction. The fence
 is presentation, not content: it is stripped before schema validation, so a
 fenced-but-valid proposal reaches review exactly as a bare one does. The
 prompt also forbids fences explicitly, but tolerance must not depend on the
-model obeying. Anything else non-JSON — preamble prose, truncation — still
-fails with its reason ([CVIMPORT-17]).
+model obeying. Anything else non-JSON — preamble prose — still fails with its
+reason ([CVIMPORT-17]); a response cut off at the token limit fails with its
+own truncation reason ([CVIMPORT-19]).
+
+## [CVIMPORT-19] A response cut off at the model's token limit fails the import with a truncation reason
+
+The guard lives in the shared `AnthropicIntelligenceService`: the Messages
+response's `stop_reason` is decoded alongside the content blocks, and
+`"max_tokens"` throws `LiveServiceError.truncated` before any text is returned
+— truncated JSON never reaches proposal validation, so the failure cannot
+masquerade as "the response was not valid JSON" ([CVIMPORT-17]).
+
+The import store maps the throw to its own `ImportError.responseTruncated`
+(decisions/0006), distinct from `requestFailed` ([CVIMPORT-16]): the
+failed-state message names the length problem — the CV may be too long to
+import whole — because "check your connection and try again" is wrong advice
+when a retry would truncate again at the same 16k cap. The Profile is
+unchanged and no review is offered, as with every failed import.

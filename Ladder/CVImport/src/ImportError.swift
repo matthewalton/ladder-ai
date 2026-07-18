@@ -16,6 +16,10 @@ enum ImportError: Error, Equatable {
     /// proposal; `detail` names what failed, e.g. "HTTP 429"
     /// (SPEC.md [CVIMPORT-16], decisions/0004).
     case requestFailed(detail: String)
+    /// The reply was cut off at the model's token cap — a length problem,
+    /// distinct from transport failure: retrying truncates again
+    /// (SPEC.md [CVIMPORT-19], decisions/0006).
+    case responseTruncated
     /// The service's JSON did not match the proposal schema; `reason` names
     /// the rejected part (SPEC.md [CVIMPORT-10], [CVIMPORT-17]).
     case proposalInvalid(reason: String)

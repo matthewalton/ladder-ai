@@ -448,6 +448,41 @@ struct CVImportFlowTests {
         let review = try #require(store.review)
         #expect(review.roles.map(\.proposed.company) == ["Acme", "Initech"], "the fenced proposal reads exactly as the bare one")
     }
+
+    @Test("[CVIMPORT-19] a response cut off at the model's token limit fails the import with a truncation reason")
+    func truncatedResponseFailsWithTruncationReason() async throws {
+        let profileStore = try makeProfileStore()
+        let store = ImportStore(
+            profileStore: profileStore,
+            keyStore: InMemoryAPIKeyStore(key: "test-key"),
+            makeIntelligence: { _ in ThrowingIntelligenceService(error: .truncated) }
+        )
+
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        // A length problem is its own failure — not transport, not invalid
+        // JSON (decisions/0006).
+        #expect(store.phase == .failed(.responseTruncated))
+        #expect(store.review == nil, "no review is offered")
+        #expect(profileStore.profile?.roles.isEmpty == true, "the Profile is unchanged")
+    }
+
+    @Test("[CVIMPORT-19] the service throws truncated on a max_tokens stop, before returning any text")
+    func serviceThrowsTruncatedOnMaxTokensStop() throws {
+        // The response-parsing seam, network-free like the request seam
+        // ([TAILOR-17]): truncated JSON must never reach proposal validation.
+        let truncated = Data(
+            #"{"content":[{"type":"text","text":"{\"roles\":[{\"compa"}],"stop_reason":"max_tokens"}"#.utf8
+        )
+        #expect(throws: AnthropicIntelligenceService.LiveServiceError.truncated) {
+            try AnthropicIntelligenceService.responseText(from: truncated)
+        }
+
+        let complete = Data(
+            #"{"content":[{"type":"text","text":"{}"}],"stop_reason":"end_turn"}"#.utf8
+        )
+        #expect(try AnthropicIntelligenceService.responseText(from: complete) == Data("{}".utf8))
+    }
 }
 
 /// Fails every request the way the live service does ([CVIMPORT-16]).

@@ -21,6 +21,10 @@ struct AnthropicIntelligenceService: IntelligenceService {
     enum LiveServiceError: Error, Equatable {
         case httpFailure(status: Int)
         case emptyResponse
+        /// The reply hit the `max_tokens` cap (`stop_reason == "max_tokens"`)
+        /// and is cut off mid-content ([CVIMPORT-19], CVImport
+        /// decisions/0006).
+        case truncated
     }
 
     /// The request-building seam ([TAILOR-17]) — tested without network.
@@ -50,9 +54,19 @@ struct AnthropicIntelligenceService: IntelligenceService {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw LiveServiceError.httpFailure(status: status)
         }
+        return try Self.responseText(from: data)
+    }
+
+    /// The response-parsing seam ([CVIMPORT-19]) — tested without network,
+    /// like `urlRequest(for:)`. A reply cut off at the token cap is a
+    /// truncation, never JSON worth handing to validation.
+    static func responseText(from data: Data) throws -> Data {
         let decoded = try JSONDecoder().decode(MessagesResponse.self, from: data)
+        guard decoded.stopReason != "max_tokens" else {
+            throw LiveServiceError.truncated
+        }
         // Adaptive thinking can put thinking blocks before the text block —
-        // the tailor result JSON is the first text block's text.
+        // the result JSON is the first text block's text.
         guard let text = decoded.content.first(where: { $0.type == "text" })?.text else {
             throw LiveServiceError.emptyResponse
         }
@@ -86,4 +100,10 @@ private struct MessagesResponse: Decodable {
     }
 
     var content: [ContentBlock]
+    var stopReason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case content
+        case stopReason = "stop_reason"
+    }
 }

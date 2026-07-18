@@ -33,6 +33,12 @@ Turning the dropped file into plain text on-device — PDFKit for PDF,
 structuring it is the service's job.
 _Avoid_: parsing, OCR, scraping
 
+**Truncated response**:
+A live reply the model cut off at its `max_tokens` cap — `stop_reason ==
+"max_tokens"` — detected by the shared service before any JSON parsing and
+surfaced as its own failure (decisions/0006), never as invalid JSON.
+_Avoid_: cut-off response, length-limit error, incomplete response, overflow
+
 **Not-imported section**:
 CV content the proposal assigns outside the import scope (education, projects) —
 listed in the review so nothing is silently dropped, and never merged.
