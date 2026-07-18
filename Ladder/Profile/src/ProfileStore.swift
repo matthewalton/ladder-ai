@@ -21,16 +21,22 @@ enum ProfilePresentation: Equatable {
 @MainActor
 @Observable
 final class ProfileStore {
+    /// Exposed so sibling slices can open their own contexts on the same
+    /// store (cv-export inserts Applications; CVExport decisions/0001).
+    let container: ModelContainer
     private let context: ModelContext
     private(set) var profile: Profile?
 
     init(container: ModelContainer) {
+        self.container = container
         self.context = ModelContext(container)
     }
 
-    /// The slice's schema, one place. `url` nil means the app's default store.
+    /// The app's schema, one place. `url` nil means the app's default store.
     static func container(at url: URL? = nil, inMemory: Bool = false) throws -> ModelContainer {
-        let schema = Schema([Profile.self, Role.self, Achievement.self, SkillTag.self])
+        let schema = Schema([
+            Profile.self, Role.self, Achievement.self, SkillTag.self, Application.self,
+        ])
         let configuration: ModelConfiguration
         if inMemory {
             configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)

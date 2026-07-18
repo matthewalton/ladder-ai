@@ -7,12 +7,22 @@ struct TailorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var store: TailorStore
     @State private var details = JobDetails(company: "", roleTitle: "", jobDescription: "")
+    // The cv-export hand-off: the export happens on "Export CV…" in review,
+    // then the save panel, then the fit report (CVExport SPEC.md).
+    @State private var exportStore: CVExportStore
+    @State private var export: CVExportStore.Export?
+    @State private var isSavingPDF = false
+    @State private var exportFailed = false
+
+    private let profileStore: ProfileStore
 
     init(
         profileStore: ProfileStore,
         keyStore: any APIKeyStore = KeychainAPIKeyStore(),
         makeIntelligence: ((String) -> any IntelligenceService)? = nil
     ) {
+        self.profileStore = profileStore
+        _exportStore = State(initialValue: CVExportStore(container: profileStore.container))
         if let makeIntelligence {
             _store = State(initialValue: TailorStore(
                 profileStore: profileStore, keyStore: keyStore, makeIntelligence: makeIntelligence
@@ -32,11 +42,14 @@ struct TailorView: View {
             case .running:
                 progress("Matching your achievements to the job…")
             case .review:
-                if let review = store.review {
+                if let export {
+                    FitReportView(report: export.fitReport, onDone: { dismiss() })
+                } else if let review = store.review {
                     TailorReviewView(
                         review: review,
                         onCancel: { store.reset() },
-                        onDone: { dismiss() }
+                        onDone: { dismiss() },
+                        onExport: { runExport(review: review) }
                     )
                 }
             case .failed(let error):
@@ -45,6 +58,35 @@ struct TailorView: View {
         }
         .frame(minWidth: 640, minHeight: 480)
         .background(Color.paper)
+        .fileExporter(
+            isPresented: $isSavingPDF,
+            document: export.map { PDFFileDocument(data: $0.pdfData) },
+            contentType: .pdf,
+            defaultFilename: defaultFilename
+        ) { _ in
+            // Declining the save does not undo the persisted Application
+            // (CVExport decisions/0003); the fit report shows either way.
+        }
+        .alert("The CV couldn't be exported.", isPresented: $exportFailed) {
+            Button("OK", role: .cancel) {}
+        }
+    }
+
+    private func runExport(review: TailorReview) {
+        guard let profile = profileStore.profile else { return }
+        do {
+            export = try exportStore.export(profile: profile, review: review, details: details)
+            isSavingPDF = true
+        } catch {
+            exportFailed = true
+        }
+    }
+
+    private var defaultFilename: String {
+        let name = [profileStore.profile?.name ?? "", details.roleTitle]
+            .filter { !$0.isEmpty }
+            .joined(separator: " — ")
+        return name.isEmpty ? "CV" : name
     }
 
     private var canRun: Bool {
@@ -153,6 +195,8 @@ struct TailorReviewView: View {
     @Bindable var review: TailorReview
     var onCancel: () -> Void
     var onDone: () -> Void
+    /// The cv-export hand-off; the review itself never exports.
+    var onExport: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -194,6 +238,7 @@ struct TailorReviewView: View {
                 Spacer()
                 Button("Start over", action: onCancel)
                 Button("Done", action: onDone)
+                Button("Export CV…", action: onExport)
                     .buttonStyle(.borderedProminent)
                     .tint(Color.pine)
             }
