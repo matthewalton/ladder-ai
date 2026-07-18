@@ -11,6 +11,7 @@ struct ImportProposal: Equatable, Sendable, Decodable {
     /// Schema validation: JSON the decoder rejects fails the import
     /// (SPEC.md [CVIMPORT-10]).
     init(json: Data) throws {
+        let json = FencedJSON.stripped(from: json)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let raw = try decoder.singleValueContainer().decode(String.self)
@@ -24,9 +25,43 @@ struct ImportProposal: Equatable, Sendable, Decodable {
         }
         do {
             self = try decoder.decode(ImportProposal.self, from: json)
+        } catch let error as DecodingError {
+            throw ImportError.proposalInvalid(reason: Self.reason(for: error))
         } catch {
-            throw ImportError.proposalInvalid
+            throw ImportError.proposalInvalid(reason: "the response did not match the proposal schema")
         }
+    }
+
+    /// The rejected part, named — fail-fast earns its keep by being specific
+    /// (SPEC.md [CVIMPORT-17], decisions/0004).
+    private static func reason(for error: DecodingError) -> String {
+        switch error {
+        case .keyNotFound(let key, let context):
+            "the proposal is missing '\(path(context.codingPath, then: key))'"
+        case .typeMismatch(_, let context):
+            "'\(path(context.codingPath))' is not the expected type"
+        case .valueNotFound(_, let context):
+            "'\(path(context.codingPath))' is null where a value is required"
+        case .dataCorrupted(let context) where context.codingPath.isEmpty:
+            "the response was not valid JSON"
+        case .dataCorrupted(let context):
+            "'\(path(context.codingPath))' is invalid: \(context.debugDescription)"
+        @unknown default:
+            "the response did not match the proposal schema"
+        }
+    }
+
+    /// "roles[0].achievements[1].text" from a coding path.
+    private static func path(_ codingPath: [any CodingKey], then last: (any CodingKey)? = nil) -> String {
+        var rendered = ""
+        for key in codingPath + [last].compactMap(\.self) {
+            if let index = key.intValue {
+                rendered += "[\(index)]"
+            } else {
+                rendered += rendered.isEmpty ? key.stringValue : ".\(key.stringValue)"
+            }
+        }
+        return rendered.isEmpty ? "the proposal" : rendered
     }
 
     /// Proposal dates are month-resolution ("2021-04"), as CVs state them.

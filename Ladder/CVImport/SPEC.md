@@ -10,14 +10,20 @@ the included ones into the existing Profile. This slice owns the extraction
 step, the `IntelligenceService` protocol and its fixture implementation, the
 proposal/review model, the merge, and `Prompts/import.md`.
 
-Fixture-driven throughout: `FixtureIntelligenceService` returns canned JSON from
-`LadderTests/Fixtures/` — no live API calls in this slice (live calls arrive
-with the tailor slice). Import requires an existing Profile (decisions/0001);
+Live in production: the import run reads the Anthropic API key from the
+Keychain and calls the shared live `IntelligenceService` — pinned model per
+Tailor decisions/0003, key store shared via `Ladder/Shared/Services/`
+(decisions/0005). Without a stored key the run refuses and points to Settings;
+production never falls back to fixtures (Tailor decisions/0002). Failures are
+fail-fast with the reason surfaced — no repair request (decisions/0004). Tests
+and previews stay on `FixtureIntelligenceService`'s canned JSON from
+`LadderTests/Fixtures/`. Import requires an existing Profile (decisions/0001);
 the proposal covers roles, achievements, and skills only (decisions/0002); the
 review screen is the dedup (decisions/0003).
 
 Out of scope: tailoring, PDF export, Profile creation via import, automatic
-duplicate matching, `Education`/`Project` models, live LLM access.
+duplicate matching, `Education`/`Project` models, retry-with-repair
+(decisions/0004), streaming, cancellation UX.
 
 ## [CVIMPORT-1] Importing a PDF CV produces a proposal of roles for review
 
@@ -96,8 +102,8 @@ review does not write it anywhere.
 
 The service's JSON must match the proposal schema. On mismatch the import ends
 in the failed state with `ImportError.proposalInvalid`, no review is offered,
-and the Profile is unchanged. No retry-with-repair in this slice — that loop
-arrives with the tailor slice.
+and the Profile is unchanged. No retry-with-repair — fail-fast is deliberate
+(decisions/0004); the failure carries the validation reason ([CVIMPORT-17]).
 
 ## [CVIMPORT-11] A CV yielding no extractable text fails the import
 
@@ -115,5 +121,50 @@ Judged by file type before extraction is attempted:
 
 `Prompts/import.md` is born in this slice: the canonical, versioned import
 prompt, loaded at runtime — never an inline string. The fixture service records
-the request it receives; the recorded prompt equals the file's content. This
-keeps the prompt real and versioned even while calls are fixture-driven.
+the request it receives; the recorded prompt equals the file's content. The
+same prompt travels in live requests — tests exercise the seam with the fixture
+service, so the prompt stays real and versioned without network access.
+
+## [CVIMPORT-14] Starting an import with no API key stored is refused
+
+Checked at import start, before extraction and before any service call:
+`ImportError.apiKeyRequired`. The refusal directs the user to Settings to enter
+a key (same Settings scene the tailor slice owns). Production never falls back
+to fixture data (Tailor decisions/0002, adopted by decisions/0005);
+`FixtureIntelligenceService` stays a test and preview concern.
+
+## [CVIMPORT-15] The import run creates its live service with the stored API key
+
+The store takes a key store plus a `makeIntelligence` factory (the
+`TailorStore` shape) and calls the factory with exactly the key read from the
+key store. Exercised without network: a fake key store holding a known key and
+a factory that records the key it was handed. The default factory is the shared
+`AnthropicIntelligenceService` (pinned model, Tailor decisions/0003).
+
+## [CVIMPORT-16] A failed live request ends the import in the request-failed state
+
+Transport failure is not validation failure (decisions/0004): a service call
+that throws — `LiveServiceError.httpFailure(status:)`, `emptyResponse`, or any
+other transport error — ends the import with `ImportError.requestFailed`,
+distinct from `proposalInvalid`. The failure message names what failed (the
+HTTP status when there is one) so the user knows whether to retry, fix their
+key, or report a bad extraction. No review is offered; the Profile is
+unchanged.
+
+## [CVIMPORT-17] A proposal validation failure carries the reason the proposal was rejected
+
+Fail-fast earns its keep by being specific (decisions/0004): when the service's
+JSON fails proposal validation, the failed state carries the reason — which
+part of the proposal was rejected (e.g. malformed JSON, or a missing/empty
+required part) — and the review UI shows it. A bare "proposal invalid" with no
+reason does not satisfy this criterion.
+
+## [CVIMPORT-18] A proposal wrapped in a markdown code fence produces a review
+
+Live models mirror the fenced schema example in `Prompts/import.md` and wrap
+their JSON in a ```json fence despite the "only JSON" instruction. The fence
+is presentation, not content: it is stripped before schema validation, so a
+fenced-but-valid proposal reaches review exactly as a bare one does. The
+prompt also forbids fences explicitly, but tolerance must not depend on the
+model obeying. Anything else non-JSON — preamble prose, truncation — still
+fails with its reason ([CVIMPORT-17]).

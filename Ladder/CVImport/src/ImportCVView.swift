@@ -8,11 +8,23 @@ struct ImportCVView: View {
     @State private var store: ImportStore
     @State private var isPickingFile = false
 
-    init(profileStore: ProfileStore) {
-        _store = State(initialValue: ImportStore(
-            profileStore: profileStore,
-            intelligence: FixtureIntelligenceService.importFixture()
-        ))
+    /// Live by default (decisions/0005): the Keychain key store and the
+    /// shared Anthropic service. Tests and previews inject fakes — production
+    /// never falls back to fixtures (Tailor decisions/0002).
+    init(
+        profileStore: ProfileStore,
+        keyStore: any APIKeyStore = KeychainAPIKeyStore(),
+        makeIntelligence: ((String) -> any IntelligenceService)? = nil
+    ) {
+        if let makeIntelligence {
+            _store = State(initialValue: ImportStore(
+                profileStore: profileStore, keyStore: keyStore, makeIntelligence: makeIntelligence
+            ))
+        } else {
+            _store = State(initialValue: ImportStore(
+                profileStore: profileStore, keyStore: keyStore
+            ))
+        }
     }
 
     private static let docxType = UTType(filenameExtension: "docx") ?? .data
@@ -129,10 +141,19 @@ struct ImportCVView: View {
                 .foregroundStyle(Color.ink)
                 .multilineTextAlignment(.center)
             HStack {
-                Button("Try again") { store.reset() }
+                if error == .apiKeyRequired {
+                    SettingsLink {
+                        Text("Open Settings…")
+                    }
                     .buttonStyle(.borderedProminent)
                     .tint(Color.pine)
-                Button("Close") { dismiss() }
+                    Button("Close") { dismiss() }
+                } else {
+                    Button("Try again") { store.reset() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.pine)
+                    Button("Close") { dismiss() }
+                }
             }
         }
         .padding(40)
@@ -147,8 +168,12 @@ struct ImportCVView: View {
             "That file isn't a PDF or Word document (.docx)."
         case .extractionFailed:
             "No text could be read from that file. If it's a scanned CV, try an exported PDF instead."
-        case .proposalInvalid:
-            "The proposal didn't come back in a shape Ladder could read. Nothing was changed."
+        case .apiKeyRequired:
+            "Importing needs your Anthropic API key. Add it in Settings — it's stored only in your Keychain."
+        case .requestFailed(let detail):
+            "The import request couldn't be completed (\(detail)). Check your connection and try again."
+        case .proposalInvalid(let reason):
+            "The proposal didn't come back in a shape Ladder could read — \(reason). Nothing was changed."
         }
     }
 }
@@ -281,7 +306,11 @@ private struct ReviewedSkillChip: View {
 #Preview("Drop zone") {
     let profileStore = try! ProfileStore(container: ProfileStore.container(inMemory: true))
     try! profileStore.createProfile(name: "Alex Climber", headline: "Staff Engineer")
-    return ImportCVView(profileStore: profileStore)
+    return ImportCVView(
+        profileStore: profileStore,
+        keyStore: InMemoryAPIKeyStore(key: "preview-key"),
+        makeIntelligence: { _ in FixtureIntelligenceService.importFixture() }
+    )
 }
 
 #Preview("Review") {

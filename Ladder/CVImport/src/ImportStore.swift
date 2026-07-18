@@ -20,13 +20,25 @@ final class ImportStore {
     private(set) var review: ImportReview?
 
     private let profileStore: ProfileStore
-    private let intelligence: any IntelligenceService
+    private let keyStore: any APIKeyStore
     private let bundle: Bundle
+    private let makeIntelligence: (String) -> any IntelligenceService
 
-    init(profileStore: ProfileStore, intelligence: any IntelligenceService, bundle: Bundle = .main) {
+    /// `makeIntelligence` receives the stored API key and returns the service
+    /// for this run — the live Anthropic service in production, a fixture in
+    /// tests and previews (decisions/0005, Tailor decisions/0002).
+    init(
+        profileStore: ProfileStore,
+        keyStore: any APIKeyStore,
+        bundle: Bundle = .main,
+        makeIntelligence: @escaping (String) -> any IntelligenceService = {
+            AnthropicIntelligenceService(apiKey: $0)
+        }
+    ) {
         self.profileStore = profileStore
-        self.intelligence = intelligence
+        self.keyStore = keyStore
         self.bundle = bundle
+        self.makeIntelligence = makeIntelligence
     }
 
     func startImport(of url: URL) async {
@@ -36,21 +48,50 @@ final class ImportStore {
             phase = .failed(.profileRequired)
             return
         }
+        // Refused before extraction and before any service call: no stored
+        // key means no live run, and never a fixture fallback
+        // ([CVIMPORT-14], Tailor decisions/0002).
+        guard let key = try? keyStore.readKey(), !key.isEmpty else {
+            phase = .failed(.apiKeyRequired)
+            return
+        }
         phase = .importing
         review = nil
         do {
             let text = try CVTextExtractor.extractText(from: url)
             let prompt = try ImportPrompt.text(from: bundle)
-            let response = try await intelligence.complete(
-                IntelligenceRequest(prompt: prompt, payload: text)
-            )
+            let service = makeIntelligence(key)
+            let response: Data
+            do {
+                response = try await service.complete(
+                    IntelligenceRequest(prompt: prompt, payload: text)
+                )
+            } catch {
+                // Transport failure is not validation failure — the detail
+                // makes the retry informed ([CVIMPORT-16], decisions/0004).
+                throw ImportError.requestFailed(detail: Self.requestFailureDetail(for: error))
+            }
             let proposal = try ImportProposal(json: response)
             review = ImportReview(proposal: proposal)
             phase = .review
         } catch {
-            // A missing bundled prompt surfaces here too; it can only be a
-            // packaging bug, and proposalInvalid is the honest visible state.
-            phase = .failed((error as? ImportError) ?? .proposalInvalid)
+            // Only a missing bundled prompt reaches this fallback — a
+            // packaging bug; every other failure is already an ImportError.
+            phase = .failed(
+                (error as? ImportError)
+                    ?? .proposalInvalid(reason: "the import prompt could not be loaded from the app bundle")
+            )
+        }
+    }
+
+    private static func requestFailureDetail(for error: Error) -> String {
+        switch error {
+        case AnthropicIntelligenceService.LiveServiceError.httpFailure(let status):
+            "HTTP \(status)"
+        case AnthropicIntelligenceService.LiveServiceError.emptyResponse:
+            "the service returned an empty response"
+        default:
+            (error as NSError).localizedDescription
         }
     }
 

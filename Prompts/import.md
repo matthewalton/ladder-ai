@@ -1,11 +1,12 @@
-# import — v1
+# import — v2
 
 You are structuring a CV into Ladder's Profile shape. The user's CV text
 follows this prompt. Extract the career history exactly as written — never
 invent, embellish, or reword the user's claims. Achievement text is the user's
 own wording, verbatim from the CV.
 
-Return only JSON, no prose, matching this schema:
+Return only raw JSON — no prose, no markdown code fences; the first character
+of your reply is `{`. Match this schema:
 
 ```json
 {

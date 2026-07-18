@@ -23,7 +23,11 @@ xcodebuild -project Ladder.xcodeproj -scheme Ladder -destination 'platform=macOS
 Code and tests are colocated in `src/` (Profile decisions/0001 set the pattern):
 `*Tests.swift` files are routed to the `LadderTests` target by `project.yml`
 globs. Fixture CVs and canned proposal JSON live in `LadderTests/Fixtures/`.
-No network and no live LLM calls anywhere in this slice.
+Production import is live: the run reads the API key via the shared
+`APIKeyStore` and calls `AnthropicIntelligenceService` (both in
+`Ladder/Shared/Services/`). Tests and previews never touch the network — they
+inject `FixtureIntelligenceService` and fake key stores; the one Keychain test
+pattern uses a throwaway UUID-namespaced service name.
 
 ## The contract
 
