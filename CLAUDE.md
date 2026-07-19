@@ -20,8 +20,8 @@ Features are built with the Speccle skills, not ad-hoc:
 
 Each feature slice owns its markdown contract (SPEC.md etc.); acceptance criteria live there, not in a global task list. Cross-cutting decisions become ADRs in `docs/adr/`; slice-local decisions go in the slice's `decisions/`. There is no DECISIONS.md.
 
-## Current phase: **2 — Pipeline**
-Hard gate: do not create or modify anything under `Capture/`, `Intelligence/` (beyond the `IntelligenceService` protocol stub), or `Journey/`. Phase gates are defined in ARCHITECTURE.md §4 and only the human advances them (by editing this line).
+## Current phase: **3 — Capture**
+Hard gate: do not create or modify anything under `Intelligence/` (beyond the `IntelligenceService` protocol stub) or `Journey/`. Phase gates are defined in ARCHITECTURE.md §4 and only the human advances them (by editing this line).
 
 ## Project setup
 The Xcode project is generated — never edit `Ladder.xcodeproj` directly.
@@ -53,7 +53,9 @@ Ladder/
   CVExport/       Phase 1 slice: CV render + export (owns the Application model)
   PipelineBoard/  Phase 2 slice: Stage model, applications board, transitions
                   (Phase 2 slices are siblings like this — no umbrella Pipeline/)
-  Capture/        Phase 3 (gated)
+  Recorder/       Phase 3 slice: menu-bar recorder (mic stream, level meters)
+                  (Phase 3 slices are siblings — no umbrella Capture/; Transcription/,
+                   SystemAudio/, PreCall/ join as they are built)
   Intelligence/   Phase 4 (gated; protocol stub only for now)
   Journey/        Phase 5 (gated)
 Prompts/          versioned LLM prompt files (*.md) — canonical location (never TailorPrompts/)
