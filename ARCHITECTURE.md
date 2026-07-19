@@ -215,7 +215,7 @@ Open questions to resolve during build:
 ## 7. Repo conventions
 
 - SwiftUI + SwiftData, MVVM-lite (views + observable stores; no heavyweight architecture).
-- Feature folders are per-slice siblings: `Profile/`, `CVImport/`, `Tailor/`, `CVExport/`, `PipelineBoard/` (further Phase 2 slices join as siblings), `Capture/`, `Intelligence/`, `Journey/`, plus `Shared/`.
+- Feature folders are per-slice siblings: `Profile/`, `CVImport/`, `Tailor/`, `CVExport/`, `PipelineBoard/` (further Phase 2 slices join as siblings), `Recorder/` (further Phase 3 slices join as siblings — no umbrella `Capture/`), `Intelligence/`, `Journey/`, plus `Shared/`.
 - Prompts in `Prompts/*.md`, versioned, loaded at runtime.
 - All LLM calls behind `IntelligenceService` protocol → testable with fixtures.
 - Capture code behind `CaptureService` protocol → UI developable without permissions granted.

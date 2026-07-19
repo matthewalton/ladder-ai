@@ -32,5 +32,18 @@ Acceptance criteria for behaviour live in each slice's SPEC.md (Speccle owns the
 3. Calendar posture: read-only access behind a protocol; the app stays fully usable when access is denied.
 4. No raw hex/fonts in views; all tests green headlessly with no calendar permission granted; previews compile.
 
+## Phase 3 slices *(build in order with `/feature`)*
+1. **recorder** — `CaptureService` protocol + fixture (mirrors the `CalendarSyncService` seam) → `MenuBarExtra` scene alongside `WindowGroup`/`Settings` with record control, level meters, elapsed time → mic stream via AVAudioEngine → visible recording indicator + first-run consent screen → mic permission detect-and-guide; `NSMicrophoneUsageDescription` is born here. Tracer: start a capture from the menu bar — the meter moves and elapsed time runs; stop — the session ends cleanly and nothing persists (raw audio never outlives the session).
+2. **transcription** — `Transcriber` protocol + fixture over on-device `SpeechAnalyzer`/`SpeechTranscriber` (ADR 0001) → `Transcript` + `Segment` models (ARCHITECTURE.md §3) colocated in the slice → `Stage.transcript` link, Stage picked at record time. Tracer: record your own voice, relaunch, the transcript is still on the Stage.
+3. **system-audio** — second stream via ScreenCaptureKit audio / Core Audio process taps → screen-recording permission onboarding with explanatory copy → timestamp merge with mic = `.me` / system = `.them` attribution → `sourceApp` detection. Completes the phase accept criterion.
+4. **pre-call** — EventKit pre-call notification ("Interview with {company} at 14:00 — record?") driven off the calendar-sync seam / `Stage.calendarEventID` → opens the recorder armed on the right Stage → notification permission detect-and-guide. First UserNotifications usage in the app.
+
+## Phase 3 exit criteria
+1. Fresh path: record a real video call → attributed (me/them) transcript attached to the right Stage, fully offline.
+2. Privacy posture: raw audio never persisted beyond the session; transcription fully on-device, no network egress; visible recording indicator whenever capture is live; first-run consent before the first capture.
+3. Permissions posture: mic / screen-recording / notifications denial never crashes; detect-and-guide; the app stays fully usable with everything denied.
+4. Migration safety: relaunching over a Phase 2 store keeps every Application, Stage, and `cvSnapshot` byte-identical.
+5. No raw hex/fonts in views; all tests green headlessly with no permissions granted; previews compile.
+
 ## Later phases
-See ARCHITECTURE.md §4 for Phase 3–5 module definitions. Slice maps for those phases get drawn when the phase opens.
+See ARCHITECTURE.md §4 for Phase 4–5 module definitions. Slice maps for those phases get drawn when the phase opens.
