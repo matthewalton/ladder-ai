@@ -364,6 +364,41 @@ struct CalendarSyncFlowTests {
         #expect(StageKindGuesser.guess(fromTitle: "Coffee with Jane") == nil)
     }
 
+    // MARK: - Empty-scan explainers
+
+    @Test("[CALSYNC-19] an empty scan with no tracked Application explains that matching starts past Draft")
+    func emptyScanWithoutTrackedApplicationsSignalsCaseOne() async throws {
+        let (pipeline, sync, _) = try makeStores(events: [event(title: "Acme interview")])
+        // A matching company still in Draft: matching never ran, and the
+        // signal says why the scan came back empty.
+        try seedApplication(in: pipeline, company: "Acme", status: .draft)
+
+        await sync.scan(asOf: Self.now)
+
+        #expect(sync.scanState == .ready)
+        #expect(sync.proposals.isEmpty)
+        #expect(sync.hasTrackedApplications == false)
+
+        // Live, not captured at scan time (decisions/0006): tracking an
+        // application after the scan flips the signal without a re-scan.
+        try seedApplication(in: pipeline, company: "Globex", status: .applied)
+        #expect(sync.hasTrackedApplications == true)
+    }
+
+    @Test("[CALSYNC-20] an empty scan with tracked Applications explains that no event matched")
+    func emptyScanWithTrackedApplicationsSignalsCaseTwo() async throws {
+        // A tracked Application whose company no event names — the
+        // exact-match policy (decisions/0002) drops everything.
+        let (pipeline, sync, _) = try makeStores(events: [event(title: "Globex catch-up")])
+        try seedApplication(in: pipeline, company: "Acme", status: .applied)
+
+        await sync.scan(asOf: Self.now)
+
+        #expect(sync.scanState == .ready)
+        #expect(sync.proposals.isEmpty)
+        #expect(sync.hasTrackedApplications == true)
+    }
+
     // MARK: - Denied access
 
     @Test("[CALSYNC-17] when calendar access is denied the scan reports the denied state")

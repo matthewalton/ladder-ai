@@ -150,6 +150,13 @@ final class CalendarSyncStore {
     /// yet sent; rejected and withdrawn are closed.
     static let trackedStatuses: Set<ApplicationStatus> = [.applied, .active, .offer]
 
+    /// Which empty-scan explainer applies ([CALSYNC-19], [CALSYNC-20]):
+    /// computed live rather than captured at scan time, so the explainer
+    /// stays truthful when the board changes after a scan (decisions/0006).
+    var hasTrackedApplications: Bool {
+        pipeline.applications.contains { Self.trackedStatuses.contains($0.status) }
+    }
+
     private func buildProposals(from events: [CalendarEvent]) -> [StageProposal] {
         let tracked = pipeline.applications.filter {
             Self.trackedStatuses.contains($0.status)

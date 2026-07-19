@@ -52,3 +52,14 @@ to Application status)
 The scan outcome when calendar access is refused: no proposals, no error, the
 rest of the app untouched (decisions/0001).
 _Avoid_: permission error, failure
+
+**Empty scan**:
+A scan that completes (`.ready`) with zero proposals. Not the denied state —
+access was granted and the pass ran; there was simply nothing to propose.
+_Avoid_: failed scan, no results, empty state
+
+**Explainer**:
+The quiet one-line message the bar renders below its header when there is
+nothing to show — one for the denied state ([CALSYNC-17]) and one per empty
+scan case ([CALSYNC-19], [CALSYNC-20]).
+_Avoid_: hint, placeholder, error message

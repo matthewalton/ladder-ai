@@ -143,3 +143,37 @@ with a System Settings link (visual-verify).
 Info dictionary, with the permission-anxiety copy agreed in decisions/0001 —
 reading requires the full-access tier, and the copy says what is read, that
 nothing is written, and that nothing leaves the Mac.
+
+## [CALSYNC-19] An empty scan with no tracked Application explains that matching starts past Draft
+
+Case one of the silent empty scan (decisions/0006): no Application is
+tracked, so `buildProposals` short-circuits and matching never ran — the bar
+showed only its header and read as broken. The store exposes
+`hasTrackedApplications`, computed live from the pipeline's Applications
+against the tracked statuses (decisions/0002), and after an empty scan with
+it false the bar renders the explainer:
+
+> Nothing to match yet — matching starts once an application is past Draft.
+> Move one along, or add one to the board.
+
+The measurable clause is the store signal (`scanState == .ready`, zero
+proposals, `hasTrackedApplications == false`); the rendered line is
+visual-verify, like [CALSYNC-17]'s explainer. No explainer renders while
+idle, scanning, or denied.
+
+## [CALSYNC-20] An empty scan with tracked Applications explains that no event matched
+
+Case two of the silent empty scan (decisions/0006): tracked Applications
+exist but every event dropped out under the exact-match policy
+(decisions/0002) — a real interview whose title spells the company
+differently, or a recruiter invite from a public mail domain, yields nothing
+and the bar went silent. After an empty scan with `hasTrackedApplications`
+true the bar renders the explainer:
+
+> No calendar events matched a tracked company — scans cover a week back and
+> a month ahead.
+
+The measurable clause is the store signal (`scanState == .ready`, zero
+proposals, `hasTrackedApplications == true`) — the first direct coverage of
+the tracked-but-unmatched path, which [CALSYNC-3]'s test reaches only via
+non-tracked statuses. The rendered line is visual-verify.
