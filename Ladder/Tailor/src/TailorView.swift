@@ -1,14 +1,9 @@
 import SwiftUI
 
-/// The tailor flow's sheet: the tailor sheet (company, role title, pasted
-/// job description), the run, then the side-by-side review. One view per
-/// store phase.
 struct TailorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var store: TailorStore
     @State private var details = JobDetails(company: "", roleTitle: "", jobDescription: "")
-    // The cv-export hand-off: the export happens on "Export CV…" in review,
-    // then the save panel, then the fit report (CVExport SPEC.md).
     @State private var exportStore: CVExportStore
     @State private var export: CVExportStore.Export?
     @State private var isSavingPDF = false
@@ -64,8 +59,8 @@ struct TailorView: View {
             contentType: .pdf,
             defaultFilename: defaultFilename
         ) { _ in
-            // Declining the save does not undo the persisted Application
-            // (CVExport decisions/0003); the fit report shows either way.
+            // Declining the save does not undo the persisted Application;
+            // the fit report shows either way.
         }
         .alert("The CV couldn't be exported.", isPresented: $exportFailed) {
             Button("OK", role: .cancel) {}
@@ -188,14 +183,10 @@ struct TailorView: View {
     }
 }
 
-/// The review (slice CONTEXT.md): each rephrasing beside its achievement's
-/// canonical text, accepted by default, with the gaps and the rationale in
-/// plain sight.
 struct TailorReviewView: View {
     @Bindable var review: TailorReview
     var onCancel: () -> Void
     var onDone: () -> Void
-    /// The cv-export hand-off; the review itself never exports.
     var onExport: () -> Void = {}
 
     var body: some View {

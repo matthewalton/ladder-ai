@@ -1,10 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// The per-Application timeline (DESIGN.md §6): vertical line in pine,
-/// blazes as nodes — hollow future, filled completed — elapsed labels on the
-/// segments between entries, the in-stage label trailing. Read-only: every
-/// date shown is persisted by pipeline-board or calendar-sync.
+/// Read-only: every date shown is persisted by pipeline-board or calendar-sync.
 struct ApplicationTimelineView: View {
     var application: Application
     var asOf: Date = .now

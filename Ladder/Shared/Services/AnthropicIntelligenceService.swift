@@ -1,12 +1,8 @@
 import Foundation
 
-/// The live `IntelligenceService`: the Anthropic Messages API, raw HTTP.
-/// Selected exactly when an API key is stored (Tailor decisions/0002); the
-/// model is pinned to the latest Sonnet (Tailor decisions/0003). The key is
+/// Live `IntelligenceService` over the Anthropic Messages API. The key is
 /// never logged.
 struct AnthropicIntelligenceService: IntelligenceService {
-    /// Pinned per Tailor decisions/0003; verified against current Anthropic
-    /// API documentation at implement time.
     static let model = "claude-sonnet-5"
     static let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
 
@@ -21,15 +17,10 @@ struct AnthropicIntelligenceService: IntelligenceService {
     enum LiveServiceError: Error, Equatable {
         case httpFailure(status: Int)
         case emptyResponse
-        /// The reply hit the `max_tokens` cap (`stop_reason == "max_tokens"`)
-        /// and is cut off mid-content ([CVIMPORT-19], CVImport
-        /// decisions/0006).
+        /// The reply hit the `max_tokens` cap and is cut off mid-content.
         case truncated
     }
 
-    /// The request-building seam ([TAILOR-17]) — tested without network.
-    /// The prompt travels as the system prompt, the payload as the one user
-    /// message.
     static func urlRequest(for request: IntelligenceRequest, apiKey: String) throws -> URLRequest {
         var urlRequest = URLRequest(url: endpoint)
         urlRequest.httpMethod = "POST"
@@ -57,16 +48,12 @@ struct AnthropicIntelligenceService: IntelligenceService {
         return try Self.responseText(from: data)
     }
 
-    /// The response-parsing seam ([CVIMPORT-19]) — tested without network,
-    /// like `urlRequest(for:)`. A reply cut off at the token cap is a
-    /// truncation, never JSON worth handing to validation.
     static func responseText(from data: Data) throws -> Data {
         let decoded = try JSONDecoder().decode(MessagesResponse.self, from: data)
         guard decoded.stopReason != "max_tokens" else {
             throw LiveServiceError.truncated
         }
-        // Adaptive thinking can put thinking blocks before the text block —
-        // the result JSON is the first text block's text.
+        // Adaptive thinking can put thinking blocks before the text block.
         guard let text = decoded.content.first(where: { $0.type == "text" })?.text else {
             throw LiveServiceError.emptyResponse
         }

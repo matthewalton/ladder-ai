@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Inspector pane: details of the selected achievement — canonical text,
-/// impact metric, tech, strength notes, and skill chips.
 struct AchievementInspectorView: View {
     @Bindable var store: ProfileStore
     let achievement: Achievement
@@ -55,7 +53,6 @@ struct AchievementInspectorView: View {
     }
 }
 
-/// Skill chips: pineTint fills, 6pt radius (DESIGN.md §2, §4).
 struct SkillChipsView: View {
     let names: [String]
 

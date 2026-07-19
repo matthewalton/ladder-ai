@@ -4,8 +4,8 @@ import Testing
 
 @testable import Ladder
 
-/// Persistence criteria: each test relaunches by closing one container and
-/// reopening a new one against the same store URL (SPEC.md [PROFILE-1] body).
+/// Each test simulates a relaunch by closing one container and reopening a
+/// new one against the same store URL.
 @MainActor
 struct ProfilePersistenceTests {
     @Test("[PROFILE-1] a role added to the Profile is still present after the app relaunches")
@@ -47,8 +47,7 @@ struct ProfilePersistenceTests {
             try store.addAchievement(to: role, text: "Second")
             try store.addAchievement(to: role, text: "Third")
 
-            // The SPEC.md [PROFILE-7] edge case: first moves to last, every
-            // intermediate index shifts by one.
+            // First moves to last; every intermediate index shifts by one.
             try store.moveAchievements(in: role, from: IndexSet(integer: 0), to: 3)
             #expect(role.orderedAchievements.map(\.text) == ["Second", "Third", "First"])
         }

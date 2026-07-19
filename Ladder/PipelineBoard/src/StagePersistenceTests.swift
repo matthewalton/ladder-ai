@@ -4,10 +4,6 @@ import Testing
 
 @testable import Ladder
 
-/// The slice's persistence criteria: on-disk stores closed and reopened at
-/// the same URL (the [PROFILE-5]/[CVEXPORT-11] pattern, shared helpers in
-/// ProfilePersistenceTests.swift). The tracer drives the real path — fixture
-/// tailor run → export → Stage — end to end.
 @MainActor
 struct StagePersistenceTests {
     @Test("[PIPEBOARD-1] a Stage added to an exported Application survives an app relaunch")
@@ -70,9 +66,9 @@ struct StagePersistenceTests {
 
     @Test("[PIPEBOARD-2] a Phase 1 Application survives the schema migration with its CV snapshot byte-identical")
     func phaseOneStoreSurvivesMigration() throws {
-        // The committed fixture store was written by the Phase 1 schema
-        // (slice AGENTS.md: never regenerate it). Copy it — sidecars too —
-        // before opening: migration rewrites the file.
+        // The committed fixture store was written by the Phase 1 schema —
+        // never regenerate it. Copy it (sidecars too) before opening:
+        // migration rewrites the file.
         let fixtureDirectory = try #require(
             Bundle.main.url(forResource: "Phase1Store", withExtension: nil, subdirectory: "Fixtures"),
             "Phase1Store is missing from the bundled Fixtures folder"

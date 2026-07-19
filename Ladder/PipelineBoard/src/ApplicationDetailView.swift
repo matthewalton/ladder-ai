@@ -1,14 +1,11 @@
 import SwiftData
 import SwiftUI
 
-/// The application detail (inspector content): source, applied date, notes,
-/// and the Stage chain with add/edit/delete ([PIPEBOARD-12], Stage CRUD).
 struct ApplicationDetailView: View {
     @Bindable var store: PipelineStore
     var application: Application
-    /// The calendar look-back action ([CALSYNC-29], [CALSYNC-30]), injected
-    /// as a closure so this slice never depends on a calendar-sync type;
-    /// nil (previews, no calendar wiring) renders no button.
+    /// Injected as a closure so this slice never depends on a calendar-sync
+    /// type; nil renders no button.
     var onLookBack: (() -> Void)?
 
     @State private var source: String

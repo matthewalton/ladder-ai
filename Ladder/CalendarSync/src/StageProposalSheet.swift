@@ -1,10 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// The confirmation sheet (slice CONTEXT.md: confirmation) — the one gesture
-/// that writes (ARCHITECTURE.md §6). Creates a pending Stage ([CALSYNC-8])
-/// or links the event onto a Stage the user already tracks ([CALSYNC-9]);
-/// several candidates get the picker ([CALSYNC-6]).
+/// The one gesture in the slice that writes.
 struct StageProposalSheet: View {
     enum Mode: Hashable {
         case create
@@ -17,13 +14,9 @@ struct StageProposalSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var candidateID: PersistentIdentifier?
     @State private var mode: Mode = .create
-    /// Starts from the kind guess (decisions/0005); nil means the user must
-    /// pick before confirming ([CALSYNC-16]).
     @State private var kind: StageKind?
     @State private var stageID: PersistentIdentifier?
-    /// The possible-interview fields ([CALSYNC-26]): company starts from the
-    /// guess ([CALSYNC-24], [CALSYNC-25]) and stays editable; the calendar
-    /// knows no role title, so that field starts blank.
+    /// The calendar knows no role title, so only company gets a pre-fill.
     @State private var company: String
     @State private var roleTitle: String = ""
 
@@ -77,9 +70,6 @@ struct StageProposalSheet: View {
 
             Form {
                 if proposal.isPossibleInterview {
-                    // The calendar-first confirm ([CALSYNC-26]): one gesture
-                    // creates the applied Application and its event-linked
-                    // Stage — nothing exists until Confirm.
                     TextField("Company", text: $company)
                     TextField("Role title", text: $roleTitle)
                     Picker("Kind", selection: $kind) {
@@ -170,8 +160,7 @@ struct StageProposalSheet: View {
             }
             dismiss()
         } catch {
-            // The store's save failed; leave the sheet open so nothing is
-            // silently lost.
+            // Save failed; leave the sheet open so nothing is silently lost.
         }
     }
 }

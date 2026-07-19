@@ -1,9 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// One status's lane (slice CONTEXT.md: column). Drops resolve through the
-/// store; an illegal drop is refused there and changes nothing
-/// ([PIPEBOARD-6]) — the card snaps back.
+/// An illegal drop is refused by the store's throw — the card snaps back.
 struct StatusColumnView: View {
     @Bindable var store: PipelineStore
     var status: ApplicationStatus

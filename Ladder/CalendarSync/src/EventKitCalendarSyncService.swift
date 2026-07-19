@@ -1,9 +1,8 @@
 import EventKit
 import Foundation
 
-/// The live seam (decisions/0001): read-only EventKit access, exercised by
-/// humans only — no test constructs an EKEventStore (AGENTS.md). Reposts
-/// `EKEventStoreChanged` as the seam's service-agnostic change signal.
+/// Read-only EventKit access, exercised by humans only — no test constructs
+/// an EKEventStore.
 final class EventKitCalendarSyncService: CalendarSyncService, @unchecked Sendable {
     // @unchecked: EKEventStore is documented thread-safe; the observer token
     // is written once in init and read once in deinit.
@@ -28,8 +27,7 @@ final class EventKitCalendarSyncService: CalendarSyncService, @unchecked Sendabl
         switch EKEventStore.authorizationStatus(for: .event) {
         case .fullAccess: .granted
         case .notDetermined: .notDetermined
-        // Write-only cannot read events, so it is denied for this slice's
-        // purposes (decisions/0001: reading needs the full-access tier).
+        // Write-only access cannot read events, so it counts as denied.
         default: .denied
         }
     }

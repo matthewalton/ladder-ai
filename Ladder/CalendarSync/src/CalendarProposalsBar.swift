@@ -1,11 +1,8 @@
 import SwiftData
 import SwiftUI
 
-/// The Applications section's calendar strip: proposals awaiting a ruling,
-/// the manual refresh action, and the quiet explainers — denied state
-/// ([CALSYNC-17]) and empty scan ([CALSYNC-19], [CALSYNC-20]). Before a
-/// scan has run it renders only its header — the board never depends on a
-/// scan having run.
+/// Before a scan has run this renders only its header — the board never
+/// depends on a scan having run.
 struct CalendarProposalsBar: View {
     @Bindable var store: CalendarSyncStore
     @State private var reviewing: StageProposal?
@@ -22,8 +19,6 @@ struct CalendarProposalsBar: View {
                     ProgressView()
                         .controlSize(.small)
                 }
-                // The browse fallback ([CALSYNC-27], [CALSYNC-28]) — only
-                // once a scan has fetched something to browse.
                 if !store.browseEvents.isEmpty {
                     Button {
                         isBrowsing = true
@@ -32,9 +27,8 @@ struct CalendarProposalsBar: View {
                     }
                     .buttonStyle(.borderless)
                 }
-                // The manual refresh action (decisions/0003) — also the
-                // explicit user gesture that first requests access
-                // (decisions/0001).
+                // Also the explicit gesture that first requests calendar
+                // access.
                 Button {
                     Task { await store.scan() }
                 } label: {
@@ -60,8 +54,6 @@ struct CalendarProposalsBar: View {
         }
         .sheet(isPresented: $isBrowsing) {
             BrowseEventsSheet(store: store) { event in
-                // Picking proposes on demand ([CALSYNC-28]); the normal
-                // confirmation flow takes it from here.
                 isBrowsing = false
                 reviewing = store.proposal(for: event)
             }
@@ -83,10 +75,6 @@ struct CalendarProposalsBar: View {
                         .foregroundStyle(Color.inkSoft)
                     }
                     Spacer()
-                    // A proposal with no candidates is the heuristic's work
-                    // ([CALSYNC-21], [CALSYNC-22]) — say so, since its
-                    // confirmation creates an Application rather than
-                    // attaching to one.
                     if proposal.isPossibleInterview {
                         Text("Possible interview")
                             .font(.caption)
@@ -111,9 +99,8 @@ struct CalendarProposalsBar: View {
         }
     }
 
-    /// The empty-scan explainers ([CALSYNC-19], [CALSYNC-20]), chosen live
-    /// by the tracked-Applications signal (decisions/0006). Only reachable
-    /// in `.ready` — idle, scanning, and denied render other branches.
+    /// Only reachable in `.ready` — idle, scanning, and denied render other
+    /// branches.
     private var emptyScanExplainer: some View {
         HStack(spacing: 8) {
             Image(systemName: "calendar")

@@ -1,8 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The board ([PIPEBOARD-4]): one column per status, all six always present,
-/// scrolling horizontally.
 struct PipelineBoardView: View {
     @Bindable var store: PipelineStore
     @Binding var selection: PersistentIdentifier?

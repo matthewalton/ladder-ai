@@ -1,8 +1,6 @@
 import Foundation
 
-/// Meeting-link detection ([CALSYNC-7]): a pure helper over the event's
-/// location and notes text, location first. Zoom, Meet, and Teams are the
-/// recognised set; anything else is not a meeting link.
+/// A closed set: anything not Zoom, Meet, or Teams is not a meeting link.
 enum MeetingLinkDetector {
     private static let recognisedHosts = [
         "zoom.us", "meet.google.com", "teams.microsoft.com", "teams.live.com",

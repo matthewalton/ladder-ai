@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// The app's Settings scene — born in this slice. One field: the Anthropic
-/// API key, stored only in the Keychain ([TAILOR-16], CLAUDE.md). The key is
-/// never displayed back and never logged.
+/// The stored key lives only in the Keychain and is never displayed back or
+/// logged.
 struct SettingsView: View {
     private let keyStore: any APIKeyStore
 

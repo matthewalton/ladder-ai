@@ -1,14 +1,12 @@
 import Foundation
 import SwiftData
 
-/// MVVM-lite store for the export (slice CONTEXT.md): render the CV, persist
-/// the Application, and hand back the one render for both destinations —
-/// snapshot and save panel (decisions/0003).
+/// One render serves both destinations — snapshot and save panel.
 @MainActor
 @Observable
 final class CVExportStore {
-    /// One export's outputs. `pdfData` is the same bytes as
-    /// `application.cvSnapshot` — one render, never a second ([CVEXPORT-12]).
+    /// `pdfData` is the same bytes as `application.cvSnapshot` — one render,
+    /// never a second.
     struct Export {
         let application: Application
         let pdfData: Data
@@ -21,10 +19,8 @@ final class CVExportStore {
         context = ModelContext(container)
     }
 
-    /// The export ([CVEXPORT-1]): reviewed outcome + job details + Profile →
-    /// rendered PDF → persisted Application. The Profile is read, never
-    /// written ([CVEXPORT-14]); each call creates a fresh Application
-    /// ([CVEXPORT-13]).
+    /// The Profile is read, never written; each call creates a fresh
+    /// Application.
     @discardableResult
     func export(profile: Profile, review: TailorReview, details: JobDetails) throws -> Export {
         let document = CVDocument(profile: profile, review: review)
@@ -48,9 +44,8 @@ final class CVExportStore {
     }
 }
 
-/// The fit report's content (slice CONTEXT.md): strengths derived from the
-/// selection step, gaps and rationale verbatim from the reviewed outcome —
-/// nothing re-derived from the JD ([CVEXPORT-15]–[CVEXPORT-17]).
+/// Strengths derived from the selection step, gaps and rationale verbatim
+/// from the reviewed outcome — nothing re-derived from the JD.
 struct FitReport: Equatable {
     /// One strength per selected achievement, in reviewed text.
     var strengths: [String]

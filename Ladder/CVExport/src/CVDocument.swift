@@ -1,25 +1,22 @@
 import Foundation
 
-/// The rendered CV's content (slice CONTEXT.md, decisions/0002): full role
-/// history, only selected achievements, reviewed text. A plain value — built
-/// once from the Profile and the review, then handed to the renderer.
+/// The rendered CV's content: full role history, only selected achievements,
+/// reviewed text. Built once from the Profile and the review, then handed to
+/// the renderer.
 struct CVDocument: Equatable {
     struct RoleSection: Equatable {
         var title: String
         var company: String
         var start: Date
         var end: Date?  // nil = current role, rendered as "Present"
-        /// The selected achievements under this role, in their persisted
-        /// order, each in reviewed text ([CVEXPORT-4]). Empty for a role
-        /// with no selected achievements — the role still appears
-        /// ([CVEXPORT-3]).
+        /// Empty for a role with no selected achievements — the role still
+        /// appears.
         var bullets: [String]
     }
 
     var name: String
     var headline: String
-    /// Non-empty contact fields only — empty ones are omitted, no
-    /// placeholders ([CVEXPORT-2]).
+    /// Non-empty contact fields only — no placeholders.
     var contactLines: [String]
     /// Newest-first, the same ordering the tailor payload uses.
     var roles: [RoleSection]
@@ -36,10 +33,9 @@ struct CVDocument: Equatable {
             profile.contact.link,
         ].filter { !$0.isEmpty }
 
-        // The reviewed text per selected achievement: the accepted
-        // rephrasing, or the canonical text where the rephrasing was
-        // rejected ([TAILOR-13], [TAILOR-14]). The review holds the
-        // Achievement models, so identity survives to the role grouping.
+        // Reviewed text per selected achievement: the accepted rephrasing, or
+        // the canonical text where it was rejected. Keyed by object identity,
+        // which survives to the role grouping below.
         var reviewedText: [ObjectIdentifier: String] = [:]
         for item in review.items {
             reviewedText[ObjectIdentifier(item.achievement)] =
@@ -64,8 +60,8 @@ struct CVDocument: Equatable {
         skills = profile.skills.map(\.name).sorted()
     }
 
-    /// Month-resolution dates ([CVEXPORT-3] body), matching the tailor
-    /// payload's resolution; UTC like the payload so tests are stable.
+    /// Month resolution, matching the tailor payload; UTC so tests are
+    /// stable.
     static func month(from date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")

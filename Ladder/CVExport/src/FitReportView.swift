@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// The fit report (slice CONTEXT.md): how the Profile met this JD —
-/// strength chips, gap chips, and the rationale as New York prose
-/// (DESIGN.md §3: narrative text is the story voice).
 struct FitReportView: View {
     var report: FitReport
     var onDone: () -> Void

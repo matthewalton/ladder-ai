@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Sheet for adding a role. Used by the add-first-role empty state and the
-/// editor sidebar.
 struct RoleFormView: View {
     @Bindable var store: ProfileStore
     @Environment(\.dismiss) private var dismiss

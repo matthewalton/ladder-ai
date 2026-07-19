@@ -4,10 +4,8 @@ import Testing
 
 @testable import Ladder
 
-/// The tailor flow's criteria, against an in-memory Profile store, the
-/// fixture intelligence service, and the in-memory key store. The canned
-/// tailor result loads from the app bundle's Fixtures folder (tests run in
-/// the app host). No network anywhere (slice AGENTS.md).
+/// The canned tailor result loads from the app bundle's Fixtures folder
+/// (tests run in the app host). No network anywhere.
 @MainActor
 struct TailorFlowTests {
     /// One role, three achievements — payload ids a1, a2, a3 in sort order.
@@ -70,7 +68,7 @@ struct TailorFlowTests {
         let service = FixtureIntelligenceService.tailorFixture()
         let store = makeTailorStore(profileStore: try makeProfileStore(), service: service)
 
-        // Whitespace-only counts as empty (SPEC.md [TAILOR-2] body).
+        // Whitespace-only counts as empty.
         var details = jobDetails
         details.jobDescription = "  \n\t "
         await store.startRun(details)
@@ -130,8 +128,6 @@ struct TailorFlowTests {
         let requests = await service.recordedRequests
         #expect(requests.count == 1)
         #expect(requests.first?.prompt == promptOnDisk, "the prompt is the file's content, never an inline string")
-        // The payload carries the Profile's achievements and the pasted job
-        // description (SPEC.md [TAILOR-5] body).
         let payload = try #require(requests.first?.payload)
         #expect(payload.contains("Cut CI build times across every product target"))
         #expect(payload.contains("Own platform reliability. Kubernetes, CI at scale, incident response."))
@@ -166,10 +162,8 @@ struct TailorFlowTests {
 
     @Test("[TAILOR-8] a tailor result selecting an achievement not on the Profile fails validation")
     func unknownAchievementFailsValidation() async throws {
-        // "a9" matches nothing in the payload's id map — referential failure
-        // feeds the repair path exactly like a schema mismatch; the fixture
-        // service returns the same invalid result to the repair request too,
-        // so the run ends failed.
+        // "a9" matches nothing in the payload's id map; the fixture returns
+        // the same invalid result to the repair request, so the run ends failed.
         let unknownSelection = Data("""
         {
           "selections": [{"achievementID": "a9", "rephrasing": "Invented history"}],
@@ -204,7 +198,6 @@ struct TailorFlowTests {
 
         await store.startRun(jobDetails)
 
-        // A valid repair response produces the tailor result as normal.
         #expect(store.phase == .review)
         #expect(store.review != nil)
 
@@ -212,8 +205,7 @@ struct TailorFlowTests {
         #expect(requests.count == 2, "an invalid-then-valid sequence records two requests, never three")
         let repair = try #require(requests.last)
         #expect(repair.prompt == requests.first?.prompt, "the repair keeps the versioned prompt")
-        // The repair carries the original request content, the invalid
-        // response, and the validation failure (SPEC.md [TAILOR-9] body).
+        // The original request content, the invalid response, and the failure.
         #expect(repair.payload.contains("failed validation"))
         #expect(repair.payload.contains(#""selections": "not an array""#))
         #expect(repair.payload.contains("Cut CI build times across every product target"))
@@ -388,7 +380,6 @@ struct TailorFlowTests {
     @Test("[TAILOR-18] a tailor result wrapped in a markdown code fence produces a review")
     func fencedResultProducesReview() async throws {
         let profileStore = try makeProfileStore()
-        // The canned result, exactly as a live model fences it.
         let bareJSON = try Data(contentsOf: #require(
             Bundle.main.url(forResource: "tailor-result", withExtension: "json", subdirectory: "Fixtures"),
             "tailor-result.json missing from the bundled Fixtures folder"
@@ -405,7 +396,7 @@ struct TailorFlowTests {
             "Cut CI build times across every product target",
             "Led incident response for the payments outage",
         ], "the fenced result reads exactly as the bare one")
-        // The fence never costs the single repair request (decisions/0004).
+        // The fence never costs the single repair request.
         #expect(await service.recordedRequests.count == 1)
     }
 }

@@ -5,9 +5,6 @@ import Testing
 
 @testable import Ladder
 
-/// The board's behaviour criteria, unit-tested against `PipelineStore` on an
-/// in-memory container (slice AGENTS.md): grouping, the transition map,
-/// stamping, auto-advance, cascade, and the card derivations.
 @MainActor
 struct PipelineFlowTests {
     private func makeStore() throws -> PipelineStore {
@@ -93,8 +90,7 @@ struct PipelineFlowTests {
         let fresh = ModelContext(store.container)
         #expect(try fresh.fetch(FetchDescriptor<Application>()).isEmpty)
 
-        // No dedup ([CVEXPORT-13] stance): the same company and role twice
-        // is two Applications.
+        // No dedup: the same company and role twice is two Applications.
         try store.createApplication(
             company: "Summit Labs", roleTitle: "Engineer", source: nil, notes: "", appliedAt: .now)
         try store.createApplication(
@@ -104,10 +100,8 @@ struct PipelineFlowTests {
 
     @Test("[PIPEBOARD-20] the add-application form opens from the empty state and the shell toolbar")
     func addFormRendersFromBothHosts() throws {
-        // The [PIPEBOARD-14] pattern: the form and both hosting roots render
-        // — the empty state (no applications, its own action) and the
-        // populated shell (the + toolbar button). Chrome and sheet
-        // presentation are visual-verify.
+        // Render-smoke only: chrome and sheet presentation are on the
+        // visual-verify list.
         let emptyStore = try makeStore()
         try emptyStore.load()
         let emptyRoot = ImageRenderer(
@@ -281,7 +275,6 @@ struct PipelineFlowTests {
         try store.addStage(to: application, kind: .technical)
         #expect(PipelineStore.nextWaypoint(for: application) == .screen)
 
-        // The screen resolving hands the waypoint to the next pending Stage.
         screen.outcome = .passed
         #expect(PipelineStore.nextWaypoint(for: application) == .technical)
 
@@ -321,8 +314,7 @@ struct PipelineFlowTests {
         let pipelineStore = PipelineStore(container: profileStore.container)
         try pipelineStore.load()
 
-        // Both section roots render — the same views the shell's TabView
-        // switches between; native tab feel is on the visual-verify list.
+        // Render-smoke only: native tab feel is on the visual-verify list.
         let profileRoot = ImageRenderer(
             content: ProfileRootView(store: profileStore).frame(width: 480, height: 320))
         #expect(profileRoot.nsImage != nil, "the Profile section root renders")

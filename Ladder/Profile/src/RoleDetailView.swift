@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Content pane: the selected role's achievements, in their persisted drag
-/// order. Reorder and inspector arrive with their criteria.
 struct RoleDetailView: View {
     @Bindable var store: ProfileStore
     let role: Role

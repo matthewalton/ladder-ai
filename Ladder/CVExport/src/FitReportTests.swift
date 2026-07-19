@@ -3,8 +3,6 @@ import Testing
 
 @testable import Ladder
 
-/// The fit report's criteria, at the value level: everything arrives
-/// verbatim from the reviewed outcome — nothing re-derived from the JD.
 @MainActor
 struct FitReportTests {
     private var outcome: ReviewedOutcome {
@@ -51,8 +49,8 @@ struct FitReportTests {
     func fitReportListsEachSelectionAsAStrength() {
         let report = FitReport(outcome: outcome)
 
-        // One strength per selected achievement, in reviewed text — the
-        // accepted rephrasing for the first, canonical for the second.
+        // Reviewed text: the accepted rephrasing for the first, canonical
+        // for the second.
         #expect(report.strengths == [
             "Drove CI build times down across every product target",
             "Led incident response for the payments outage",

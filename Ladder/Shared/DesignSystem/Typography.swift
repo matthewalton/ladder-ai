@@ -1,20 +1,15 @@
 import SwiftUI
 
-// DESIGN.md §3 — SF Pro is the tool, New York is the story.
-// UI chrome uses system text styles directly (.body, .headline, …);
-// narrative text (journey, debriefs, fit-report prose, empty-state
-// encouragement) uses `trailNarrative`. No `.custom` fonts, no hardcoded
-// sizes outside the Summit View.
+// No `.custom` fonts, no hardcoded sizes outside the Summit View.
 extension Font {
-    /// New York serif for text that narrates the user's journey.
+    /// Serif for narrative text; UI chrome uses system text styles directly.
     static func trailNarrative(_ style: Font.TextStyle = .body) -> Font {
         .system(style, design: .serif)
     }
 }
 
 extension View {
-    /// Elapsed times, dates, timeline metadata: monospaced digits so
-    /// columns of timestamps align (DESIGN.md §3).
+    /// Monospaced digits so columns of timestamps align.
     func trailMetadata() -> some View {
         font(.caption)
             .monospacedDigit()

@@ -42,10 +42,6 @@ extension StageOutcome {
     }
 }
 
-/// One application on the board (DESIGN.md §6): company + role in SF Pro,
-/// next waypoint chip, quiet elapsed-time footer. No progress bars, no
-/// percentages. A closed trail (rejected/withdrawn) desaturates to
-/// mist/inkSoft.
 struct ApplicationCardView: View {
     var application: Application
 

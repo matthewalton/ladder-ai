@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// The editor: sidebar (roles) / content (selected role's achievements) /
-/// inspector (selected achievement). Standard three-pane per DESIGN.md §4.
 struct ProfileEditorView: View {
     @Bindable var store: ProfileStore
 

@@ -4,9 +4,8 @@ import Testing
 
 @testable import Ladder
 
-/// The import flow's criteria, against an in-memory Profile store and the
-/// fixture intelligence service. Fixture CVs and the canned proposal load
-/// from the app bundle's Fixtures folder (tests run in the app host).
+/// Fixture CVs and the canned proposal load from the app bundle's Fixtures
+/// folder (tests run in the app host).
 @MainActor
 struct CVImportFlowTests {
     private func makeProfileStore(createProfile: Bool = true) throws -> ProfileStore {
@@ -25,9 +24,8 @@ struct CVImportFlowTests {
         )
     }
 
-    /// Tests inject the fixture service through the factory and a fake key
-    /// store holding a key, so the live-wiring guards stay out of the way of
-    /// the criteria that aren't about them (slice AGENTS.md).
+    /// A fake key store holding a key keeps the live-wiring guards out of
+    /// the way of criteria that aren't about them.
     private func makeImportStore(
         profileStore: ProfileStore,
         service: FixtureIntelligenceService,
@@ -86,8 +84,7 @@ struct CVImportFlowTests {
 
         #expect(store.phase == .failed(.profileRequired))
         #expect(store.review == nil)
-        // Refused at start, before any extraction or service call
-        // (SPEC.md [CVIMPORT-3] body).
+        // Refused before any extraction or service call.
         #expect(await service.recordedRequests.isEmpty)
     }
 
@@ -158,7 +155,7 @@ struct CVImportFlowTests {
 
         // Excluding a role excludes its achievements with it; excluding one
         // achievement keeps the role's others; excluding a skill keeps the
-        // achievement (SPEC.md [CVIMPORT-6] body).
+        // achievement.
         try #require(review.roles.count == 2)
         review.roles[1].included = false
         review.roles[0].achievements[1].included = false
@@ -217,8 +214,7 @@ struct CVImportFlowTests {
         )
         let existingTag = try profileStore.tag(existingAchievement, skillNamed: "Swift")
 
-        // The SPEC.md [CVIMPORT-8] body's worked case: the proposal names
-        // " swift " where the Profile already has "Swift".
+        // The proposal names " swift " where the Profile already has "Swift".
         let proposalJSON = Data("""
         {
           "roles": [
@@ -270,7 +266,7 @@ struct CVImportFlowTests {
         #expect(review.notImportedSections.map(\.name) == ["Education", "Projects"])
         #expect(review.notImportedSections.first?.content.contains("University of Leeds") == true)
 
-        // Never silently dropped, never merged (decisions/0002).
+        // Not-imported sections never merge.
         store.confirmReview()
         let profile = try #require(profileStore.profile)
         #expect(Set(profile.roles.map(\.company)) == ["Acme", "Initech"])
@@ -356,8 +352,7 @@ struct CVImportFlowTests {
 
         #expect(store.phase == .failed(.apiKeyRequired))
         #expect(store.review == nil)
-        // Refused before extraction and before any service call
-        // (SPEC.md [CVIMPORT-14] body).
+        // Refused before any extraction or service call.
         #expect(await service.recordedRequests.isEmpty)
     }
 
@@ -392,8 +387,6 @@ struct CVImportFlowTests {
 
         await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
 
-        // Transport failure is not validation failure (decisions/0004); the
-        // detail names the HTTP status so the retry is informed.
         #expect(store.phase == .failed(.requestFailed(detail: "HTTP 429")))
         #expect(store.review == nil, "no review is offered")
         #expect(profileStore.profile?.roles.isEmpty == true, "the Profile is unchanged")
@@ -403,7 +396,7 @@ struct CVImportFlowTests {
     func proposalValidationFailureCarriesTheReason() async throws {
         let profileStore = try makeProfileStore()
 
-        // The SPEC.md [CVIMPORT-17] body's cases: a missing required part…
+        // A missing required part…
         let missingRoles = makeImportStore(
             profileStore: profileStore,
             service: FixtureIntelligenceService(returning: Data(#"{"notImportedSections": []}"#.utf8))
@@ -460,8 +453,6 @@ struct CVImportFlowTests {
 
         await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
 
-        // A length problem is its own failure — not transport, not invalid
-        // JSON (decisions/0006).
         #expect(store.phase == .failed(.responseTruncated))
         #expect(store.review == nil, "no review is offered")
         #expect(profileStore.profile?.roles.isEmpty == true, "the Profile is unchanged")
@@ -469,8 +460,7 @@ struct CVImportFlowTests {
 
     @Test("[CVIMPORT-19] the service throws truncated on a max_tokens stop, before returning any text")
     func serviceThrowsTruncatedOnMaxTokensStop() throws {
-        // The response-parsing seam, network-free like the request seam
-        // ([TAILOR-17]): truncated JSON must never reach proposal validation.
+        // Truncated JSON must never reach proposal validation.
         let truncated = Data(
             #"{"content":[{"type":"text","text":"{\"roles\":[{\"compa"}],"stop_reason":"max_tokens"}"#.utf8
         )
@@ -485,7 +475,7 @@ struct CVImportFlowTests {
     }
 }
 
-/// Fails every request the way the live service does ([CVIMPORT-16]).
+/// Fails every request the way the live service does.
 private struct ThrowingIntelligenceService: IntelligenceService {
     var error: AnthropicIntelligenceService.LiveServiceError
 
@@ -494,14 +484,13 @@ private struct ThrowingIntelligenceService: IntelligenceService {
     }
 }
 
-/// Captures the key handed to the `makeIntelligence` factory ([CVIMPORT-15]);
-/// the factory runs on the main actor inside the store.
+/// The `makeIntelligence` factory runs on the main actor inside the store.
 @MainActor
 private final class KeyBox {
     var value: String?
 }
 
-/// Proposal dates are month-resolution UTC (ImportProposal.parseMonth).
+/// Proposal dates are month-resolution UTC.
 @MainActor
 private func monthDate(_ year: Int, _ month: Int) -> Date {
     var components = DateComponents()

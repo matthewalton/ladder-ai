@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// Renders a `CVDocument` to PDF bytes with `ImageRenderer` (ARCHITECTURE.md
-/// tech stack; Typst is a later, separately-decided upgrade). A4 pages
-/// ([CVEXPORT-7]), real extractable text — never a rasterised image.
+/// Renders a `CVDocument` to A4 PDF bytes — real extractable text, never a
+/// rasterised image.
 @MainActor
 enum CVRenderer {
     /// A4 in PostScript points.
@@ -40,8 +39,8 @@ enum CVRenderer {
     }
 }
 
-/// The CV's single-column layout (decisions/0002). System text styles only —
-/// UI chrome rules apply to the print document too (CLAUDE.md).
+/// System text styles only — the UI chrome rules apply to the print document
+/// too.
 struct CVPageView: View {
     var document: CVDocument
 
@@ -49,7 +48,6 @@ struct CVPageView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // Identity header ([CVEXPORT-2])
             Text(document.name)
                 .font(.title)
                 .bold()
@@ -63,8 +61,6 @@ struct CVPageView: View {
 
             Divider()
 
-            // Every role, newest-first ([CVEXPORT-3]); selected achievements
-            // only, in reviewed text ([CVEXPORT-4], [CVEXPORT-5]).
             ForEach(Array(document.roles.enumerated()), id: \.offset) { _, role in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline) {
@@ -82,7 +78,6 @@ struct CVPageView: View {
                 }
             }
 
-            // Skills section ([CVEXPORT-6])
             if !document.skills.isEmpty {
                 Divider()
                 Text("Skills")

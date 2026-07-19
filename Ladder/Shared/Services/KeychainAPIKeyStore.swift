@@ -1,9 +1,8 @@
 import Foundation
 import Security
 
-/// The real key store: a Keychain generic-password item — never
-/// UserDefaults, never on disk, never logged (SPEC.md [TAILOR-16],
-/// CLAUDE.md).
+/// A Keychain generic-password item — never UserDefaults, never on disk,
+/// never logged.
 struct KeychainAPIKeyStore: APIKeyStore {
     struct KeychainFailure: Error, Equatable {
         var status: OSStatus

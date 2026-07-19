@@ -1,11 +1,8 @@
 import Foundation
 
 /// Live models sometimes wrap their JSON in a markdown code fence despite
-/// prompts forbidding it; the fence is presentation, not content (CVImport
-/// SPEC.md [CVIMPORT-18], Tailor SPEC.md [TAILOR-18]).
+/// prompts forbidding it; the fence is presentation, not content.
 enum FencedJSON {
-    /// The data with a whole-response ``` fence removed. Anything that is not
-    /// a fence around the entire response is returned untouched.
     static func stripped(from data: Data) -> Data {
         guard let raw = String(data: data, encoding: .utf8) else { return data }
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)

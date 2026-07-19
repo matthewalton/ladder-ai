@@ -5,10 +5,8 @@ import Testing
 
 @testable import Ladder
 
-/// The export flow's criteria: a tailor run driven to review with the
-/// fixture intelligence service, then exported. Render content is asserted
-/// by PDFKit text extraction (slice AGENTS.md); no test touches the network
-/// or the real save panel.
+/// A tailor run driven to review with the fixture intelligence service, then
+/// exported. No test touches the network or the real save panel.
 @MainActor
 struct CVExportFlowTests {
     /// One role, three achievements — payload ids a1, a2, a3 in sort order.
@@ -127,8 +125,8 @@ struct CVExportFlowTests {
             profile: try #require(profileStore.profile), review: review, details: jobDetails
         )
 
-        // The seam the save panel consumes (decisions/0003): the FileDocument
-        // wraps the export's bytes; tests never drive the real dialog.
+        // The FileDocument wraps the export's bytes; tests never drive the
+        // real save dialog.
         let document = PDFFileDocument(data: export.pdfData)
         let written = try #require(document.fileWrapper().regularFileContents)
         #expect(written == export.application.cvSnapshot, "one render, two destinations — never a second render")
@@ -141,7 +139,7 @@ struct CVExportFlowTests {
         let exportStore = CVExportStore(container: profileStore.container)
         let profile = try #require(profileStore.profile)
 
-        // Same job details both times — no dedup, no refusal (SPEC.md body).
+        // Same job details both times — no dedup, no refusal.
         try exportStore.export(profile: profile, review: review, details: jobDetails)
         try exportStore.export(profile: profile, review: review, details: jobDetails)
 
@@ -153,8 +151,7 @@ struct CVExportFlowTests {
 
     @Test("[CVEXPORT-14] an export leaves the persisted Profile unchanged")
     func exportLeavesPersistedProfileUnchanged() async throws {
-        // On-disk store, reopened after the flow — extending [TAILOR-15]
-        // through the export (SPEC.md body).
+        // On-disk store, reopened after the flow.
         let url = temporaryStoreURL()
         defer { removeStore(at: url) }
 

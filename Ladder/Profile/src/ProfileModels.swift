@@ -1,11 +1,9 @@
 import Foundation
 import SwiftData
 
-// Roadmap-minimal schema (decisions/0003): Profile, Role, Achievement,
-// SkillTag, ContactInfo. Education/Project arrive with the slice that needs
-// them. ARCHITECTURE.md §3 is the target shape.
+// Roadmap-minimal schema: Education/Project arrive with the slice that
+// needs them.
 
-/// The Profile's identity-header value type (slice CONTEXT.md: contact info).
 struct ContactInfo: Codable, Hashable {
     var email: String = ""
     var phone: String = ""
@@ -55,9 +53,8 @@ final class Role {
         self.achievements = []
     }
 
-    /// Achievements in their persisted drag order. SwiftData to-many
-    /// relationships are unordered; `sortIndex` carries the order
-    /// (SPEC.md [PROFILE-7] body).
+    /// SwiftData to-many relationships are unordered; `sortIndex` carries
+    /// the drag order.
     var orderedAchievements: [Achievement] {
         achievements.sorted { $0.sortIndex < $1.sortIndex }
     }
@@ -91,8 +88,8 @@ final class Achievement {
     }
 }
 
-/// One named skill shared across the Profile — achievements reference
-/// SkillTags, they never own private copies (slice CONTEXT.md).
+/// Shared across the Profile — achievements reference SkillTags, they never
+/// own private copies.
 @Model
 final class SkillTag {
     var name: String

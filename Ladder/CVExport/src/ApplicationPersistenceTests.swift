@@ -4,8 +4,6 @@ import Testing
 
 @testable import Ladder
 
-/// The Application model's persistence criterion — the round-trip test every
-/// SwiftData model change owes (CLAUDE.md), mirroring [PROFILE-5].
 @MainActor
 struct ApplicationPersistenceTests {
     @Test("[CVEXPORT-11] a fully-populated Application round-trips through a store reopen")

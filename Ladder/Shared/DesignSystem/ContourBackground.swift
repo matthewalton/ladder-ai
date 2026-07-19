@@ -1,8 +1,7 @@
 import SwiftUI
 
-// DESIGN.md §4 — faint topographic contour lines, used in exactly two places:
-// the journey celebration view and the empty states. Texture as reward, not
-// wallpaper.
+// Faint topographic contour lines, used only in the journey celebration view
+// and the empty states — texture as reward, not wallpaper.
 struct ContourBackground: View {
     var opacity: Double = 0.4
 

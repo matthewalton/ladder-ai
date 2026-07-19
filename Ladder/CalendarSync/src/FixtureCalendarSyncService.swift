@@ -1,8 +1,5 @@
 import Foundation
 
-/// In-code canned events for tests and previews (decisions/0001) — the
-/// `FixtureIntelligenceService` pattern: no EventKit, no permission, and it
-/// records every interval it is asked for ([CALSYNC-13]).
 actor FixtureCalendarSyncService: CalendarSyncService {
     private var state: CalendarAccessState
     private var fixtureEvents: [CalendarEvent]

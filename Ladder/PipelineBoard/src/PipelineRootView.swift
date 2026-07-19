@@ -1,16 +1,11 @@
 import SwiftData
 import SwiftUI
 
-/// The Applications section's root: empty state until the first Application
-/// exists, then the DESIGN.md §4 three-pane — sidebar list, board, inspector
-/// detail for the selection.
 struct PipelineRootView: View {
     @Bindable var store: PipelineStore
     /// Passed through to the detail's look-back button; nil renders none.
     var onLookBack: ((Application) -> Void)?
 
-    /// The content toggle (Timeline CONTEXT.md): which view fills the
-    /// content pane — DESIGN.md §4 "content (Stage timeline or board)".
     enum ContentPane: String, CaseIterable {
         case board = "Board"
         case timeline = "Timeline"
@@ -33,8 +28,7 @@ struct PipelineRootView: View {
                 shell
             }
         }
-        // Both affordances present the same sheet ([PIPEBOARD-20],
-        // decisions/0004).
+        // Attached here so the toolbar and empty-state affordances share it.
         .sheet(isPresented: $isAddingApplication) {
             AddApplicationSheet(store: store)
         }
@@ -55,8 +49,6 @@ struct PipelineRootView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220)
             } detail: {
                 Group {
-                    // [TIMELINE-12]: the timeline needs a selection; losing
-                    // it falls back to the board.
                     if contentPane == .timeline, let application = selectedApplication {
                         ApplicationTimelineView(application: application)
                     } else {
@@ -115,8 +107,7 @@ struct PipelineRootView: View {
             Text("Tailor a CV from your Profile, or add one by hand.")
                 .font(.callout)
                 .foregroundStyle(Color.inkSoft)
-            // The empty state's own affordance ([PIPEBOARD-20]) — the shell
-            // toolbar does not render here.
+            // The shell toolbar (and its add button) does not render here.
             Button("Add application") {
                 isAddingApplication = true
             }

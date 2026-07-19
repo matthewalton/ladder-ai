@@ -11,8 +11,7 @@ struct LadderApp: App {
         do {
             store = try ProfileStore(container: ProfileStore.container())
             try store.load()
-            // Same container, own context (ProfileStore's exposed-container
-            // seam); load() runs the applied-date backfill ([PIPEBOARD-8]).
+            // load() runs the applied-date backfill.
             pipelineStore = PipelineStore(container: store.container)
             try pipelineStore.load()
         } catch {
@@ -21,9 +20,7 @@ struct LadderApp: App {
         let service = EventKitCalendarSyncService()
         calendarStore = CalendarSyncStore(pipeline: pipelineStore, service: service)
         calendarStore.startObservingChanges()
-        // Launch never prompts (CalendarSync decisions/0001): scan only when
-        // access is already granted; the bar's check action is the explicit
-        // gesture that first requests it.
+        // Launch never prompts: scan only when access is already granted.
         let calendarStore = calendarStore
         Task { @MainActor in
             if await service.accessState() == .granted {

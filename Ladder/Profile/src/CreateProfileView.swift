@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The create-profile empty state — the only place a Profile can be created
-/// (SPEC.md [PROFILE-2], [PROFILE-3]; decisions/0002).
+/// The only place a Profile can be created.
 struct CreateProfileView: View {
     @Bindable var store: ProfileStore
 

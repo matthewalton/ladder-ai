@@ -1,16 +1,14 @@
 import Foundation
 
-/// MVVM-lite store for the tailor flow: job details → payload → intelligence
-/// service → validated tailor result → review (SPEC.md). One run at a time;
-/// everything is transient (decisions/0001).
+/// One tailor run at a time; nothing a run produces is persisted.
 @MainActor
 @Observable
 final class TailorStore {
     enum Phase: Equatable {
         case idle
-        /// The tailor run (and any repair request) is in flight.
+        /// The repair request runs in this phase too — it never gets its own.
         case running
-        /// A tailor result is held for review; `review` is non-nil.
+        /// `review` is non-nil.
         case review
         case failed(TailorError)
     }
@@ -23,9 +21,8 @@ final class TailorStore {
     private let bundle: Bundle
     private let makeIntelligence: (String) -> any IntelligenceService
 
-    /// `makeIntelligence` receives the stored API key and returns the service
-    /// for this run — the live Anthropic service in production, a fixture in
-    /// tests and previews (decisions/0002).
+    /// `makeIntelligence` is the seam tests and previews use to substitute a
+    /// fixture service.
     init(
         profileStore: ProfileStore,
         keyStore: any APIKeyStore,
@@ -41,8 +38,6 @@ final class TailorStore {
     }
 
     func startRun(_ details: JobDetails) async {
-        // Each refusal fires at start, before any service call
-        // ([TAILOR-2]–[TAILOR-4]).
         guard !details.jobDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             phase = .failed(.jobDescriptionRequired)
             return
@@ -70,10 +65,8 @@ final class TailorStore {
             do {
                 result = try TailorResult(json: response, validAchievementIDs: validIDs)
             } catch let failure as TailorValidationFailure {
-                // Exactly one repair request (decisions/0004): the original
-                // request content, the invalid response, and the failure,
-                // for the service to fix ([TAILOR-9]). A repair response
-                // failing validation fails the run ([TAILOR-10]).
+                // Exactly one repair attempt; a repair response failing
+                // validation fails the run.
                 let repair = IntelligenceRequest(
                     prompt: prompt,
                     payload: Self.repairPayload(
@@ -111,7 +104,6 @@ final class TailorStore {
         """
     }
 
-    /// Back to idle — after a failure or a finished review.
     func reset() {
         phase = .idle
         review = nil

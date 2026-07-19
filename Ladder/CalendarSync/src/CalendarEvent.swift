@@ -1,8 +1,7 @@
 import Foundation
 
-/// A calendar event as it crosses the `CalendarSyncService` seam — a plain
-/// value, never an `EKEvent` (decisions/0001), so fixtures and tests build
-/// them in code with no calendar permission.
+/// A plain value, never an `EKEvent`, so fixtures and tests build events in
+/// code with no calendar permission.
 struct CalendarEvent: Equatable, Sendable, Identifiable {
     var identifier: String
     var title: String

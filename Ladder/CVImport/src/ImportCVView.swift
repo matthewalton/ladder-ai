@@ -1,16 +1,13 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The import flow's sheet: drop or pick a CV, watch it extract, review every
-/// proposed item, confirm the merge. One view per store phase.
 struct ImportCVView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var store: ImportStore
     @State private var isPickingFile = false
 
-    /// Live by default (decisions/0005): the Keychain key store and the
-    /// shared Anthropic service. Tests and previews inject fakes — production
-    /// never falls back to fixtures (Tailor decisions/0002).
+    /// Live by default; tests and previews inject fakes — production never
+    /// falls back to fixtures.
     init(
         profileStore: ProfileStore,
         keyStore: any APIKeyStore = KeychainAPIKeyStore(),
@@ -180,9 +177,6 @@ struct ImportCVView: View {
     }
 }
 
-/// The review (slice CONTEXT.md): every proposed item, each with an include
-/// toggle, plus the CV sections that won't be imported — nothing is silently
-/// dropped.
 struct ImportReviewView: View {
     @Bindable var review: ImportReview
     var onCancel: () -> Void
@@ -282,8 +276,7 @@ private struct ReviewedAchievementRow: View {
     }
 }
 
-/// A proposed skill as a toggleable chip: filled while included, hollow once
-/// excluded. The chip is the rendering; the SkillTag arrives at merge time.
+/// Rendering only — the SkillTag is created at merge time.
 private struct ReviewedSkillChip: View {
     @Bindable var skill: ReviewedSkill
 

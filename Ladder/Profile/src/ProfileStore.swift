@@ -2,27 +2,24 @@ import Foundation
 import SwiftData
 
 enum ProfileStoreError: Error, Equatable {
-    /// The single-profile invariant: exactly one Profile may exist
-    /// (SPEC.md [PROFILE-4], decisions/0002).
+    /// Exactly one Profile may exist.
     case profileAlreadyExists
-    /// Mutations that need a Profile were called before one was created.
     case noProfile
 }
 
-/// Which screen the Profile slice presents (SPEC.md [PROFILE-2], [PROFILE-10]).
 enum ProfilePresentation: Equatable {
     case createProfile
     case addFirstRole
     case editor
 }
 
-/// MVVM-lite store for the Profile slice. All mutations save immediately —
-/// persistence is part of the slice's promise, not a detail.
+/// All mutations save immediately — persistence is part of the slice's
+/// promise, not a detail.
 @MainActor
 @Observable
 final class ProfileStore {
     /// Exposed so sibling slices can open their own contexts on the same
-    /// store (cv-export inserts Applications; CVExport decisions/0001).
+    /// store.
     let container: ModelContainer
     private let context: ModelContext
     private(set) var profile: Profile?
@@ -107,7 +104,6 @@ final class ProfileStore {
         return achievement
     }
 
-    /// Reassigns `sortIndex` to match the dragged order (SPEC.md [PROFILE-7]).
     func moveAchievements(in role: Role, from source: IndexSet, to destination: Int) throws {
         let profile = try requireProfile()
         var ordered = role.orderedAchievements
@@ -119,8 +115,6 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// The same store pathway as text edits carries impactMetric, tech, and
-    /// strengthNotes (SPEC.md [PROFILE-9] body).
     func updateAchievementDetails(
         _ achievement: Achievement,
         impactMetric: String?,
@@ -136,7 +130,7 @@ final class ProfileStore {
     }
 
     /// Achievement text is user-owned canon — this is the only place it
-    /// changes (SPEC.md [PROFILE-9], root CONTEXT.md).
+    /// changes.
     func updateAchievementText(_ achievement: Achievement, to text: String) throws {
         let profile = try requireProfile()
         achievement.text = text
@@ -146,8 +140,6 @@ final class ProfileStore {
 
     // MARK: - Skills
 
-    /// Tags an achievement, reusing the Profile's existing SkillTag when the
-    /// name matches case-insensitively after trimming (SPEC.md [PROFILE-8]).
     @discardableResult
     func tag(_ achievement: Achievement, skillNamed rawName: String) throws -> SkillTag {
         let profile = try requireProfile()

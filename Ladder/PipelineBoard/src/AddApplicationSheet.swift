@@ -1,11 +1,8 @@
 import SwiftData
 import SwiftUI
 
-/// The manual add form (decisions/0004, [PIPEBOARD-20]): company and role
-/// title required, Draft-or-Applied choice with an "Applied on" date when
-/// applied ([PIPEBOARD-17]/[PIPEBOARD-18]), optional source and notes. The
-/// store's blank-field throw is the guarantee; the disabled Add button just
-/// mirrors it ([PIPEBOARD-19]).
+/// The store's blank-field throw is the guarantee; the disabled Add button
+/// just mirrors it.
 struct AddApplicationSheet: View {
     enum InitialStatus: String, CaseIterable {
         case draft = "Draft"

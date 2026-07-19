@@ -1,15 +1,11 @@
 import Foundation
 
-/// The structure the intelligence service returns for an extracted CV (slice
-/// CONTEXT.md: proposal) — held in memory for review, never persisted. Scope
-/// is roles, achievements, and skills only; everything else arrives as a
-/// not-imported section (decisions/0002).
+/// The structure the intelligence service returns for an extracted CV —
+/// held in memory for review, never persisted.
 struct ImportProposal: Equatable, Sendable, Decodable {
     var roles: [ProposedRole]
     var notImportedSections: [NotImportedSection]
 
-    /// Schema validation: JSON the decoder rejects fails the import
-    /// (SPEC.md [CVIMPORT-10]).
     init(json: Data) throws {
         let json = FencedJSON.stripped(from: json)
         let decoder = JSONDecoder()
@@ -32,8 +28,6 @@ struct ImportProposal: Equatable, Sendable, Decodable {
         }
     }
 
-    /// The rejected part, named — fail-fast earns its keep by being specific
-    /// (SPEC.md [CVIMPORT-17], decisions/0004).
     private static func reason(for error: DecodingError) -> String {
         switch error {
         case .keyNotFound(let key, let context):
@@ -64,7 +58,7 @@ struct ImportProposal: Equatable, Sendable, Decodable {
         return rendered.isEmpty ? "the proposal" : rendered
     }
 
-    /// Proposal dates are month-resolution ("2021-04"), as CVs state them.
+    /// CVs state dates at month resolution ("2021-04").
     private static func parseMonth(_ raw: String) -> Date? {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -78,7 +72,7 @@ struct ProposedRole: Equatable, Sendable, Decodable {
     var company: String
     var title: String
     var start: Date
-    var end: Date?  // nil = current role, as in the Role model
+    var end: Date?  // nil = current role
     var achievements: [ProposedAchievement]
 }
 
@@ -89,8 +83,7 @@ struct ProposedAchievement: Equatable, Sendable, Decodable {
     var skills: [String]
 }
 
-/// CV content outside the import scope — listed in review so nothing is
-/// silently dropped, never merged (SPEC.md [CVIMPORT-9]).
+/// CV content outside the import scope — listed in review, never merged.
 struct NotImportedSection: Equatable, Sendable, Decodable {
     var name: String
     var content: String

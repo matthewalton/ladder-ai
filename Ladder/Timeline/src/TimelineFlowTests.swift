@@ -5,9 +5,6 @@ import Testing
 
 @testable import Ladder
 
-/// The timeline's derivation criteria, unit-tested against `TimelineModel`
-/// on an in-memory container (slice AGENTS.md). The tracer drives the real
-/// path — fixture tailor run → export → backfilling load → derive.
 @MainActor
 struct TimelineFlowTests {
     @Test("[TIMELINE-1] the timeline for an applied Application begins with its applied entry")
@@ -39,8 +36,7 @@ struct TimelineFlowTests {
         _ = try exportStore.export(
             profile: try #require(profileStore.profile), review: review, details: details)
 
-        // load() backfills the applied date ([PIPEBOARD-8]) — the timeline
-        // reads what the pipeline persists, nothing more.
+        // load() backfills the applied date the timeline then reads.
         let pipelineStore = PipelineStore(container: profileStore.container)
         try pipelineStore.load()
         let application = try #require(pipelineStore.applications.first)
@@ -88,13 +84,13 @@ struct TimelineFlowTests {
         return (context, application)
     }
 
-    // MARK: - Heard back (decisions/0001)
+    // MARK: - Heard back
 
     @Test("[TIMELINE-2] the heard-back entry carries the earliest date across the Application's Stages")
     func heardBackIsEarliestStageDate() throws {
         // Stage A's heardBackAt (day 8) beats its scheduledAt (day 10);
         // Stage B's scheduledAt (day 6) beats both — the minimum ranges over
-        // both fields of every Stage (SPEC edge case).
+        // both fields of every Stage.
         let (_, application) = try makeApplication(stages: [
             Stage(kind: .screen, scheduledAt: Self.day(10), heardBackAt: Self.day(8), sortIndex: 0),
             Stage(kind: .technical, scheduledAt: Self.day(6), sortIndex: 1),
@@ -127,8 +123,7 @@ struct TimelineFlowTests {
     @Test("[TIMELINE-4] Stage entries follow the Stage chain's added order")
     func stageEntriesFollowSortIndex() throws {
         // Dates deliberately disagree with the chain order: the undated
-        // technical Stage keeps its place, the late-scheduled screen stays
-        // first ([TIMELINE-4]: sortIndex, not date).
+        // technical Stage keeps its place, the late-scheduled screen stays first.
         let (_, application) = try makeApplication(stages: [
             Stage(kind: .screen, scheduledAt: Self.day(9), sortIndex: 0),
             Stage(kind: .technical, sortIndex: 1),
@@ -176,7 +171,7 @@ struct TimelineFlowTests {
         #expect(!entries.contains { if case .outcome = $0.kind { return true } else { return false } })
     }
 
-    // MARK: - Elapsed labels (decisions/0003)
+    // MARK: - Elapsed labels
 
     private func entry(_ kind: TimelineEntry.Kind, date: Date?) -> TimelineEntry {
         TimelineEntry(kind: kind, label: "", date: date, isFilled: true, blaze: .circle)
@@ -209,8 +204,8 @@ struct TimelineFlowTests {
                 to: entry(.stage(.technical), date: Self.day(5).addingTimeInterval(3_600)))
                 == "same day"
         )
-        // The SPEC edge case: 09:00 → 08:00 five days later is 4 completed
-        // 24-hour days, not a 5-calendar-date difference.
+        // 09:00 → 08:00 five days later is 4 completed 24-hour days, not a
+        // 5-calendar-date difference.
         #expect(
             TimelineModel.segmentLabel(
                 from: entry(.applied, date: Self.day(0).addingTimeInterval(9 * 3_600)),
@@ -260,7 +255,7 @@ struct TimelineFlowTests {
         #expect(TimelineModel.inStageLabel(for: undated, asOf: Self.day(9)) == nil)
     }
 
-    // MARK: - Rendering derivations (decisions/0002)
+    // MARK: - Rendering derivations
 
     @Test("[TIMELINE-10] a Stage entry is filled exactly when its outcome is resolved")
     func stageEntriesFillWhenResolved() throws {
@@ -307,9 +302,8 @@ struct TimelineFlowTests {
 
     @Test("[TIMELINE-12] the content pane switches between the board and the selected Application's timeline")
     func contentPaneOffersBoardAndTimeline() throws {
-        // The [PIPEBOARD-14] pattern: both content roots render for the same
-        // selected Application — the views the shell's toggle swaps between.
-        // Toggle chrome and its no-selection disabling are visual-verify.
+        // Render-smoke only: toggle chrome and its no-selection disabling are
+        // on the visual-verify list.
         let store = try PipelineStore(container: ProfileStore.container(inMemory: true))
         let context = ModelContext(store.container)
         let application = Application(

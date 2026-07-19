@@ -4,7 +4,6 @@ import Testing
 
 @testable import Ladder
 
-/// Store-behaviour criteria, run against an in-memory container (CLAUDE.md).
 @MainActor
 struct ProfileStoreTests {
     private func makeStore() throws -> ProfileStore {
@@ -55,8 +54,8 @@ struct ProfileStoreTests {
         let role = try store.addRole(company: "Acme", title: "Engineer", start: .now, end: nil)
         let achievement = try store.addAchievement(to: role, text: "Cut build times")
 
-        // SkillTags referenced by deleted achievements survive — they are
-        // shared across the Profile (SPEC.md [PROFILE-6] body).
+        // SkillTags are shared across the Profile, so the tag must survive
+        // the cascade.
         let tag = SkillTag(name: "Swift")
         profile.skills.append(tag)
         achievement.skills.append(tag)
@@ -78,8 +77,7 @@ struct ProfileStoreTests {
         let first = try store.addAchievement(to: role, text: "Cut build times")
         let second = try store.addAchievement(to: role, text: "Shipped sync engine")
 
-        // Case-insensitive, whitespace-trimmed; the surviving tag keeps the
-        // name as first entered (SPEC.md [PROFILE-8] body).
+        // The surviving tag keeps the name as first entered.
         let tag = try store.tag(first, skillNamed: "Swift")
         let reused = try store.tag(second, skillNamed: "  swift ")
 
@@ -96,8 +94,6 @@ struct ProfileStoreTests {
         try store.createProfile(name: "Alex Climber", headline: "Staff Engineer")
         #expect(store.presentation == .addFirstRole)
 
-        // With a role, the editor takes over; distinct from the
-        // create-profile empty state ([PROFILE-2]).
         try store.addRole(company: "Acme", title: "Engineer", start: .now, end: nil)
         #expect(store.presentation == .editor)
     }

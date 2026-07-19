@@ -1,18 +1,15 @@
 import Foundation
 
-/// The tailor run's payload: the Profile's achievements (each under a stable
-/// generated id) plus the pasted job details, encoded as deterministic JSON.
-/// The id map is what referential validation checks against
-/// (SPEC.md [TAILOR-8]).
+/// `achievementsByID` is the map result validation resolves selections
+/// against.
 @MainActor
 struct TailorPayload {
     let json: String
     let achievementsByID: [String: Achievement]
 
     init(profile: Profile, details: JobDetails) throws {
-        // Deterministic order: roles newest-first (SwiftData to-many
-        // relationships are unordered), achievements by their persisted sort
-        // index. Ids are assigned sequentially across the whole profile.
+        // Roles newest-first — SwiftData to-many relationships are unordered,
+        // and the JSON must be deterministic.
         let orderedRoles = profile.roles.sorted {
             ($0.start, $1.company) > ($1.start, $0.company)
         }
@@ -57,7 +54,7 @@ struct TailorPayload {
         achievementsByID = byID
     }
 
-    /// Month-resolution dates, matching the import prompt's convention.
+    /// Month resolution matches the import prompt's convention.
     private static func month(from date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")

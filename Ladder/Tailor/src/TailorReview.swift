@@ -1,8 +1,7 @@
 import Foundation
 
-/// The review (slice CONTEXT.md): side-by-side accept/reject over each
-/// rephrasing, producing the reviewed outcome. It judges rewordings only —
-/// it never adds or removes achievements from the selection.
+/// Judges rewordings only — a review never adds or removes achievements
+/// from the selection.
 @MainActor
 @Observable
 final class TailorReview {
@@ -11,8 +10,8 @@ final class TailorReview {
     let rationale: String
 
     init(result: TailorResult, achievementsByID: [String: Achievement]) {
-        // Ids were validated against the payload map ([TAILOR-8]) before a
-        // review is constructed, so every selection resolves.
+        // Ids were validated against the payload map before construction,
+        // so every selection resolves.
         items = result.selections.compactMap { selection in
             achievementsByID[selection.achievementID].map {
                 ReviewedRephrasing(achievement: $0, rephrasing: selection.rephrasing)
@@ -22,10 +21,7 @@ final class TailorReview {
         rationale = result.rationale
     }
 
-    /// The reviewed outcome (slice CONTEXT.md): per selected achievement,
-    /// the accepted rephrasing or the canonical text ([TAILOR-13],
-    /// [TAILOR-14]). The input cv-export will consume; transient like
-    /// everything else here.
+    /// The input cv-export consumes.
     var outcome: ReviewedOutcome {
         ReviewedOutcome(
             items: items.map {
@@ -40,8 +36,8 @@ final class TailorReview {
     }
 }
 
-/// The post-review result. Plain values — holding it never retains the
-/// SwiftData models it was derived from.
+/// Plain values — holding one never retains the SwiftData models it was
+/// derived from.
 struct ReviewedOutcome: Equatable, Sendable {
     struct Item: Equatable, Sendable {
         var canonicalText: String
@@ -53,8 +49,6 @@ struct ReviewedOutcome: Equatable, Sendable {
     var rationale: String
 }
 
-/// One selected achievement in review: canonical text beside the proposed
-/// rephrasing (SPEC.md [TAILOR-11]), entering as accepted ([TAILOR-12]).
 @MainActor
 @Observable
 final class ReviewedRephrasing: Identifiable {

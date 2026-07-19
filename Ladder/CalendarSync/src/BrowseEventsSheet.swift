@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// The browse list ([CALSYNC-27], [CALSYNC-28]): every window event the
-/// scan fetched, minus linked and dismissed ones — the fallback for real
-/// interviews the heuristic misses. Picking one hands the event back for
-/// the normal confirmation flow; this sheet itself never writes.
+/// Browsing never writes — picking hands the event back for the normal
+/// confirmation flow.
 struct BrowseEventsSheet: View {
     @Bindable var store: CalendarSyncStore
     let onPick: (CalendarEvent) -> Void

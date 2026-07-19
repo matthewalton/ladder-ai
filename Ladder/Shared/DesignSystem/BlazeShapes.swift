@@ -1,10 +1,7 @@
 import SwiftUI
 
-/// The trail-blaze forms (DESIGN.md §5): simple geometric badges inspired by
-/// painted trail markers. Which form a stage kind takes is the timeline
-/// slice's mapping (Timeline decisions/0002); this file owns only the
-/// geometry, beside Palette and Typography, so board and Summit View can
-/// adopt the same shapes later.
+/// Geometric badges inspired by painted trail markers. This file owns only
+/// the geometry; the stage-kind mapping lives in the timeline slice.
 enum Blaze: Equatable, Sendable {
     case circle
     case diamond
@@ -13,8 +10,6 @@ enum Blaze: Equatable, Sendable {
     case flag
 }
 
-/// One blaze as a fillable `Path`. Hollow rendering is a stroke of the same
-/// path — `BlazeMark` below handles both.
 struct BlazeShape: Shape {
     var blaze: Blaze
 
@@ -33,8 +28,8 @@ struct BlazeShape: Shape {
         case .square:
             return Path(rect)
         case .doubleChevron:
-            // Two upward chevron bands stacked, each a closed strip so the
-            // shape fills as well as it strokes.
+            // Each chevron is a closed strip so the shape fills as well as
+            // it strokes.
             var path = Path()
             let band = rect.height * 0.28
             for offset in [rect.minY, rect.minY + rect.height * 0.44] {
@@ -62,8 +57,7 @@ struct BlazeShape: Shape {
     }
 }
 
-/// A blaze rendered filled or hollow (DESIGN.md §6: future stages hollow,
-/// completed filled), tinted through Palette only.
+/// Filled marks completed stages; hollow marks future ones.
 struct BlazeMark: View {
     var blaze: Blaze
     var filled: Bool

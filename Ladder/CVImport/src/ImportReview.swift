@@ -1,8 +1,7 @@
 import Foundation
 
-/// The review (slice CONTEXT.md): the mandatory per-item confirmation step
-/// between proposal and merge. Every proposed item enters as included
-/// ([CVIMPORT-4]) — the review screen is the dedup (decisions/0003).
+/// The mandatory per-item confirmation step between proposal and merge;
+/// every proposed item enters as included.
 @MainActor
 @Observable
 final class ImportReview {

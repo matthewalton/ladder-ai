@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// The add-first-role empty state: an existing Profile with zero roles
-/// (SPEC.md [PROFILE-10]). Copy per DESIGN.md §6; the Import CV action is the
-/// cv-import slice's entry point, anticipated by the [PROFILE-10] body.
 struct AddFirstRoleView: View {
     @Bindable var store: ProfileStore
     @State private var isAddingRole = false

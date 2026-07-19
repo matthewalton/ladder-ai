@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Add/edit sheet for one Stage. The kind picker offers the known kinds plus
-/// a free-text Other row — the only way to produce an `.other` kind
-/// (decisions/0002).
 struct StageFormView: View {
     @Bindable var store: PipelineStore
     var application: Application

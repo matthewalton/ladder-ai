@@ -4,10 +4,9 @@ import Testing
 
 @testable import Ladder
 
-/// The rendered CV's content criteria, asserted by extracting text from the
-/// PDF with PDFKit — the extraction succeeding at all is the ATS-parseable
-/// guarantee (SPEC.md [CVEXPORT-2] body). Reviews are constructed directly
-/// from a TailorResult; no service, no network.
+/// Asserted by extracting text from the PDF with PDFKit — the extraction
+/// succeeding at all is the ATS-parseable guarantee. Reviews are constructed
+/// directly from a TailorResult; no service, no network.
 @MainActor
 struct CVRenderTests {
     /// Two roles, newest-first: Acme (current; "Cut CI…" = a1, "Shipped the
@@ -94,7 +93,7 @@ struct CVRenderTests {
         #expect(text.contains("Sep 2020 – Present"), "a current role renders its end as Present")
         #expect(text.contains("Engineer, Globex"))
         #expect(text.contains("Jun 2015 – Feb 2018"), "month-resolution dates")
-        // Newest-first, the tailor payload's ordering (SPEC.md body).
+        // Newest-first.
         let acme = try #require(text.range(of: "Senior Engineer, Acme"))
         let globex = try #require(text.range(of: "Engineer, Globex"))
         #expect(acme.lowerBound < globex.lowerBound)
@@ -103,8 +102,7 @@ struct CVRenderTests {
     @Test("[CVEXPORT-3] a Role with no selected achievements still appears in the rendered CV")
     func roleWithoutSelectionsStillAppears() throws {
         let profileStore = try makeProfileStore()
-        // Select only a1 (Acme) — Globex contributes nothing, but the
-        // employment history stays continuous (SPEC.md body).
+        // Select only a1 (Acme) — Globex contributes nothing.
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
         let result = try TailorResult(
@@ -168,8 +166,7 @@ struct CVRenderTests {
 
         let text = try extractedText(profileStore: profileStore, review: review)
 
-        // a2 was never selected — and its text appears nowhere else
-        // (SPEC.md body), so absence is assertable directly.
+        // a2's text appears nowhere else, so absence is assertable directly.
         #expect(!text.contains("Shipped the offline sync engine"))
     }
 
@@ -178,8 +175,8 @@ struct CVRenderTests {
         let profileStore = try makeProfileStore()
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
-        // Kubernetes tags a2 — an achievement outside the selection; skills
-        // are Profile-level canon, so it appears anyway (SPEC.md body).
+        // Kubernetes tags an achievement outside the selection; skills are
+        // Profile-level canon, so it appears anyway.
         try profileStore.tag(acme.orderedAchievements[0], skillNamed: "CI/CD")
         try profileStore.tag(acme.orderedAchievements[1], skillNamed: "Kubernetes")
         let review = try makeReview(profileStore: profileStore)
@@ -210,8 +207,7 @@ struct CVRenderTests {
 
     @Test("[CVEXPORT-7] a CV too long for one page paginates into A4 pages")
     func longCVPaginatesIntoA4Pages() throws {
-        // Forty selected achievements overflow a single A4 page; every
-        // resulting page still measures A4 (SPEC.md: every page).
+        // Forty selected achievements overflow a single A4 page.
         let store = try ProfileStore(container: ProfileStore.container(inMemory: true))
         try store.load()
         try store.createProfile(name: "Alex Climber", headline: "Staff Engineer")

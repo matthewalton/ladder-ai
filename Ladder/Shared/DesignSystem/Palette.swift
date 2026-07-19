@@ -1,7 +1,7 @@
 import SwiftUI
 
-// DESIGN.md §2 — the only way to reference color in views.
-// Values live in Assets.xcassets with Daylight (light) / Night Hike (dark) variants.
+// The only way to reference color in views. Values live in Assets.xcassets
+// with Daylight (light) / Night Hike (dark) variants.
 extension Color {
     static let paper = Color("Paper")
     static let paperRaised = Color("PaperRaised")

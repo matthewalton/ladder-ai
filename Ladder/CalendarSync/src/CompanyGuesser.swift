@@ -1,12 +1,7 @@
 import Foundation
 
-/// The company guess (decisions/0007): the pre-fill for the confirmation
-/// sheet's company field on a possible-interview proposal. Domain first
-/// ([CALSYNC-24]), title fallback ([CALSYNC-25]); like the kind guess, it
-/// only ever pre-fills — the field stays editable.
+/// Only ever pre-fills the confirmation sheet — the field stays editable.
 enum CompanyGuesser {
-    /// Words that connect without naming — stripped alongside the interview
-    /// vocabulary in the title fallback.
     private static let connectives: Set<String> = [
         "with", "at", "the", "a", "an", "and", "or", "for", "of", "on",
         "to", "in", "round", "call", "chat", "meeting", "w", "x", "vs",
@@ -20,16 +15,13 @@ enum CompanyGuesser {
         return strippedTitle(event.title)
     }
 
-    /// The registrable-domain label, cased from the title when it appears
-    /// there as a word — `waynetech` + "Interview with WayneTech" →
-    /// "WayneTech" ([CALSYNC-24]).
+    /// `waynetech` + "Interview with WayneTech" → "WayneTech".
     private static func cased(_ label: String, fromTitle title: String) -> String {
         casedWords(title).first { $0.lowercased() == label } ?? label
     }
 
-    /// The title fallback ([CALSYNC-25]): drop every interview-vocabulary
-    /// phrase and connective word; what remains — original order, original
-    /// casing — is the guess. Nothing left → empty.
+    /// What remains after dropping interview vocabulary and connectives —
+    /// original order and casing — is the guess. Nothing left → empty.
     private static func strippedTitle(_ title: String) -> String {
         let words = casedWords(title)
         let lowered = words.map { $0.lowercased() }
@@ -50,7 +42,6 @@ enum CompanyGuesser {
             .joined(separator: " ")
     }
 
-    /// Alphanumeric words with their original casing kept.
     private static func casedWords(_ text: String) -> [String] {
         text.split { !($0.isLetter || $0.isNumber) }.map(String.init)
     }

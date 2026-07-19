@@ -1,25 +1,18 @@
 import Foundation
 
-/// Why a response failed validation — carried into the repair request so the
-/// service is told what to fix (SPEC.md [TAILOR-9], decisions/0004).
+/// Carried into the repair request so the service is told what to fix.
 struct TailorValidationFailure: Error, Equatable {
     var reason: String
 }
 
-/// The validated structure the service returns (slice CONTEXT.md: tailor
-/// result) — held in memory for review, never persisted (decisions/0001).
 struct TailorResult: Equatable, Sendable, Decodable {
     var selections: [TailorSelection]
     var gaps: [String]
     var rationale: String
 
-    /// Validation is schema decode plus the referential check: every
-    /// selection must reference an achievement id from the payload
-    /// (SPEC.md [TAILOR-8]).
     init(json: Data, validAchievementIDs: Set<String>) throws {
         // A whole-response fence is presentation, not content — stripped so a
-        // formatting quirk never consumes the single repair request
-        // (SPEC.md [TAILOR-18]).
+        // formatting quirk never consumes the single repair request.
         let json = FencedJSON.stripped(from: json)
         do {
             self = try JSONDecoder().decode(TailorResult.self, from: json)
@@ -37,7 +30,6 @@ struct TailorResult: Equatable, Sendable, Decodable {
     }
 }
 
-/// One selected achievement with its proposed rephrasing (slice CONTEXT.md).
 struct TailorSelection: Equatable, Sendable, Decodable {
     var achievementID: String
     var rephrasing: String

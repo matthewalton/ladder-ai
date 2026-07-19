@@ -1,15 +1,13 @@
 import Foundation
 
-/// MVVM-lite store for the import flow: file → extraction → proposal →
-/// review → merge (SPEC.md). One import runs at a time.
+/// One import runs at a time.
 @MainActor
 @Observable
 final class ImportStore {
     enum Phase: Equatable {
         case idle
-        /// Extraction and the proposal request, in flight.
         case importing
-        /// A proposal is held for review; `review` is non-nil.
+        /// `review` is non-nil while in this phase.
         case review
         case merging
         case merged
@@ -24,9 +22,8 @@ final class ImportStore {
     private let bundle: Bundle
     private let makeIntelligence: (String) -> any IntelligenceService
 
-    /// `makeIntelligence` receives the stored API key and returns the service
-    /// for this run — the live Anthropic service in production, a fixture in
-    /// tests and previews (decisions/0005, Tailor decisions/0002).
+    /// `makeIntelligence` receives the stored API key — the live service in
+    /// production, a fixture in tests and previews.
     init(
         profileStore: ProfileStore,
         keyStore: any APIKeyStore,
@@ -42,15 +39,12 @@ final class ImportStore {
     }
 
     func startImport(of url: URL) async {
-        // Refused before extraction: import merges into the Profile and never
-        // creates it ([CVIMPORT-3], decisions/0001).
+        // Import merges into an existing Profile — it never creates one.
         guard profileStore.profile != nil else {
             phase = .failed(.profileRequired)
             return
         }
-        // Refused before extraction and before any service call: no stored
-        // key means no live run, and never a fixture fallback
-        // ([CVIMPORT-14], Tailor decisions/0002).
+        // No stored key means no live run — never a fixture fallback.
         guard let key = try? keyStore.readKey(), !key.isEmpty else {
             phase = .failed(.apiKeyRequired)
             return
@@ -67,12 +61,9 @@ final class ImportStore {
                     IntelligenceRequest(prompt: prompt, payload: text)
                 )
             } catch AnthropicIntelligenceService.LiveServiceError.truncated {
-                // A length problem, not a transport one — retrying truncates
-                // again at the same cap ([CVIMPORT-19], decisions/0006).
+                // A length problem, not a transport one — retrying truncates again.
                 throw ImportError.responseTruncated
             } catch {
-                // Transport failure is not validation failure — the detail
-                // makes the retry informed ([CVIMPORT-16], decisions/0004).
                 throw ImportError.requestFailed(detail: Self.requestFailureDetail(for: error))
             }
             let proposal = try ImportProposal(json: response)
@@ -99,10 +90,8 @@ final class ImportStore {
         }
     }
 
-    /// The merge (slice CONTEXT.md): the review's included items land in the
-    /// existing Profile through the `ProfileStore` pathway ([CVIMPORT-5]–
-    /// [CVIMPORT-8]). Nothing lands without this confirmation; not-imported
-    /// sections are never written anywhere ([CVIMPORT-9]).
+    /// Nothing lands in the Profile without this confirmation; not-imported
+    /// sections are never written anywhere.
     func confirmReview() {
         guard phase == .review, let review else { return }
         phase = .merging
@@ -138,7 +127,6 @@ final class ImportStore {
         }
     }
 
-    /// Back to idle — after a failure or a completed merge.
     func reset() {
         phase = .idle
         review = nil

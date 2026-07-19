@@ -4,9 +4,8 @@ import Testing
 
 @testable import Ladder
 
-/// The slice's persistence criterion: dismissals are forever
-/// (decisions/0004) — each test relaunches by closing one container and
-/// reopening a new one against the same store URL (the [PROFILE-1] pattern).
+/// Relaunch is simulated by closing one container and reopening a new one
+/// against the same store URL.
 @MainActor
 struct CalendarSyncPersistenceTests {
     @Test("[CALSYNC-12] a dismissal survives an app relaunch")
