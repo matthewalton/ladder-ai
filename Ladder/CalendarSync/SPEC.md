@@ -17,6 +17,15 @@ Nothing is ever created silently (ARCHITECTURE.md §6): a scan only produces
 proposals, and only the confirmation sheet turns a proposal into a Stage —
 created new, or linked onto a Stage the user already tracks.
 
+The calendar-first path (decisions/0007) covers the reverse arrival order:
+an interview already in the calendar with no Application yet on the board.
+The interview heuristic flags such events as possible-interview proposals
+([CALSYNC-21], [CALSYNC-22]), the browse list is the fallback for events it
+misses ([CALSYNC-27], [CALSYNC-28]), confirmation is the one gesture that
+creates the Application along with its Stage ([CALSYNC-26]), and the
+on-demand look-back scan reaches further into the past for one application's
+company ([CALSYNC-29], [CALSYNC-30]).
+
 Out of scope: any write to the calendar (the entitlement posture is read-only,
 decisions/0001), the per-Application timeline view (the timeline slice), email
 parsing, and Phase 3+ capture behaviour.
@@ -34,12 +43,6 @@ identifier, title, and schedule carried — with the user having typed nothing.
 ARCHITECTURE.md §6 pinned as a criterion: after a scan over fixture events
 that all match tracked Applications, the persisted Stage count is unchanged.
 Only confirmation ([CALSYNC-8], [CALSYNC-9]) writes.
-
-## [CALSYNC-3] An event matching no tracked Application yields no proposal
-
-Covers both an unknown company and a known company whose Application is in a
-non-tracked status (draft, rejected, withdrawn — decisions/0002). The scan
-completes with an empty proposal list, not an error.
 
 ## [CALSYNC-4] An attendee email domain matching the company name proposes the event for that Application
 
@@ -147,8 +150,10 @@ nothing is written, and that nothing leaves the Mac.
 ## [CALSYNC-19] An empty scan with no tracked Application explains that matching starts past Draft
 
 Case one of the silent empty scan (decisions/0006): no Application is
-tracked, so `buildProposals` short-circuits and matching never ran — the bar
-showed only its header and read as broken. The store exposes
+tracked, so matching never ran — the bar showed only its header and read as
+broken. (Since the calendar-first amendment the interview heuristic still
+runs with an empty board; this explainer covers the scan that produced
+nothing at all.) The store exposes
 `hasTrackedApplications`, computed live from the pipeline's Applications
 against the tracked statuses (decisions/0002), and after an empty scan with
 it false the bar renders the explainer:
@@ -174,6 +179,103 @@ true the bar renders the explainer:
 > a month ahead.
 
 The measurable clause is the store signal (`scanState == .ready`, zero
-proposals, `hasTrackedApplications == true`) — the first direct coverage of
-the tracked-but-unmatched path, which [CALSYNC-3]'s test reaches only via
-non-tracked statuses. The rendered line is visual-verify.
+proposals, `hasTrackedApplications == true`) — direct coverage of the
+tracked-but-unmatched path. The rendered line is visual-verify. Since the
+calendar-first amendment, an unmatched event can still surface as a
+possible-interview proposal ([CALSYNC-21], [CALSYNC-22]); this explainer
+renders only when the scan produced nothing at all.
+
+## [CALSYNC-21] An event matching no tracked Application whose title carries an interview keyword surfaces as a possible-interview proposal
+
+The calendar-first half of the scan (decisions/0007): matching runs first and
+wins — an event with candidates is a matched proposal, never a
+possible-interview one. Only then does the interview heuristic look at the
+leftovers. The keyword set is the heuristic vocabulary in decisions/0007:
+the word "interview" plus every keyword the kind guess already knows
+(decisions/0005) — so "Interview with Hooli" and "Acme phone screen"
+both flag, and the kind guess pre-selects on the same title as ever.
+A possible-interview proposal carries no candidates; dismissal works exactly
+as [CALSYNC-11] — same `DismissedEvent` record, same suppression. This
+amendment retires [CALSYNC-3]: its blanket promise — an unmatched event
+yields no proposal — is now false by design, and [CALSYNC-23] carries the
+narrower promise that survives. The number 3 stays retired.
+
+## [CALSYNC-22] An event matching no tracked Application with a recognised meeting link surfaces as a possible-interview proposal
+
+The heuristic's second signal, independent of the first: a recognised meeting
+link ([CALSYNC-7]'s set — Zoom, Meet, Teams) flags the event even when the
+title says nothing useful ("Chat with Sarah" + a Zoom link). Real interviews
+titled without vocabulary are the case that motivated the browse fallback;
+the link signal catches most of them one step earlier.
+
+## [CALSYNC-23] An event matching no tracked Application with neither an interview keyword nor a recognised meeting link yields no proposal
+
+The heuristic's negative space, keeping the bar quiet: dentist appointments
+and team standups in the window stay invisible. They remain reachable through
+the browse list ([CALSYNC-27], [CALSYNC-28]) — invisible is not gone.
+
+## [CALSYNC-24] The company guess takes the registrable-domain label of a non-public attendee or organizer email
+
+The pre-fill for the confirmation sheet's company field (decisions/0007):
+`recruiting@waynetech.com` → `waynetech`, using the same
+registrable-domain and public-provider rules as [CALSYNC-4]
+(`CalendarMatcher.companyLabel`). When the label appears in the event title
+as a word, the guess takes the title's casing — "Interview with WayneTech"
+turns the label into "WayneTech". A guess only ever pre-fills — the field
+stays editable, the [CALSYNC-15] stance.
+
+## [CALSYNC-25] With no usable email domain the company guess falls back to the event title stripped of interview vocabulary
+
+The no-email case: no attendee emails beyond the user's own, so the title is
+all there is. Strip the heuristic vocabulary (decisions/0007) and connective
+words from the title; what remains, in title order and casing, is the guess —
+"Interview with Hooli" → "Hooli". Nothing left → empty field, the
+user types. Both guess criteria are pure-helper testable, no EventKit.
+
+## [CALSYNC-26] Confirming a possible-interview proposal creates an applied Application and its event-linked Stage
+
+The one new write path, still one gesture behind the confirmation sheet
+(ARCHITECTURE.md §6). The sheet collects company (pre-filled by the guess,
+editable) and role title (free text — the calendar knows nothing useful);
+blank either → the store refuses, nothing created. Creation goes through
+`PipelineStore.createApplication` (status applied, `appliedAt` = the event's
+start as the best evidence on hand — the real application predates the
+interview, and the date is editable like any manual add) then
+`PipelineStore.addStage` with the confirmed kind, the event identifier, and
+the detected meeting link — so the [PIPEBOARD-7] auto-advance carries the new
+Application straight to active, mirroring [CALSYNC-8].
+
+## [CALSYNC-27] The browse list carries every event in the scan window except linked and dismissed ones
+
+The fallback surface (decisions/0007) for interviews the heuristic misses:
+matched, flagged, and plain events alike, in start order — only [CALSYNC-10]
+and [CALSYNC-11] suppression applies. The list is store state computed from
+the same fetched events as the scan, no second fetch. The browse UI itself
+(how the list opens from the bar) is visual-verify; the list's contents are
+the measurable clause.
+
+## [CALSYNC-28] Picking a browsed event yields a proposal for that event
+
+The escape hatch that makes the heuristic safe to keep small: any browsed
+event can become a proposal on demand — with candidates when matching finds
+tracked Applications ([CALSYNC-6] semantics), as a possible-interview
+proposal when it does not, heuristic verdict ignored. From there the normal
+confirmation flow runs: [CALSYNC-8]/[CALSYNC-9] on candidates, [CALSYNC-26]
+without.
+
+## [CALSYNC-29] A look-back scan requests events from ninety days back to the scan instant
+
+The on-demand deep window (decisions/0007; ninety days was defaulted at
+plan, not agreed — the number lives in one place). A per-application action,
+never automatic and never the standing window: [CALSYNC-13]'s seven-back /
+thirty-ahead stands untouched (decisions/0003). Pinned at the seam the
+[CALSYNC-13] way — the fixture service captures the requested interval.
+
+## [CALSYNC-30] A look-back scan proposes only events matching its application's company
+
+The scope that keeps ninety days of calendar from flooding the bar: the
+look-back matches against exactly one company — the application the action
+was invoked on — with the same matching policy (decisions/0002) and the same
+linked/dismissed suppression. Every proposal it emits carries that
+application as the sole candidate, so confirmation lands on it: [CALSYNC-8]
+to create a Stage there, [CALSYNC-9] to link an existing one.

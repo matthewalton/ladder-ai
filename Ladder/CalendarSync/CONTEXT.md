@@ -63,3 +63,33 @@ The quiet one-line message the bar renders below its header when there is
 nothing to show — one for the denied state ([CALSYNC-17]) and one per empty
 scan case ([CALSYNC-19], [CALSYNC-20]).
 _Avoid_: hint, placeholder, error message
+
+**Interview heuristic**:
+The flag over events matching no tracked Application: a title keyword (the
+word "interview" plus the decisions/0005 kind vocabulary) or a recognised
+meeting link (decisions/0007). Flags only — never creates, never matches.
+_Avoid_: classifier, detection, smart scan
+
+**Possible-interview proposal**:
+A proposal for an event matching no tracked Application, flagged by the
+interview heuristic or picked from the browse list. Carries no candidates;
+its confirmation creates ([CALSYNC-26]) instead of attaching.
+_Avoid_: unmatched proposal, orphan event, suggestion
+
+**Company guess**:
+The pre-fill for the confirmation sheet's company field: attendee/organizer
+email domain first, event title stripped of interview vocabulary as the
+fallback (decisions/0007). Like the kind guess, it only ever pre-fills.
+_Avoid_: auto-fill, company detection, inference
+
+**Browse list**:
+Every event in the scan window except linked and dismissed ones — the
+fallback surface when the interview heuristic misses a real interview.
+Picking an event turns it into a proposal on demand ([CALSYNC-28]).
+_Avoid_: event picker, calendar view, all events
+
+**Look-back scan**:
+The on-demand per-application scan reaching ninety days back
+(decisions/0007), matched against that application's company only. Never
+automatic, never the standing window.
+_Avoid_: backfill, deep scan, history import

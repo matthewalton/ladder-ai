@@ -17,6 +17,10 @@ enum StageKindGuesser {
         (["offer"], .offer),
     ]
 
+    /// The flat keyword vocabulary, shared with the interview heuristic
+    /// (decisions/0007): one list, two uses.
+    static var allKeywords: [String] { keywordMap.flatMap(\.keywords) }
+
     static func guess(fromTitle title: String) -> StageKind? {
         let lowered = title.lowercased()
         return keywordMap.first { entry in

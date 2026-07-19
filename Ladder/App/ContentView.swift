@@ -21,12 +21,19 @@ struct ContentView: View {
                 ProfileRootView(store: store)
             }
             Tab("Applications", systemImage: "map", value: AppSection.applications) {
-                PipelineRootView(store: pipelineStore)
-                    // calendar-sync's strip: proposals, the manual check,
-                    // and the denied explainer ([CALSYNC-17]).
-                    .safeAreaInset(edge: .top, spacing: 0) {
-                        CalendarProposalsBar(store: calendarStore)
+                PipelineRootView(
+                    store: pipelineStore,
+                    // The on-demand look-back ([CALSYNC-29], [CALSYNC-30]):
+                    // proposals land in the bar like any others.
+                    onLookBack: { application in
+                        Task { await calendarStore.lookBack(for: application) }
                     }
+                )
+                // calendar-sync's strip: proposals, the manual check,
+                // and the denied explainer ([CALSYNC-17]).
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    CalendarProposalsBar(store: calendarStore)
+                }
             }
         }
     }

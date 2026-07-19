@@ -21,19 +21,32 @@ struct StageProposalSheet: View {
     /// pick before confirming ([CALSYNC-16]).
     @State private var kind: StageKind?
     @State private var stageID: PersistentIdentifier?
+    /// The possible-interview fields ([CALSYNC-26]): company starts from the
+    /// guess ([CALSYNC-24], [CALSYNC-25]) and stays editable; the calendar
+    /// knows no role title, so that field starts blank.
+    @State private var company: String
+    @State private var roleTitle: String = ""
 
     init(store: CalendarSyncStore, proposal: StageProposal) {
         self.store = store
         self.proposal = proposal
         _candidateID = State(initialValue: proposal.candidates.first?.persistentModelID)
         _kind = State(initialValue: proposal.kindGuess)
+        _company = State(initialValue: proposal.companyGuess ?? "")
     }
 
     private var candidate: Application? {
         proposal.candidates.first { $0.persistentModelID == candidateID }
     }
 
+    private func isBlank(_ text: String) -> Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private var canConfirm: Bool {
+        if proposal.isPossibleInterview {
+            return kind != nil && !isBlank(company) && !isBlank(roleTitle)
+        }
         guard candidate != nil else { return false }
         switch mode {
         case .create: return kind != nil
@@ -63,7 +76,19 @@ struct StageProposalSheet: View {
             }
 
             Form {
-                if proposal.candidates.count > 1 {
+                if proposal.isPossibleInterview {
+                    // The calendar-first confirm ([CALSYNC-26]): one gesture
+                    // creates the applied Application and its event-linked
+                    // Stage — nothing exists until Confirm.
+                    TextField("Company", text: $company)
+                    TextField("Role title", text: $roleTitle)
+                    Picker("Kind", selection: $kind) {
+                        Text("Choose…").tag(StageKind?.none)
+                        ForEach(StageKind.knownCases, id: \.self) { known in
+                            Text(known.label).tag(Optional(known))
+                        }
+                    }
+                } else if proposal.candidates.count > 1 {
                     Picker("Application", selection: $candidateID) {
                         ForEach(proposal.candidates) { application in
                             Text("\(application.company) — \(application.roleTitle)")
@@ -77,27 +102,29 @@ struct StageProposalSheet: View {
                     }
                 }
 
-                Picker("Add as", selection: $mode) {
-                    Text("New stage").tag(Mode.create)
-                    Text("Existing stage").tag(Mode.link)
-                }
-                .pickerStyle(.segmented)
-                .disabled((candidate?.orderedStages.isEmpty) ?? true)
-
-                switch mode {
-                case .create:
-                    Picker("Kind", selection: $kind) {
-                        Text("Choose…").tag(StageKind?.none)
-                        ForEach(StageKind.knownCases, id: \.self) { known in
-                            Text(known.label).tag(Optional(known))
-                        }
+                if !proposal.isPossibleInterview {
+                    Picker("Add as", selection: $mode) {
+                        Text("New stage").tag(Mode.create)
+                        Text("Existing stage").tag(Mode.link)
                     }
-                case .link:
-                    Picker("Stage", selection: $stageID) {
-                        Text("Choose…").tag(PersistentIdentifier?.none)
-                        ForEach(candidate?.orderedStages ?? []) { stage in
-                            Text(stageRowLabel(for: stage))
-                                .tag(Optional(stage.persistentModelID))
+                    .pickerStyle(.segmented)
+                    .disabled((candidate?.orderedStages.isEmpty) ?? true)
+
+                    switch mode {
+                    case .create:
+                        Picker("Kind", selection: $kind) {
+                            Text("Choose…").tag(StageKind?.none)
+                            ForEach(StageKind.knownCases, id: \.self) { known in
+                                Text(known.label).tag(Optional(known))
+                            }
+                        }
+                    case .link:
+                        Picker("Stage", selection: $stageID) {
+                            Text("Choose…").tag(PersistentIdentifier?.none)
+                            ForEach(candidate?.orderedStages ?? []) { stage in
+                                Text(stageRowLabel(for: stage))
+                                    .tag(Optional(stage.persistentModelID))
+                            }
                         }
                     }
                 }
@@ -123,8 +150,16 @@ struct StageProposalSheet: View {
     }
 
     private func confirm() {
-        guard let candidate else { return }
         do {
+            if proposal.isPossibleInterview {
+                guard let kind else { return }
+                try store.confirmCreate(
+                    proposal, company: company, roleTitle: roleTitle, kind: kind
+                )
+                dismiss()
+                return
+            }
+            guard let candidate else { return }
             switch mode {
             case .create:
                 guard let kind else { return }
@@ -162,6 +197,28 @@ struct StageProposalSheet: View {
             candidates: [application],
             meetingLink: URL(string: "https://acme.zoom.us/j/123"),
             kindGuess: .systemDesign
+        )
+    )
+}
+
+#Preview("Possible interview") {
+    let pipeline = PipelineStore(container: try! ProfileStore.container(inMemory: true))
+    let store = CalendarSyncStore(
+        pipeline: pipeline, service: FixtureCalendarSyncService()
+    )
+    return StageProposalSheet(
+        store: store,
+        proposal: StageProposal(
+            event: CalendarEvent(
+                identifier: "evt-2",
+                title: "Interview with Hooli",
+                start: .now.addingTimeInterval(-86_400),
+                location: "https://hooli.zoom.us/j/9"
+            ),
+            candidates: [],
+            meetingLink: URL(string: "https://hooli.zoom.us/j/9"),
+            kindGuess: nil,
+            companyGuess: "Hooli"
         )
     )
 }

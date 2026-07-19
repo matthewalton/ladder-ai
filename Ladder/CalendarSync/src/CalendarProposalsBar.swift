@@ -9,6 +9,7 @@ import SwiftUI
 struct CalendarProposalsBar: View {
     @Bindable var store: CalendarSyncStore
     @State private var reviewing: StageProposal?
+    @State private var isBrowsing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -20,6 +21,16 @@ struct CalendarProposalsBar: View {
                 if store.scanState == .scanning {
                     ProgressView()
                         .controlSize(.small)
+                }
+                // The browse fallback ([CALSYNC-27], [CALSYNC-28]) — only
+                // once a scan has fetched something to browse.
+                if !store.browseEvents.isEmpty {
+                    Button {
+                        isBrowsing = true
+                    } label: {
+                        Label("Browse events", systemImage: "list.bullet")
+                    }
+                    .buttonStyle(.borderless)
                 }
                 // The manual refresh action (decisions/0003) — also the
                 // explicit user gesture that first requests access
@@ -47,6 +58,14 @@ struct CalendarProposalsBar: View {
         .sheet(item: $reviewing) { proposal in
             StageProposalSheet(store: store, proposal: proposal)
         }
+        .sheet(isPresented: $isBrowsing) {
+            BrowseEventsSheet(store: store) { event in
+                // Picking proposes on demand ([CALSYNC-28]); the normal
+                // confirmation flow takes it from here.
+                isBrowsing = false
+                reviewing = store.proposal(for: event)
+            }
+        }
     }
 
     private var proposalList: some View {
@@ -64,6 +83,15 @@ struct CalendarProposalsBar: View {
                         .foregroundStyle(Color.inkSoft)
                     }
                     Spacer()
+                    // A proposal with no candidates is the heuristic's work
+                    // ([CALSYNC-21], [CALSYNC-22]) — say so, since its
+                    // confirmation creates an Application rather than
+                    // attaching to one.
+                    if proposal.isPossibleInterview {
+                        Text("Possible interview")
+                            .font(.caption)
+                            .foregroundStyle(Color.skyline)
+                    }
                     if let guess = proposal.kindGuess {
                         Text(guess.label)
                             .font(.caption)

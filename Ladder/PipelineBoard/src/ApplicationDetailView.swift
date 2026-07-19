@@ -6,6 +6,10 @@ import SwiftUI
 struct ApplicationDetailView: View {
     @Bindable var store: PipelineStore
     var application: Application
+    /// The calendar look-back action ([CALSYNC-29], [CALSYNC-30]), injected
+    /// as a closure so this slice never depends on a calendar-sync type;
+    /// nil (previews, no calendar wiring) renders no button.
+    var onLookBack: (() -> Void)?
 
     @State private var source: String
     @State private var notes: String
@@ -13,9 +17,13 @@ struct ApplicationDetailView: View {
     @State private var isAddingStage = false
     @State private var saveFailed = false
 
-    init(store: PipelineStore, application: Application) {
+    init(
+        store: PipelineStore, application: Application,
+        onLookBack: (() -> Void)? = nil
+    ) {
         self.store = store
         self.application = application
+        self.onLookBack = onLookBack
         _source = State(initialValue: application.source ?? "")
         _notes = State(initialValue: application.notes)
     }
@@ -45,6 +53,17 @@ struct ApplicationDetailView: View {
                         Text(appliedAt, style: .date)
                             .foregroundStyle(Color.inkSoft)
                     }
+                }
+                if let onLookBack {
+                    Button {
+                        onLookBack()
+                    } label: {
+                        Label(
+                            "Check calendar history",
+                            systemImage: "clock.arrow.circlepath"
+                        )
+                    }
+                    .buttonStyle(.borderless)
                 }
             }
 

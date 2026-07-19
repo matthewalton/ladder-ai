@@ -17,12 +17,19 @@ enum CalendarScanState: Equatable, Sendable {
 struct StageProposal: Identifiable {
     let event: CalendarEvent
     /// Tracked Applications the event could attach to, in board order
-    /// ([CALSYNC-6]).
+    /// ([CALSYNC-6]). Empty means a possible-interview proposal
+    /// (decisions/0007): the event matched nothing, and confirmation
+    /// creates ([CALSYNC-26]) instead of attaching.
     let candidates: [Application]
     let meetingLink: URL?
     let kindGuess: StageKind?
+    /// The sheet's company pre-fill ([CALSYNC-24], [CALSYNC-25]) — carried
+    /// only on possible-interview proposals.
+    var companyGuess: String?
 
     var id: String { event.identifier }
+
+    var isPossibleInterview: Bool { candidates.isEmpty }
 }
 
 /// MVVM-lite store for the calendar-sync slice: scan, match, propose —
@@ -42,6 +49,73 @@ final class CalendarSyncStore {
 
     private(set) var scanState: CalendarScanState = .idle
     private(set) var proposals: [StageProposal] = []
+    /// Everything the last scan fetched, before matching and the heuristic —
+    /// the raw material of the browse list ([CALSYNC-27]).
+    private var fetchedEvents: [CalendarEvent] = []
+
+    /// The browse list ([CALSYNC-27]): every fetched window event minus
+    /// linked and dismissed ones, in start order. Computed live, so a
+    /// confirmation or dismissal drops the event without a re-scan.
+    var browseEvents: [CalendarEvent] {
+        let linked = linkedEventIDs()
+        let dismissed = dismissedEventIDs()
+        return fetchedEvents
+            .filter { !linked.contains($0.identifier) && !dismissed.contains($0.identifier) }
+            .sorted { $0.start < $1.start }
+    }
+
+    /// Picking a browsed event ([CALSYNC-28]): a proposal on demand, the
+    /// heuristic's verdict ignored — candidates when matching finds tracked
+    /// Applications, possible-interview when it does not.
+    func proposal(for event: CalendarEvent) -> StageProposal {
+        makeProposal(
+            for: event,
+            candidates: trackedApplications().filter {
+                CalendarMatcher.matches(event: event, company: $0.company)
+            }
+        )
+    }
+
+    /// The on-demand look-back scan ([CALSYNC-29], [CALSYNC-30]): ninety
+    /// days back to the scan instant, matched against one application's
+    /// company only — never automatic, never the standing window
+    /// (decisions/0007).
+    static func lookBackWindow(asOf: Date) -> DateInterval {
+        DateInterval(start: asOf.addingTimeInterval(-90 * 86_400), end: asOf)
+    }
+
+    func lookBack(for application: Application, asOf: Date = .now) async {
+        scanState = .scanning
+        var access = await service.accessState()
+        if access == .notDetermined {
+            access = await service.requestAccess()
+        }
+        guard access == .granted else {
+            scanState = .denied
+            return
+        }
+
+        do {
+            let events = try await service.events(in: Self.lookBackWindow(asOf: asOf))
+            let linked = linkedEventIDs()
+            let dismissed = dismissedEventIDs()
+            let proposed = Set(proposals.map(\.id))
+            let found = events
+                .filter { event in
+                    !linked.contains(event.identifier)
+                        && !dismissed.contains(event.identifier)
+                        && !proposed.contains(event.identifier)
+                        && CalendarMatcher.matches(event: event, company: application.company)
+                }
+                // The sole candidate is the application the action was
+                // invoked on ([CALSYNC-30]) — confirmation lands there.
+                .map { makeProposal(for: $0, candidates: [application]) }
+            proposals = (proposals + found).sorted { $0.event.start < $1.event.start }
+        } catch {
+            // A failed look-back leaves the standing proposals alone.
+        }
+        scanState = .ready
+    }
 
     init(pipeline: PipelineStore, service: any CalendarSyncService) {
         self.pipeline = pipeline
@@ -82,8 +156,10 @@ final class CalendarSyncStore {
 
         do {
             let events = try await service.events(in: Self.scanWindow(asOf: asOf))
+            fetchedEvents = events
             proposals = buildProposals(from: events)
         } catch {
+            fetchedEvents = []
             proposals = []
         }
         scanState = .ready
@@ -110,6 +186,34 @@ final class CalendarSyncStore {
     func confirm(
         _ proposal: StageProposal, application: Application, kind: StageKind
     ) throws -> Stage {
+        let stage = try pipeline.addStage(
+            to: application,
+            kind: kind,
+            scheduledAt: proposal.event.start,
+            calendarEventID: proposal.event.identifier,
+            meetingURL: proposal.meetingLink
+        )
+        proposals.removeAll { $0.id == proposal.id }
+        return stage
+    }
+
+    /// The calendar-first write path ([CALSYNC-26], decisions/0007): one
+    /// confirmation creates the applied Application and its event-linked
+    /// Stage — through the pipeline's own creation paths, so the manual
+    /// add's invariants (blank fields refuse) and the [PIPEBOARD-7]
+    /// auto-advance both hold.
+    @discardableResult
+    func confirmCreate(
+        _ proposal: StageProposal, company: String, roleTitle: String, kind: StageKind
+    ) throws -> Stage {
+        // Applied at the event's start — the best evidence on hand
+        // (decisions/0007); createApplication refuses blanks before
+        // anything is created.
+        let application = try pipeline.createApplication(
+            company: company, roleTitle: roleTitle,
+            source: "calendar", notes: "",
+            appliedAt: proposal.event.start
+        )
         let stage = try pipeline.addStage(
             to: application,
             kind: kind,
@@ -157,11 +261,26 @@ final class CalendarSyncStore {
         pipeline.applications.contains { Self.trackedStatuses.contains($0.status) }
     }
 
+    private func trackedApplications() -> [Application] {
+        pipeline.applications.filter { Self.trackedStatuses.contains($0.status) }
+    }
+
+    /// One proposal, whatever surfaced the event: candidates when matched,
+    /// possible-interview (company guess carried) when not.
+    private func makeProposal(
+        for event: CalendarEvent, candidates: [Application]
+    ) -> StageProposal {
+        StageProposal(
+            event: event,
+            candidates: candidates,
+            meetingLink: MeetingLinkDetector.meetingLink(in: event),
+            kindGuess: StageKindGuesser.guess(fromTitle: event.title),
+            companyGuess: candidates.isEmpty ? CompanyGuesser.guess(for: event) : nil
+        )
+    }
+
     private func buildProposals(from events: [CalendarEvent]) -> [StageProposal] {
-        let tracked = pipeline.applications.filter {
-            Self.trackedStatuses.contains($0.status)
-        }
-        guard !tracked.isEmpty else { return [] }
+        let tracked = trackedApplications()
         let linked = linkedEventIDs()
         let dismissed = dismissedEventIDs()
         return events
@@ -173,13 +292,13 @@ final class CalendarSyncStore {
                 let candidates = tracked.filter {
                     CalendarMatcher.matches(event: event, company: $0.company)
                 }
-                guard !candidates.isEmpty else { return nil }
-                return StageProposal(
-                    event: event,
-                    candidates: candidates,
-                    meetingLink: MeetingLinkDetector.meetingLink(in: event),
-                    kindGuess: StageKindGuesser.guess(fromTitle: event.title)
-                )
+                // Matching wins; the interview heuristic only looks at the
+                // leftovers — an empty board included (decisions/0007,
+                // [CALSYNC-21]–[CALSYNC-23]).
+                if candidates.isEmpty {
+                    guard InterviewHeuristic.flags(event) else { return nil }
+                }
+                return makeProposal(for: event, candidates: candidates)
             }
     }
 

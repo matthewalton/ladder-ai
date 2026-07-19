@@ -6,6 +6,8 @@ import SwiftUI
 /// detail for the selection.
 struct PipelineRootView: View {
     @Bindable var store: PipelineStore
+    /// Passed through to the detail's look-back button; nil renders none.
+    var onLookBack: ((Application) -> Void)?
 
     /// The content toggle (Timeline CONTEXT.md): which view fills the
     /// content pane — DESIGN.md §4 "content (Stage timeline or board)".
@@ -89,8 +91,13 @@ struct PipelineRootView: View {
             }
             .inspector(isPresented: $showInspector) {
                 if let application = selectedApplication {
-                    ApplicationDetailView(store: store, application: application)
-                        .inspectorColumnWidth(min: 280, ideal: 320)
+                    ApplicationDetailView(
+                        store: store, application: application,
+                        onLookBack: onLookBack.map { callback in
+                            { callback(application) }
+                        }
+                    )
+                    .inspectorColumnWidth(min: 280, ideal: 320)
                 } else {
                     Text("Select an application to see its trail.")
                         .font(.trailNarrative())
