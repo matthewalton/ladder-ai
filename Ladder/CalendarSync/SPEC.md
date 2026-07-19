@@ -50,7 +50,10 @@ The second matching signal (decisions/0002), for recruiter invites that never
 name the company in the title: an attendee `jane@acme.com` matches an
 Application whose normalised company name is `acme` ("Acme Corp" → `acme`).
 Public mail domains are never company evidence — `gmail.com`, `outlook.com`
-and friends are excluded by the deny-list in decisions/0002.
+and friends are excluded by the deny-list in decisions/0002. Calendar and
+scheduling infrastructure is excluded the same way: a Google-synced invite's
+`unknownorganizer@calendar.google.com` is not evidence of Google, and a
+Calendly notification is not evidence of Calendly.
 
 ## [CALSYNC-5] Matching ignores case and punctuation in the company name
 
@@ -218,8 +221,10 @@ the browse list ([CALSYNC-27], [CALSYNC-28]) — invisible is not gone.
 
 The pre-fill for the confirmation sheet's company field (decisions/0007):
 `recruiting@waynetech.com` → `waynetech`, using the same
-registrable-domain and public-provider rules as [CALSYNC-4]
-(`CalendarMatcher.companyLabel`). When the label appears in the event title
+registrable-domain and deny-list rules as [CALSYNC-4]
+(`CalendarMatcher.companyLabel`) — public providers and calendar
+infrastructure (`calendar.google.com`, `calendly.com`) both fall through
+to the title fallback ([CALSYNC-25]). When the label appears in the event title
 as a word, the guess takes the title's casing — "Interview with WayneTech"
 turns the label into "WayneTech". A guess only ever pre-fills — the field
 stays editable, the [CALSYNC-15] stance.

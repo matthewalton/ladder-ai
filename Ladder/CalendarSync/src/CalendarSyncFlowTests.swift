@@ -432,6 +432,22 @@ struct CalendarSyncFlowTests {
         let acme = event(title: "Intro call", attendees: ["jane@mail.acme.com"])
         #expect(CompanyGuesser.guess(for: acme) == "acme")
 
+        // Calendar infrastructure is never company evidence: a
+        // Google-synced invite's unknownorganizer@calendar.google.com must
+        // not guess "google" — it falls through to the title fallback.
+        let synced = event(
+            title: "Interview with Hooli",
+            organizerEmail: "unknownorganizer@calendar.google.com"
+        )
+        #expect(CompanyGuesser.guess(for: synced) == "Hooli")
+        // …and the same domain never matches a tracked "Google"
+        // application either — the deny-list is shared with [CALSYNC-4].
+        #expect(
+            !CalendarMatcher.domainMatches(
+                email: "unknownorganizer@calendar.google.com", company: "Google"
+            )
+        )
+
         // The guess rides on the proposal for the sheet to pre-fill.
         let (_, sync, _) = try makeStores(events: [openCoreOS])
         await sync.scan(asOf: Self.now)

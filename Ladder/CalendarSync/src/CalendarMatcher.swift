@@ -16,6 +16,17 @@ enum CalendarMatcher {
         "protonmail.com",
     ]
 
+    /// Calendar and scheduling infrastructure — senders the plumbing puts
+    /// on an event, not the company: a Google-synced invite's
+    /// `unknownorganizer@calendar.google.com` is not evidence of Google,
+    /// and a Calendly notification is not evidence of Calendly. Excluded
+    /// from `companyLabel` the same way public providers are, so neither
+    /// matching ([CALSYNC-4]) nor the company guess ([CALSYNC-24]) sees
+    /// them.
+    private static let infrastructureDomains: Set<String> = [
+        "calendar.google.com", "calendly.com",
+    ]
+
     /// Registrable-domain second-level labels that are not company names —
     /// `acme.co.uk` normalises to `acme`, not `co`.
     private static let secondLevelLabels: Set<String> = [
@@ -53,7 +64,8 @@ enum CalendarMatcher {
         let parts = email.lowercased().split(separator: "@")
         guard parts.count == 2 else { return nil }
         let domain = String(parts[1])
-        guard !publicMailDomains.contains(where: { domain == $0 || domain.hasSuffix("." + $0) })
+        let denied = publicMailDomains.union(infrastructureDomains)
+        guard !denied.contains(where: { domain == $0 || domain.hasSuffix("." + $0) })
         else { return nil }
         let labels = domain.split(separator: ".").map(String.init)
         guard labels.count >= 2 else { return nil }
