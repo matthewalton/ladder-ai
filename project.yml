@@ -42,6 +42,9 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: '-'
         ENABLE_HARDENED_RUNTIME: YES
+        # Pine as the app accent: macOS draws list selection and control
+        # accents from this asset, not from SwiftUI .tint (DESIGN.md §2).
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
 
   LadderTests:
     type: bundle.unit-test

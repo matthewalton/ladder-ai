@@ -68,7 +68,10 @@ struct ProfileEditorView: View {
                     .font(.trailNarrative(.title3))
                     .foregroundStyle(Color.inkSoft)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.paper)
+                    .background {
+                        ContourBackground()
+                            .background(Color.paper)
+                    }
             }
         }
         .sheet(isPresented: $isAddingRole) {
@@ -87,12 +90,14 @@ private struct RoleRowView: View {
     let role: Role
 
     var body: some View {
+        // Semantic styles so the text inverts on the selection highlight.
         VStack(alignment: .leading, spacing: 2) {
             Text(role.title)
                 .font(.body)
+                .foregroundStyle(.primary)
             Text(role.company)
                 .font(.caption)
-                .foregroundStyle(Color.inkSoft)
+                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
     }

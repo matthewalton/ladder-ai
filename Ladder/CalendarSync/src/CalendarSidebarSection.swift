@@ -36,13 +36,15 @@ private struct CalendarSidebarRow: View {
             isReviewing = true
         } label: {
             HStack(alignment: .top, spacing: 6) {
+                // Semantic styles so the text inverts on the selection
+                // highlight.
                 VStack(alignment: .leading, spacing: 2) {
                     Text(row.title)
-                        .foregroundStyle(Color.ink)
+                        .foregroundStyle(.primary)
                         .lineLimit(2)
                     Text(row.start.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
-                        .foregroundStyle(Color.inkSoft)
+                        .foregroundStyle(.secondary)
                     badge
                 }
                 Spacer(minLength: 0)
@@ -79,12 +81,7 @@ private struct CalendarSidebarRow: View {
                 .font(.caption2)
                 .foregroundStyle(Color.skyline)
         } else if let guess = row.kindGuess {
-            Text(guess.label)
-                .font(.caption2)
-                .foregroundStyle(Color.pine)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.pineTint, in: Capsule())
+            StageKindChip(kind: guess)
         }
     }
 

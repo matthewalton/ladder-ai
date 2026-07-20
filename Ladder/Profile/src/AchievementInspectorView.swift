@@ -23,6 +23,7 @@ struct AchievementInspectorView: View {
                     Button("Save wording", action: commitText)
                 }
             }
+            .listRowBackground(Color.paperRaised)
 
             Section("Skills") {
                 if !achievement.skills.isEmpty {
@@ -31,8 +32,11 @@ struct AchievementInspectorView: View {
                 TextField("Add a skill", text: $newSkill)
                     .onSubmit(addSkill)
             }
+            .listRowBackground(Color.paperRaised)
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.paper)
     }
 
     private func commitText() {

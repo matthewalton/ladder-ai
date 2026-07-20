@@ -57,20 +57,23 @@ struct BlazeShape: Shape {
     }
 }
 
-/// Filled marks completed stages; hollow marks future ones.
+/// Filled marks completed stages; hollow marks future ones. The tint carries
+/// the stage-kind accent where a caller maps one; pine is the default trail
+/// color.
 struct BlazeMark: View {
     var blaze: Blaze
     var filled: Bool
     var size: CGFloat = 14
+    var tint: Color = .pine
 
     var body: some View {
         ZStack {
             if filled {
                 BlazeShape(blaze: blaze)
-                    .fill(Color.pine)
+                    .fill(tint)
             } else {
                 BlazeShape(blaze: blaze)
-                    .stroke(Color.pine, lineWidth: 1.5)
+                    .stroke(tint, lineWidth: 1.5)
                     .background(BlazeShape(blaze: blaze).fill(Color.paper))
             }
         }

@@ -11,15 +11,24 @@ struct StatusColumnView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Signage-style eyebrow (DESIGN.md §3 trail metadata).
             HStack {
                 Text(status.columnTitle)
-                    .font(.headline)
-                    .foregroundStyle(Color.ink)
+                    .font(.caption.weight(.medium))
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+                    .foregroundStyle(Color.inkSoft)
                 Spacer()
                 Text("\(store.applications(in: status).count)")
                     .trailMetadata()
+                    .foregroundStyle(Color.inkSoft)
             }
             .padding(.horizontal, 4)
+
+            Rectangle()
+                .fill(Color.mist)
+                .frame(height: 1)
+                .padding(.horizontal, 4)
 
             ScrollView {
                 LazyVStack(spacing: 8) {
@@ -41,8 +50,10 @@ struct StatusColumnView: View {
         }
         .padding(8)
         .frame(width: 236)
+        // Columns are open regions on the map, not boxes — only a drop
+        // target gets a wash.
         .background(
-            isTargeted ? Color.pineTint.opacity(0.5) : Color.paper,
+            isTargeted ? Color.pineTint.opacity(0.5) : Color.clear,
             in: RoundedRectangle(cornerRadius: 10, style: .continuous)
         )
         .dropDestination(for: ApplicationDragItem.self) { items, _ in

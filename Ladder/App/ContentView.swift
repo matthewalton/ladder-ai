@@ -31,6 +31,11 @@ struct ContentView: View {
                 }
             }
         }
+        // Pine is the app accent everywhere — selection, buttons, links —
+        // so nothing renders in system blue (DESIGN.md §2).
+        .tint(Color.pine)
+        // The title-bar area joins the paper field instead of system gray.
+        .toolbarBackground(Color.paper, for: .windowToolbar)
     }
 }
 

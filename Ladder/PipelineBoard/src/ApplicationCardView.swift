@@ -59,12 +59,7 @@ struct ApplicationCardView: View {
                 .foregroundStyle(Color.inkSoft)
 
             if let waypoint = PipelineStore.nextWaypoint(for: application), !isClosed {
-                Text(waypoint.label)
-                    .font(.caption)
-                    .foregroundStyle(Color.pine)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.pineTint, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                StageKindChip(kind: waypoint)
             }
 
             Text("\(PipelineStore.daysOnTrail(for: application, asOf: .now)) days on trail")

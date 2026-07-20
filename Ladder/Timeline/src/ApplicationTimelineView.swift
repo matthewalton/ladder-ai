@@ -21,7 +21,7 @@ struct ApplicationTimelineView: View {
 
                 if entries.isEmpty {
                     Text("No dated activity yet. Add a Stage or an applied date to draw the line.")
-                        .font(.callout)
+                        .font(.trailNarrative(.callout))
                         .foregroundStyle(Color.inkSoft)
                         .padding(.top, 16)
                 } else {
@@ -47,7 +47,7 @@ struct ApplicationTimelineView: View {
 
     private func row(for entry: TimelineEntry) -> some View {
         HStack(spacing: 12) {
-            BlazeMark(blaze: entry.blaze, filled: entry.isFilled)
+            BlazeMark(blaze: entry.blaze, filled: entry.isFilled, tint: tint(for: entry))
                 .frame(width: Self.blazeColumn)
             Text(entry.label)
                 .font(.body)
@@ -58,6 +58,18 @@ struct ApplicationTimelineView: View {
                     .font(.callout.monospacedDigit())
                     .foregroundStyle(Color.inkSoft)
             }
+        }
+    }
+
+    /// Stage-kind accent on the node only (DESIGN.md §2): summit gold for the
+    /// offer, desaturated "closed trail" for rejected/withdrawn, pine
+    /// otherwise.
+    private func tint(for entry: TimelineEntry) -> Color {
+        switch entry.kind {
+        case .stage(let kind): kind.accent
+        case .outcome(.offer): .summitGold
+        case .outcome(.rejected), .outcome(.withdrawn): .inkSoft
+        default: .pine
         }
     }
 

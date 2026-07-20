@@ -36,11 +36,14 @@ struct ApplicationDetailView: View {
                     .foregroundStyle(Color.inkSoft)
                 Text(application.status.columnTitle)
                     .font(.caption)
-                    .foregroundStyle(Color.pine)
+                    .foregroundStyle(application.status.chipForeground)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Color.pineTint, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .background(
+                        application.status.chipBackground,
+                        in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
+            .listRowBackground(Color.paperRaised)
 
             Section("Details") {
                 TextField("Source — referral, LinkedIn, direct…", text: $source)
@@ -48,6 +51,7 @@ struct ApplicationDetailView: View {
                 if let appliedAt = application.appliedAt {
                     LabeledContent("Applied") {
                         Text(appliedAt, style: .date)
+                            .monospacedDigit()
                             .foregroundStyle(Color.inkSoft)
                     }
                 }
@@ -63,19 +67,28 @@ struct ApplicationDetailView: View {
                     .buttonStyle(.borderless)
                 }
             }
+            .listRowBackground(Color.paperRaised)
 
             Section("Notes") {
                 TextEditor(text: $notes)
                     .frame(minHeight: 60)
+                    .scrollContentBackground(.hidden)
                     .onChange(of: notes) { saveDetails() }
             }
+            .listRowBackground(Color.paperRaised)
 
             Section {
                 ForEach(application.orderedStages) { stage in
                     Button {
                         stageBeingEdited = stage
                     } label: {
-                        HStack {
+                        HStack(spacing: 8) {
+                            BlazeMark(
+                                blaze: TimelineModel.blaze(for: stage.kind),
+                                filled: stage.outcome != .pending,
+                                size: 10,
+                                tint: stage.kind.accent
+                            )
                             Text(stage.kind.label)
                                 .foregroundStyle(Color.ink)
                             Spacer()
@@ -105,14 +118,18 @@ struct ApplicationDetailView: View {
                     .buttonStyle(.plain)
                 }
             }
+            .listRowBackground(Color.paperRaised)
 
             if saveFailed {
                 Text("Saving the application failed.")
                     .font(.callout)
                     .foregroundStyle(Color.clay)
+                    .listRowBackground(Color.paperRaised)
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.paper)
         .sheet(isPresented: $isAddingStage) {
             StageFormView(store: store, application: application)
         }

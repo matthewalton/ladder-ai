@@ -41,12 +41,14 @@ struct PipelineRootView<SidebarFooter: View>: View {
             NavigationSplitView {
                 List(selection: $selection) {
                     ForEach(store.applications) { application in
+                        // Semantic styles, not ink: they invert to white when
+                        // the pine selection highlight draws behind the row.
                         VStack(alignment: .leading) {
                             Text(application.company)
-                                .foregroundStyle(Color.ink)
+                                .foregroundStyle(.primary)
                             Text(application.roleTitle)
                                 .font(.caption)
-                                .foregroundStyle(Color.inkSoft)
+                                .foregroundStyle(.secondary)
                         }
                         .tag(application.persistentModelID)
                     }
@@ -100,7 +102,13 @@ struct PipelineRootView<SidebarFooter: View>: View {
                     Text("Select an application to see its trail.")
                         .font(.trailNarrative())
                         .foregroundStyle(Color.inkSoft)
+                        .multilineTextAlignment(.center)
                         .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background {
+                            ContourBackground()
+                                .background(Color.paper)
+                        }
                 }
             }
     }

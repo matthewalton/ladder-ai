@@ -10,12 +10,45 @@ struct RoleDetailView: View {
     var body: some View {
         List(selection: $selectedAchievement) {
             ForEach(role.orderedAchievements, id: \.persistentModelID) { achievement in
+                // paperRaised card + mist hairline (DESIGN.md §4); selection
+                // reads as a pine border, so the row's own highlight is
+                // covered by an opaque paper row background.
                 Text(achievement.text)
-                    .padding(.vertical, 2)
+                    .foregroundStyle(Color.ink)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(
+                        Color.paperRaised,
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(
+                                selectedAchievement == achievement ? Color.pine : Color.mist,
+                                lineWidth: selectedAchievement == achievement ? 2 : 1))
                     .tag(achievement)
+                    .listRowBackground(Color.paper)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
             }
             .onMove { source, destination in
                 try? store.moveAchievements(in: role, from: source, to: destination)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Color.paper)
+        .overlay {
+            if role.orderedAchievements.isEmpty {
+                Text("What did you move forward here? Add the first achievement below.")
+                    .font(.trailNarrative(.title3))
+                    .foregroundStyle(Color.inkSoft)
+                    .multilineTextAlignment(.center)
+                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background {
+                        ContourBackground()
+                            .background(Color.paper)
+                    }
+                    .allowsHitTesting(false)
             }
         }
         .inspector(isPresented: .constant(selectedAchievement != nil)) {
