@@ -18,7 +18,8 @@ private func sharePageHTML(documentTranscript: String) -> String {
         {"type":"bulletList","content":[\
         {"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Technical coding challenge via CodeSignal"}]}]},\
         {"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Preferred language: TypeScript"}]},\
-        {"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"TSC type-checking active"}]}]}]}]}]}]}}},\
+        {"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"TSC type-checking active"}]}]}]}]}]},\
+        {"type":"paragraph","content":[{"type":"text","text":"Chat with meeting transcript: "},{"type":"text","text":"https://notes.granola.ai/t/707b6902"}]}]}}},\
         "documentLists":[],"documentTranscript":\(documentTranscript)}
         """
     let escaped = payload

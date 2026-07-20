@@ -73,6 +73,10 @@ enum GranolaSharePayload {
         if let content = (panel["panel"] as? [String: Any])?["content"] as? [String: Any] {
             flattenNotes(content, bulletDepth: 0, into: &lines)
         }
+        // Granola appends a "Chat with meeting transcript: <url>" line for
+        // its own logged-in web app; on an anonymous import it is dead
+        // weight ([TRANSCRIPT-22]).
+        lines.removeAll { $0.hasPrefix("Chat with meeting transcript:") }
 
         return SharedDocument(
             title: document?["title"] as? String,

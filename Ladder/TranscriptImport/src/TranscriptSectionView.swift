@@ -39,7 +39,7 @@ struct TranscriptSectionView: View {
             Section("Transcript") {
                 if let transcript = stage.transcript {
                     if transcript.segments.isEmpty {
-                        Text("This import carried no transcript — the link was shared without one. Replace it with a transcript-included share, or paste the text.")
+                        Text("This import carried no transcript — Granola share pages expose the notes only. Copy the transcript from Granola and add it with Replace Import.")
                             .font(.callout)
                             .foregroundStyle(Color.inkSoft)
                     } else {

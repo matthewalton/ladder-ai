@@ -183,6 +183,12 @@ plain text — headings as `## ` lines, bullet items as `- ` lines indented
 by nesting — and lands in the import's notes overview for the user to edit
 before confirming. Stored through the same [TRANSCRIPT-16] path.
 
+Edge cases:
+
+- Granola appends a "Chat with meeting transcript: <url>" line for its own
+  logged-in web app; it is dropped from the flattened notes — dead weight
+  on an anonymous import.
+
 ## [TRANSCRIPT-23] A shared transcript's microphone source attributes to me and any other source to them
 
 Stream identity, the rule native capture was going to use (ADR 0002):
@@ -198,8 +204,12 @@ Edge cases:
 
 ## [TRANSCRIPT-24] A share link carrying no transcript produces a preview with no segments
 
-`documentTranscript` is null unless the link was shared with its transcript
-included. The preview still carries the notes overview ([TRANSCRIPT-22]);
+Verified against Granola's docs and a live share page (2026-07-20): share
+pages expose the summarized notes only to anonymous viewers — the
+transcript stays behind the owner's Granola login, so `documentTranscript`
+is null in practice and the defensive mapping ([TRANSCRIPT-23]) waits on
+Granola exposing it (a shared folder may; unverified). The preview still
+carries the notes overview ([TRANSCRIPT-22]);
 confirming attaches a notes-only Transcript with zero segments. On the
 Stage detail the notes overview renders in its own section — never inside
 the transcript section — and the transcript section explains that the link

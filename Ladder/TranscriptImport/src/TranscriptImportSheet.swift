@@ -61,7 +61,7 @@ struct TranscriptImportSheet: View {
                     Section("Preview") {
                         if linkHasNoTranscript {
                             Label(
-                                "This link carries no transcript — notes only. Share it with the transcript included, or paste the transcript text.",
+                                "Granola share pages expose the notes only — the transcript stays behind your Granola login. Open the transcript in Granola, copy it, and paste it under Paste manually.",
                                 systemImage: "info.circle"
                             )
                             .font(.callout)

@@ -33,8 +33,16 @@ source → `.them` ([TRANSCRIPT-23]). No other URLs are ever fetched
   chunks), not an API contract; Granola can break it silently. Fetch or
   parse failure refuses with a reason ([TRANSCRIPT-26]) and the paste door
   is the always-working fallback.
-- `documentTranscript` is null unless the link was shared with transcript
-  included — a notes-only import attaches a zero-segment Transcript
-  ([TRANSCRIPT-24]). The transcript-bearing shape is unverified until one
-  is seen; the mapping is written defensively and falls back to notes-only
-  rather than guessing.
+- Verified 2026-07-20 (Granola docs + live payloads + an unauthenticated
+  probe of `api.granola.ai/v1/get-document-transcript` answering
+  "Unsupported client"): share pages expose the summarized notes only;
+  the transcript stays behind the owner's login, and the "Chat with
+  meeting transcript" link at the foot of the notes works only for them.
+  A notes-only import attaches a zero-segment Transcript
+  ([TRANSCRIPT-24]) and the transcript is pasted by hand. The
+  transcript-bearing mapping ([TRANSCRIPT-23]) stays, written defensively,
+  in case a payload ever carries one — Granola's docs hint shared
+  *folders* can include transcripts (unverified, no example seen).
+- Authenticated fetching (the user's Granola login inside Ladder) stays
+  out — that is exactly the integration ADR 0002 priced as heavier than
+  the recorder it replaced.
