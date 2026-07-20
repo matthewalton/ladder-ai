@@ -92,6 +92,7 @@ struct StageFormView: View {
                 if let stage {
                     GranolaNotesSection(container: store.container, stage: stage)
                     DebriefSection(container: store.container, stage: stage)
+                    PrepPackSection(container: store.container, stage: stage)
                 }
             }
             .formStyle(.grouped)

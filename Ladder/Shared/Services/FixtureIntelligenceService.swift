@@ -45,6 +45,16 @@ actor FixtureIntelligenceService: IntelligenceService {
         return FixtureIntelligenceService(returning: data)
     }
 
+    static func prepFixture(in bundle: Bundle = .main) -> FixtureIntelligenceService {
+        guard
+            let url = bundle.url(forResource: "prep-result", withExtension: "json", subdirectory: "Fixtures"),
+            let data = try? Data(contentsOf: url)
+        else {
+            fatalError("prep-result.json is missing from the bundled Fixtures folder")
+        }
+        return FixtureIntelligenceService(returning: data)
+    }
+
     func complete(_ request: IntelligenceRequest) async throws -> Data {
         recordedRequests.append(request)
         let index = min(recordedRequests.count - 1, responses.count - 1)

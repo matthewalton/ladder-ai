@@ -73,6 +73,11 @@ final class Stage {
     @Relationship(deleteRule: .cascade, inverse: \Debrief.stage)
     var debrief: Debrief?
 
+    /// One prep pack per Stage; deleting the Stage deletes it too
+    /// (owned by the prep-pack slice — see Ladder/PrepPack/).
+    @Relationship(deleteRule: .cascade, inverse: \PrepPack.stage)
+    var prepPack: PrepPack?
+
     var kind: StageKind {
         get { StageKind(rawValue: kindRaw) }
         set { kindRaw = newValue.rawValue }

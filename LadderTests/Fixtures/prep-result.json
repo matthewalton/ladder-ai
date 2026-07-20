@@ -1,0 +1,23 @@
+{
+  "likelyQuestions": [
+    "Walk me through a production incident you owned end to end.",
+    "How would you scale our ingestion pipeline?"
+  ],
+  "talkingPoints": [
+    {
+      "text": "Lead with the payments-outage incident command story",
+      "achievements": [2]
+    },
+    {
+      "text": "Ask how the platform team measures reliability today",
+      "achievements": []
+    }
+  ],
+  "companyBrief": "Summit Labs is hiring a Platform Engineer to own reliability end to end; the JD centres on incident response and infrastructure ownership.",
+  "mockTasks": [
+    {
+      "title": "Design a rate limiter",
+      "brief": "Sketch a rate limiter for a multi-tenant API: cover burst handling, fairness between tenants, and what you would measure in production."
+    }
+  ]
+}

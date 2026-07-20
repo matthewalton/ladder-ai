@@ -34,7 +34,7 @@ final class ProfileStore {
         let schema = Schema([
             Profile.self, Role.self, Achievement.self, SkillTag.self, Application.self,
             Stage.self, DismissedEvent.self, Transcript.self, Debrief.self,
-            DebriefQuestion.self,
+            DebriefQuestion.self, PrepPack.self, PrepTalkingPoint.self,
         ])
         let configuration: ModelConfiguration
         if inMemory {
