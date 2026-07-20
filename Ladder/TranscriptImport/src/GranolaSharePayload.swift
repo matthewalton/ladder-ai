@@ -1,6 +1,8 @@
 import Foundation
 
 enum GranolaShareError: Error, Equatable {
+    /// Refused before any request ([TRANSCRIPT-31]).
+    case notAShareLink
     case fetchFailed
     /// The page's payload carries no shared document — not a share link,
     /// or Granola changed the page internals (decisions/0006).
@@ -23,14 +25,12 @@ struct LiveGranolaShareFetcher: GranolaShareFetching {
     }
 }
 
-/// What a share link's page embeds (CONTEXT.md "shared document").
+/// What a share link's page embeds (CONTEXT.md "shared document"). Share
+/// pages expose the notes only — never the transcript (decisions/0006).
 struct SharedDocument: Equatable {
     var title: String?
     var createdAt: Date?
     var notesText: String
-    /// nil when the link carried no usable transcript ([TRANSCRIPT-24]) —
-    /// an unrecognized shape also lands here, never a guess.
-    var segments: [Segment]?
 }
 
 extension ISO8601DateFormatter {
@@ -47,8 +47,8 @@ extension ISO8601DateFormatter {
 /// (Next.js RSC flight chunks), not an API contract — everything here fails
 /// toward `noSharedDocument` or notes-only rather than guessing.
 enum GranolaSharePayload {
-    /// The URL door opens only for a lone `notes.granola.ai/t/…` URL
-    /// ([TRANSCRIPT-27]); anything else is a paste.
+    /// The door opens only for a lone `notes.granola.ai/t/…` URL
+    /// ([TRANSCRIPT-31]); anything else is refused before any request.
     static func shareLink(in text: String) -> URL? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !trimmed.contains(where: \.isWhitespace),
@@ -81,8 +81,7 @@ enum GranolaSharePayload {
         return SharedDocument(
             title: document?["title"] as? String,
             createdAt: createdAt,
-            notesText: lines.joined(separator: "\n"),
-            segments: transcriptSegments(in: payload)
+            notesText: lines.joined(separator: "\n")
         )
     }
 
@@ -190,36 +189,4 @@ enum GranolaSharePayload {
         }.joined()
     }
 
-    // MARK: - Shared transcript
-
-    /// Stream identity ([TRANSCRIPT-23]): `microphone` → me, any other
-    /// source → them. The shape is unverified until a transcript-shared
-    /// link is seen — anything unrecognized returns nil, never a guess.
-    private static func transcriptSegments(in payload: String) -> [Segment]? {
-        switch jsonValue(after: "\"documentTranscript\":", in: payload) {
-        case let items as [[String: Any]]:
-            let segments = items.compactMap { item -> Segment? in
-                guard let text = item["text"] as? String, !text.isEmpty else { return nil }
-                let source = (item["source"] as? String)?.lowercased()
-                return Segment(
-                    speaker: source == "microphone" ? .me : .them,
-                    text: text,
-                    tStart: numericSeconds(item["start_timestamp"]),
-                    tEnd: numericSeconds(item["end_timestamp"])
-                )
-            }
-            return segments.isEmpty ? nil : segments
-        case let text as String:
-            return try? TranscriptParser.parse(text)
-        default:
-            return nil
-        }
-    }
-
-    private static func numericSeconds(_ value: Any?) -> Double? {
-        switch value {
-        case let number as NSNumber: return number.doubleValue
-        default: return nil
-        }
-    }
 }

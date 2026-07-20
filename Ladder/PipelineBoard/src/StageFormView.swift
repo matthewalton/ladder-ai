@@ -85,11 +85,11 @@ struct StageFormView: View {
                         .frame(minHeight: 80)
                 }
 
-                // Import entry + readout live on the Stage form — the app's
-                // Stage detail surface (TranscriptImport decisions/0004).
-                // Only a persisted Stage can carry a transcript.
+                // Granola notes attach directly from the Stage form
+                // (TranscriptImport decisions/0007). Only a persisted Stage
+                // can carry them.
                 if let stage {
-                    TranscriptSectionView(container: store.container, stage: stage)
+                    GranolaNotesSection(container: store.container, stage: stage)
                 }
             }
             .formStyle(.grouped)

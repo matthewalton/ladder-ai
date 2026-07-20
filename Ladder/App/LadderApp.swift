@@ -38,5 +38,12 @@ struct LadderApp: App {
         Settings {
             SettingsView()
         }
+        // The notes window (TranscriptImport decisions/0007): the Stage only
+        // indicates attached notes; reading them opens here.
+        WindowGroup(id: GranolaNotesWindow.windowID, for: PersistentIdentifier.self) { $transcriptID in
+            if let transcriptID {
+                GranolaNotesWindow(container: store.container, transcriptID: transcriptID)
+            }
+        }
     }
 }
