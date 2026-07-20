@@ -33,6 +33,9 @@ struct TranscriptImportSheet: View {
                     TextEditor(text: $transcriptText)
                         .font(.callout)
                         .frame(minHeight: 120)
+                    Text("Paste the transcript text — or just a notes.granola.ai share link, and Preview will fetch it.")
+                        .font(.callout)
+                        .foregroundStyle(Color.inkSoft)
                 }
                 Section("Notes overview (optional)") {
                     TextEditor(text: $notesOverview)
