@@ -33,7 +33,7 @@ struct TranscriptSectionView: View {
                 TranscriptReadoutView(transcript: transcript)
                 Button("Replace Transcript…") { openImport() }
             } else {
-                Text("Paste the Granola transcript or share link, or drop a .txt or .md file.")
+                Text("Import the call from its Granola share link — or paste the transcript, or drop a .txt or .md file.")
                     .font(.callout)
                     .foregroundStyle(Color.inkSoft)
                 Button("Import Transcript…") { openImport() }

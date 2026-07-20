@@ -167,12 +167,14 @@ the fallback to the shared document's created date ([TRANSCRIPT-25]).
 
 ## [TRANSCRIPT-21] A pasted Granola share link fetches the shared document into the preview
 
-The URL door (decisions/0006): when the transcript field holds a lone
-`notes.granola.ai/t/…` URL, previewing fetches the page over plain HTTPS
-and parses its server-embedded payload — no MCP, no authentication, only
-what the link already makes public. The fetch sits behind the
-`GranolaShareFetching` seam; tests use a fixture fetcher, the app the live
-one — the `IntelligenceService` pattern.
+The URL door (decisions/0006), and the sheet's primary path: a dedicated
+link field takes the `notes.granola.ai/t/…` URL, and previewing fetches
+the page over plain HTTPS and parses its server-embedded payload — no MCP,
+no authentication, only what the link already makes public. Manual paste
+(transcript and notes overview, each its own field) sits behind a
+disclosure. The fetch sits behind the `GranolaShareFetching` seam; tests
+use a fixture fetcher, the app the live one — the `IntelligenceService`
+pattern.
 
 ## [TRANSCRIPT-22] The shared document's notes render as the notes overview text
 
@@ -216,6 +218,7 @@ field for retry.
 
 ## [TRANSCRIPT-27] A pasted URL that is not a Granola share link is refused as unlabeled text
 
-Only `notes.granola.ai` share paths open the URL door. Any other lone URL
-falls through to the paste parser and refuses via [TRANSCRIPT-9] — the app
-never fetches arbitrary URLs.
+Only `notes.granola.ai` share paths open the URL door. A non-Granola URL
+in the link field is refused up front without a request; one pasted into
+the transcript field falls through to the paste parser and refuses via
+[TRANSCRIPT-9] — either way the app never fetches arbitrary URLs.
