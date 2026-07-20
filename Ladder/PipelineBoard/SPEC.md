@@ -236,3 +236,15 @@ store so tests run offline. The link itself is not stored anywhere.
 Some postings link straight to a PDF. The fetched bytes are sniffed
 (`%PDF` magic) and extracted via PDFKit instead of the HTML path — the
 [PIPEBOARD-22] outcome through the link route.
+
+## [PIPEBOARD-28] A job description link whose page embeds JobPosting structured data imports the posting's description text
+
+Born from a real failure: Ashby-class SPA postings render an empty JS shell
+— whole-page extraction finds nothing — but embed a schema.org `JobPosting`
+`application/ld+json` block for search engines carrying the full
+description. When any ld+json block on the page yields a JobPosting (top
+level, in an array, or under `@graph`), its description — prefixed with the
+posting's title and hiring organisation when present — becomes the JD,
+converted HTML→text on-device. Preferred over whole-page text even on
+server-rendered pages: it is the posting without the nav and footer. Pages
+without one fall back to whole-page extraction ([PIPEBOARD-26]).

@@ -107,6 +107,34 @@ struct JDImportTests {
         #expect(!application.jobDescription.contains("the old JD"), "replaced, not appended")
     }
 
+    @Test("[PIPEBOARD-28] a job description link whose page embeds JobPosting structured data imports the posting's description text")
+    func linkWithJobPostingStructuredDataImportsDescription() async throws {
+        let (store, application) = try makeStore()
+        // The Ashby shape: an empty JS shell — whole-page extraction finds
+        // nothing — carrying the posting as ld+json.
+        store.fetchLinkData = { _ in
+            Data(
+                """
+                <html><head><title>Careers</title>
+                <script type="application/ld+json">{"@type":"JobPosting",\
+                "title":"Platform Engineer",\
+                "hiringOrganization":{"@type":"Organization","name":"Summit Labs"},\
+                "description":"<h1>About</h1><p>Own platform reliability across three product teams.</p>"}</script>
+                </head><body><div id="root"></div></body></html>
+                """.utf8)
+        }
+
+        try await store.importJobDescription(
+            fromLink: try #require(URL(string: "https://jobs.example.com/platform-engineer")),
+            into: application)
+
+        #expect(application.jobDescription.contains("Own platform reliability across three product teams."))
+        #expect(application.jobDescription.contains("Platform Engineer"))
+        #expect(application.jobDescription.contains("Summit Labs"))
+        #expect(!application.jobDescription.contains("<p>"), "the description lands as text, not markup")
+        #expect(!application.jobDescription.contains("@type"), "the JSON wrapper never leaks into the JD")
+    }
+
     @Test("[PIPEBOARD-24] a failed link import leaves the job description unchanged")
     func failedLinkImportLeavesJobDescriptionUnchanged() async throws {
         let (store, application) = try makeStore(existingJD: "the old JD")

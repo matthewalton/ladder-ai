@@ -155,9 +155,13 @@ final class PipelineStore {
 
     /// The link path of the JD import (decisions/0006): fetch the pasted
     /// URL, extract on-device, land the text raw. The link is not stored.
+    /// A JobPosting structured-data block wins over whole-page text — it is
+    /// the posting without the nav and footer ([PIPEBOARD-28]).
     func importJobDescription(fromLink url: URL, into application: Application) async throws {
         let data = try await fetchLinkData(url)
-        application.jobDescription = try FileTextExtractor.extractText(fromFetchedData: data)
+        application.jobDescription =
+            try JobPostingStructuredData.text(fromHTMLData: data)
+            ?? FileTextExtractor.extractText(fromFetchedData: data)
         try context.save()
     }
 
