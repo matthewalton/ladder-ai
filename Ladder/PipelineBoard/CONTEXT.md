@@ -51,6 +51,12 @@ The card's narrative label for the earliest pending Stage — footer text only,
 per DESIGN.md §6.
 _Avoid_: next step, upcoming stage (in UI copy); any use as a code identifier
 
+**Long-text field**:
+A field of the detail forms that collapses to an indicator row (root
+CONTEXT.md, docs/adr/0003) when set: the application detail's job description
+and notes, and the Stage form's prep context.
+_Avoid_: big text field, free-text area, text blob
+
 **JD import**:
 Attaching a job description to an existing Application by extracting text
 on-device from a dropped PDF or docx file (decisions/0005) or from a pasted

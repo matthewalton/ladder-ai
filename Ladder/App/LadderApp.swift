@@ -45,5 +45,33 @@ struct LadderApp: App {
                 GranolaNotesWindow(container: store.container, transcriptID: transcriptID)
             }
         }
+        // The collapsed-content windows (docs/adr/0003): forms only indicate
+        // long text content is set; reading — or, for the typed-only fields,
+        // editing — opens here.
+        WindowGroup(id: JobDescriptionWindow.windowID, for: PersistentIdentifier.self) { $applicationID in
+            if let applicationID {
+                JobDescriptionWindow(store: pipelineStore, applicationID: applicationID)
+            }
+        }
+        WindowGroup(id: NotesEditWindow.windowID, for: PersistentIdentifier.self) { $applicationID in
+            if let applicationID {
+                NotesEditWindow(store: pipelineStore, applicationID: applicationID)
+            }
+        }
+        WindowGroup(id: PrepContextEditWindow.windowID, for: PersistentIdentifier.self) { $stageID in
+            if let stageID {
+                PrepContextEditWindow(store: pipelineStore, stageID: stageID)
+            }
+        }
+        WindowGroup(id: DebriefWindow.windowID, for: PersistentIdentifier.self) { $debriefID in
+            if let debriefID {
+                DebriefWindow(container: store.container, debriefID: debriefID)
+            }
+        }
+        WindowGroup(id: PrepPackWindow.windowID, for: PersistentIdentifier.self) { $packID in
+            if let packID {
+                PrepPackWindow(container: store.container, packID: packID)
+            }
+        }
     }
 }

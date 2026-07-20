@@ -165,8 +165,39 @@ final class PipelineStore {
         try context.save()
     }
 
+    /// By fetch, not `model(for:)` — a deleted ID resolves to nil instead of
+    /// an invalidated instance that traps on first property access.
     func application(for id: PersistentIdentifier) -> Application? {
-        context.model(for: id) as? Application
+        var descriptor = FetchDescriptor<Application>(
+            predicate: #Predicate { $0.persistentModelID == id })
+        descriptor.fetchLimit = 1
+        return (try? context.fetch(descriptor))?.first
+    }
+
+    func stage(for id: PersistentIdentifier) -> Stage? {
+        var descriptor = FetchDescriptor<Stage>(
+            predicate: #Predicate { $0.persistentModelID == id })
+        descriptor.fetchLimit = 1
+        return (try? context.fetch(descriptor))?.first
+    }
+
+    /// The confirmed removes of the docs/adr/0003 pattern ([PIPEBOARD-33]):
+    /// each clears exactly one long-text field, leaving every other field
+    /// untouched. The confirmation dialog is the view's; the store just
+    /// clears.
+    func clearJobDescription(of application: Application) throws {
+        application.jobDescription = ""
+        try context.save()
+    }
+
+    func clearNotes(of application: Application) throws {
+        application.notes = ""
+        try context.save()
+    }
+
+    func clearPrepContext(of stage: Stage) throws {
+        stage.prepContext = ""
+        try context.save()
     }
 
     static func nextWaypoint(for application: Application) -> StageKind? {

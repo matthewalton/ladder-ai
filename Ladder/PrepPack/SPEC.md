@@ -173,3 +173,28 @@ points — each with the text of its mapped Achievements — and mock tasks
 when present. Sections with nothing to say are omitted rather than left
 as empty headings. Export is offline string assembly through a
 `FileDocument`; the save panel goes on the visual-verify list.
+
+## [PREP-20] A Stage's prep pack collapses to an indicator row in the Stage form
+
+The docs/adr/0003 pattern: the row shows the pack exists — labelled with its
+`generatedAt`, the Granola stance — and offers Open, Remove, and the existing
+Regenerate and Export Markdown ([PREP-19] unchanged; export needs no open
+window). The content (company brief, likely questions, talking points, mock
+tasks) never renders inline; `PrepPackContentView` moves behind Open
+([PREP-21]). Row chrome is visual-verify.
+
+## [PREP-21] Opening the prep pack shows its content in a window
+
+`openWindow` carrying the PrepPack's persistent ID — the [TRANSCRIPT-28]
+window pattern. The window renders the full pack content read-only with text
+selection enabled, and shows a gone message when the PrepPack no longer
+resolves. Window chrome is visual-verify.
+
+## [PREP-22] Removing the prep pack requires confirmation before deleting it
+
+The pack's first delete path — until now only regeneration replaced it, and
+[PREP-17] keeps its no-confirmation replace. Confirming deletes the
+`PrepPack` and its talking-point rows from the store with no orphans (the
+[PREP-3] cascade stance); the mapped Achievements survive untouched.
+Declining changes nothing. An API call recreates it, hence the confirmation
+(docs/adr/0003). Dialog chrome is visual-verify.

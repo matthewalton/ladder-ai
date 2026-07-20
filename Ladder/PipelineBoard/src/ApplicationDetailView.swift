@@ -22,10 +22,21 @@ struct ApplicationDetailView: View {
     @State private var jdLinkText = ""
     @State private var pendingJDImport: JDImportSource?
     @State private var jdImportFailureMessage: String?
+    // The collapse decision is made at appearance ([PIPEBOARD-29/30]) —
+    // these never flip mid-typing, only on remove.
+    @State private var showsNotesIndicator: Bool
+    @State private var showsJDIndicator: Bool
+    @State private var pendingRemoval: LongTextRemoval?
+    @Environment(\.openWindow) private var openWindow
 
     enum JDImportSource: Equatable {
         case file(URL)
         case link(URL)
+    }
+
+    enum LongTextRemoval: String, Identifiable {
+        case notes, jobDescription
+        var id: String { rawValue }
     }
 
     init(
@@ -38,6 +49,10 @@ struct ApplicationDetailView: View {
         _source = State(initialValue: application.source ?? "")
         _notes = State(initialValue: application.notes)
         _jobDescription = State(initialValue: application.jobDescription)
+        _showsNotesIndicator = State(
+            initialValue: LongTextField.collapsesAtAppearance(application.notes))
+        _showsJDIndicator = State(
+            initialValue: LongTextField.collapsesAtAppearance(application.jobDescription))
     }
 
     var body: some View {
@@ -85,18 +100,44 @@ struct ApplicationDetailView: View {
             .listRowBackground(Color.paperRaised)
 
             Section("Notes") {
-                TextEditor(text: $notes)
-                    .frame(minHeight: 60)
-                    .scrollContentBackground(.hidden)
-                    .onChange(of: notes) { saveDetails() }
+                if showsNotesIndicator {
+                    IndicatorRow(
+                        label: "Notes set",
+                        icon: "note.text",
+                        onOpen: {
+                            openWindow(
+                                id: NotesEditWindow.windowID,
+                                value: application.persistentModelID)
+                        },
+                        onRemove: { pendingRemoval = .notes }
+                    )
+                } else {
+                    TextEditor(text: $notes)
+                        .frame(minHeight: 60)
+                        .scrollContentBackground(.hidden)
+                        .onChange(of: notes) { saveDetails() }
+                }
             }
             .listRowBackground(Color.paperRaised)
 
             Section {
-                TextEditor(text: $jobDescription)
-                    .frame(minHeight: 60)
-                    .scrollContentBackground(.hidden)
-                    .onChange(of: jobDescription) { saveDetails() }
+                if showsJDIndicator {
+                    IndicatorRow(
+                        label: "Job description set",
+                        icon: "doc.text",
+                        onOpen: {
+                            openWindow(
+                                id: JobDescriptionWindow.windowID,
+                                value: application.persistentModelID)
+                        },
+                        onRemove: { pendingRemoval = .jobDescription }
+                    )
+                } else {
+                    TextEditor(text: $jobDescription)
+                        .frame(minHeight: 60)
+                        .scrollContentBackground(.hidden)
+                        .onChange(of: jobDescription) { saveDetails() }
+                }
                 if let jdImportFailureMessage {
                     Text(jdImportFailureMessage)
                         .font(.callout)
@@ -215,6 +256,47 @@ struct ApplicationDetailView: View {
         } message: { _ in
             Text("The imported text will replace the current job description.")
         }
+        .confirmationDialog(
+            pendingRemoval == .notes
+                ? "Remove the notes?" : "Remove the job description?",
+            isPresented: Binding(
+                get: { pendingRemoval != nil },
+                set: { if !$0 { pendingRemoval = nil } }
+            ),
+            presenting: pendingRemoval
+        ) { removal in
+            Button("Remove", role: .destructive) {
+                pendingRemoval = nil
+                performRemoval(removal)
+            }
+            Button("Cancel", role: .cancel) {
+                pendingRemoval = nil
+            }
+        } message: { removal in
+            Text(
+                removal == .notes
+                    ? "The notes will be cleared."
+                    : "The job description will be cleared.")
+        }
+    }
+
+    /// The confirmed remove ([PIPEBOARD-33]): clear through the store, then
+    /// hand the field back to its inline editor ([PIPEBOARD-30]).
+    private func performRemoval(_ removal: LongTextRemoval) {
+        do {
+            switch removal {
+            case .notes:
+                try store.clearNotes(of: application)
+                notes = ""
+                showsNotesIndicator = false
+            case .jobDescription:
+                try store.clearJobDescription(of: application)
+                jobDescription = ""
+                showsJDIndicator = false
+            }
+        } catch {
+            saveFailed = true
+        }
     }
 
     /// Empty (or whitespace-only) job descriptions have nothing worth
@@ -280,12 +362,14 @@ struct ApplicationDetailView: View {
     private func saveDetails() {
         let trimmedSource = source.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
+            // A collapsed field's inline state is stale by definition — its
+            // window may have edited the model — so pass the live value.
             try store.updateDetails(
                 application,
                 source: trimmedSource.isEmpty ? nil : trimmedSource,
-                notes: notes,
+                notes: showsNotesIndicator ? application.notes : notes,
                 appliedAt: application.appliedAt,
-                jobDescription: jobDescription
+                jobDescription: showsJDIndicator ? application.jobDescription : jobDescription
             )
         } catch {
             saveFailed = true

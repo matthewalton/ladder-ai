@@ -17,12 +17,20 @@ struct StageFormView: View {
     @State private var prepContext = ""
     @State private var meetingURLText = ""
     @State private var saveFailed = false
+    // The collapse decision is made at appearance ([PIPEBOARD-29/30]) — it
+    // never flips mid-typing, only on remove. A new Stage always edits
+    // inline: it has no prep context yet.
+    @State private var showsPrepContextIndicator = false
+    @State private var isConfirmingPrepContextRemoval = false
+    @Environment(\.openWindow) private var openWindow
 
     init(store: PipelineStore, application: Application, stage: Stage? = nil) {
         self.store = store
         self.application = application
         self.stage = stage
         guard let stage else { return }
+        _showsPrepContextIndicator = State(
+            initialValue: LongTextField.collapsesAtAppearance(stage.prepContext))
         if case .other(let label) = stage.kind {
             _isOther = State(initialValue: true)
             _otherLabel = State(initialValue: label)
@@ -81,8 +89,30 @@ struct StageFormView: View {
 
                 TextField("Meeting link", text: $meetingURLText)
                 Section("Prep context") {
-                    TextEditor(text: $prepContext)
-                        .frame(minHeight: 80)
+                    if let stage, showsPrepContextIndicator {
+                        IndicatorRow(
+                            label: "Prep context set",
+                            icon: "text.alignleft",
+                            onOpen: {
+                                openWindow(
+                                    id: PrepContextEditWindow.windowID,
+                                    value: stage.persistentModelID)
+                            },
+                            onRemove: { isConfirmingPrepContextRemoval = true }
+                        )
+                        .confirmationDialog(
+                            "Remove the prep context?",
+                            isPresented: $isConfirmingPrepContextRemoval
+                        ) {
+                            Button("Remove", role: .destructive) { removePrepContext() }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("The prep context will be cleared.")
+                        }
+                    } else {
+                        TextEditor(text: $prepContext)
+                            .frame(minHeight: 80)
+                    }
                 }
 
                 // Granola notes attach directly from the Stage form
@@ -117,8 +147,25 @@ struct StageFormView: View {
         .frame(minWidth: 420, minHeight: 440)
     }
 
+    /// The confirmed remove ([PIPEBOARD-33]): clear through the store, then
+    /// hand the field back to its inline editor ([PIPEBOARD-30]).
+    private func removePrepContext() {
+        guard let stage else { return }
+        do {
+            try store.clearPrepContext(of: stage)
+            prepContext = ""
+            showsPrepContextIndicator = false
+        } catch {
+            saveFailed = true
+        }
+    }
+
     private func save() {
         let meetingURL = meetingURLText.isEmpty ? nil : URL(string: meetingURLText)
+        // A collapsed prep context's inline state is stale by definition —
+        // its window may have edited the model — so save the live value.
+        let prepContextToSave =
+            showsPrepContextIndicator ? (stage?.prepContext ?? prepContext) : prepContext
         do {
             if let stage {
                 try store.updateStage(
@@ -127,7 +174,7 @@ struct StageFormView: View {
                     scheduledAt: hasSchedule ? scheduledAt : nil,
                     outcome: outcome,
                     heardBackAt: hasHeardBack ? heardBackAt : nil,
-                    prepContext: prepContext,
+                    prepContext: prepContextToSave,
                     meetingURL: meetingURL
                 )
             } else {

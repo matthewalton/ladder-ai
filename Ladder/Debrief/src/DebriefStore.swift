@@ -150,4 +150,16 @@ final class DebriefStore {
     func reset() {
         phase = .idle
     }
+
+    /// The confirmed remove ([DEBRIEF-20]): deletes the debrief — its
+    /// question entries cascade with it — and leaves the linked Achievements
+    /// untouched. The confirmation dialog is the view's; the store just
+    /// deletes. A Stage without a debrief is a no-op.
+    func removeDebrief(from stage: Stage) throws {
+        guard let debrief = stage.debrief else { return }
+        let context = stage.modelContext ?? self.context
+        context.delete(debrief)
+        try context.save()
+        phase = .idle
+    }
 }

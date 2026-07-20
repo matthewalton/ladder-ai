@@ -21,7 +21,8 @@ that attaches a CV. The application detail also owns the job description
 after creation: editing it in place and the JD import (decisions/0005), which
 extracts a PDF or docx file's text on-device via the shared extractor — or
 fetches a pasted link and extracts the page's text the same way
-(decisions/0006).
+(decisions/0006). The detail forms' long-text fields — job description,
+notes, prep context — collapse to indicator rows when set (docs/adr/0003).
 
 Out of scope: calendar matching (the calendar-sync slice consumes the
 `calendarEventID` and `meetingURL` fields this slice only stores), the
@@ -187,7 +188,9 @@ Until this criterion the Tailor export was the only writer — a manually
 added Application ([PIPEBOARD-17]) carried an empty job description forever,
 starving the prep-pack input guard ([PREP-5]) and the debrief payload. The
 detail form gains a job-description editor section; its chrome is
-visual-verify.
+visual-verify. Since [PIPEBOARD-29] the inline editor renders only while the
+job description is empty — a set JD is changed by re-import or by remove and
+retype (docs/adr/0003).
 
 ## [PIPEBOARD-22] Importing a PDF job description file replaces the Application's job description with its extracted text
 
@@ -248,3 +251,46 @@ posting's title and hiring organisation when present — becomes the JD,
 converted HTML→text on-device. Preferred over whole-page text even on
 server-rendered pages: it is the posting without the nav and footer. Pages
 without one fall back to whole-page extraction ([PIPEBOARD-26]).
+
+## [PIPEBOARD-29] A non-empty long-text field collapses to an indicator row when its form appears
+
+The docs/adr/0003 pattern on this slice's three long-text fields: the job
+description and the notes on the application detail, the prep context on the
+Stage form. Set means non-empty after trimming whitespace. The indicator row
+names the content and offers Open and Remove; the text itself never renders
+inline — the Granola stance ([TRANSCRIPT-28]'s section). The set/collapsed
+decision is a pure helper so the rule is testable without views; row chrome
+is visual-verify.
+
+## [PIPEBOARD-30] A long-text field that is empty when its form appears keeps its inline editor
+
+The flip side of [PIPEBOARD-29]: entering text stays cheap. The collapse
+decision is made at appearance, so an initially-empty field never collapses
+mid-typing; the indicator appears on the next visit. The job description's
+empty state keeps the import menu beside the editor
+([PIPEBOARD-22]–[PIPEBOARD-28] unchanged).
+
+## [PIPEBOARD-31] Opening the job description shows its text in a read-only window
+
+Open follows Granola: `openWindow` carrying the Application's persistent ID;
+the window renders the job description with text selection enabled, and shows
+a gone message when the Application no longer resolves. Read-only is
+deliberate (docs/adr/0003): the JD has alternate input paths — re-import
+([PIPEBOARD-25]'s confirmation still guards it), or remove and retype — so
+the window never edits. Window chrome is visual-verify.
+
+## [PIPEBOARD-32] Opening the notes or the prep context shows the text in an editable window
+
+Typing is these fields' only input path (docs/adr/0003), so their window
+edits, autosaving through the existing store seams — `updateDetails` for the
+notes ([PIPEBOARD-12]), `updateStage` for the prep context ([PIPEBOARD-15]) —
+never a private write path. Window chrome is visual-verify.
+
+## [PIPEBOARD-33] Removing a long-text field's content requires confirmation before clearing it
+
+All three fields. Confirming clears the value to empty through the store and
+saves; the field then shows its inline editor again ([PIPEBOARD-30]).
+Declining changes nothing. Confirmation everywhere is docs/adr/0003's rule —
+hand-typed notes are as costly to recreate as generated content; only Granola
+notes stay one-click, in their own slice. The needs-confirmation stance
+mirrors [PIPEBOARD-25]; the dialog chrome is visual-verify.

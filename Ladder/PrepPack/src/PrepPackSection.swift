@@ -10,6 +10,9 @@ struct PrepPackSection: View {
 
     @State private var store: PrepPackStore
     @State private var isSavingMarkdown = false
+    @State private var isConfirmingRemoval = false
+    @State private var removeFailed = false
+    @Environment(\.openWindow) private var openWindow
     private let hasAPIKey: Bool
 
     init(
@@ -54,10 +57,34 @@ struct PrepPackSection: View {
     var body: some View {
         Section("Prep pack") {
             if let pack = stage.prepPack {
-                PrepPackContentView(pack: pack)
+                // The content collapses to an indicator row ([PREP-20],
+                // docs/adr/0003); reading it opens the prep-pack window.
+                // Regenerate and Export Markdown stay below ([PREP-19]).
+                IndicatorRow(
+                    label: "Prep pack generated — \(pack.generatedAt.formatted(date: .abbreviated, time: .omitted))",
+                    icon: "list.clipboard",
+                    onOpen: {
+                        openWindow(id: PrepPackWindow.windowID, value: pack.persistentModelID)
+                    },
+                    onRemove: { isConfirmingRemoval = true }
+                )
+                .confirmationDialog(
+                    "Remove this prep pack?",
+                    isPresented: $isConfirmingRemoval
+                ) {
+                    Button("Remove", role: .destructive) { remove() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Generating it again takes another API call.")
+                }
                 Text("Generating again replaces this prep pack.")
                     .font(.callout)
                     .foregroundStyle(Color.inkSoft)
+                if removeFailed {
+                    Text("Removing the prep pack failed.")
+                        .font(.callout)
+                        .foregroundStyle(Color.clay)
+                }
             } else if !hasInputs {
                 Text("Add a job description or prep context — or debrief an earlier stage — and the prep pack draws on them.")
                     .font(.callout)
@@ -106,6 +133,15 @@ struct PrepPackSection: View {
     private func generate() {
         Task {
             await store.generate(for: stage, generatedAt: .now)
+        }
+    }
+
+    private func remove() {
+        do {
+            try store.removePrepPack(from: stage)
+            removeFailed = false
+        } catch {
+            removeFailed = true
         }
     }
 

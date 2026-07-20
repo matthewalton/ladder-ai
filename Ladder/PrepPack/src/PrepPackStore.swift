@@ -153,4 +153,16 @@ final class PrepPackStore {
     func reset() {
         phase = .idle
     }
+
+    /// The confirmed remove ([PREP-22]): deletes the pack — its
+    /// talking-point rows cascade with it — and leaves the mapped
+    /// Achievements untouched. The confirmation dialog is the view's; the
+    /// store just deletes. A Stage without a pack is a no-op.
+    func removePrepPack(from stage: Stage) throws {
+        guard let pack = stage.prepPack else { return }
+        let context = stage.modelContext ?? self.context
+        context.delete(pack)
+        try context.save()
+        phase = .idle
+    }
 }

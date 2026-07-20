@@ -1,8 +1,8 @@
 # Prep pack — language
 
-Slice-local terms. `Application`, `Stage`, `Profile`, and `Achievement` are
-defined in the root `CONTEXT.md`; `Debrief` in `Ladder/Debrief/CONTEXT.md`.
-None is restated here.
+Slice-local terms. `Application`, `Stage`, `Profile`, `Achievement`, and
+`indicator row` are defined in the root `CONTEXT.md`; `Debrief` in
+`Ladder/Debrief/CONTEXT.md`. None is restated here.
 
 **Prep pack**:
 The persisted preparation material for one upcoming Stage — likely

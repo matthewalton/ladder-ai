@@ -1,7 +1,7 @@
 # Debrief — language
 
-Slice-local terms. `Application`, `Stage`, `Profile`, and `Achievement` are
-defined in the root `CONTEXT.md`; `notes overview` in
+Slice-local terms. `Application`, `Stage`, `Profile`, `Achievement`, and
+`indicator row` are defined in the root `CONTEXT.md`; `notes overview` in
 `Ladder/TranscriptImport/CONTEXT.md`. None is restated here.
 
 **Debrief**:

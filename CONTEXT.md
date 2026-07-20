@@ -28,6 +28,10 @@ _Avoid_ (functional contexts): round, waypoint, interview
 Selecting best-fit Achievements from the Profile for a pasted job description, proposing rephrasings, and flagging gaps. It never free-writes career history.
 _Avoid_: generating a CV, optimising
 
+**Indicator row**:
+The collapsed presentation of long text content that is set — a row showing the content exists, with Open and Remove, never the text inline. The app-wide rule is docs/adr/0003; Granola notes established the pattern.
+_Avoid_: collapsed view, summary row, chip
+
 ## Flagged ambiguities
 
 - **"vault" retired (2026-07-17):** ARCHITECTURE.md originally used "CareerProfile" in code and "vault" in product copy for the same concept. Merged: the canonical term is **Profile** everywhere — model, folders, UI. Trail-flavoured narrative copy may say "pack" instead.

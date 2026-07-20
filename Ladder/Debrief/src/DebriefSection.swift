@@ -8,6 +8,9 @@ struct DebriefSection: View {
     var stage: Stage
 
     @State private var store: DebriefStore
+    @State private var isConfirmingRemoval = false
+    @State private var removeFailed = false
+    @Environment(\.openWindow) private var openWindow
     private let hasAPIKey: Bool
 
     init(
@@ -42,10 +45,33 @@ struct DebriefSection: View {
     var body: some View {
         Section("Debrief") {
             if let debrief = stage.debrief {
-                DebriefContentView(debrief: debrief)
+                // The content collapses to an indicator row ([DEBRIEF-18],
+                // docs/adr/0003); reading it opens the debrief window.
+                IndicatorRow(
+                    label: "Debrief generated — \(debrief.generatedAt.formatted(date: .abbreviated, time: .omitted))",
+                    icon: "text.badge.checkmark",
+                    onOpen: {
+                        openWindow(id: DebriefWindow.windowID, value: debrief.persistentModelID)
+                    },
+                    onRemove: { isConfirmingRemoval = true }
+                )
+                .confirmationDialog(
+                    "Remove this debrief?",
+                    isPresented: $isConfirmingRemoval
+                ) {
+                    Button("Remove", role: .destructive) { remove() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Generating it again takes another API call.")
+                }
                 Text("Generating again replaces this debrief.")
                     .font(.callout)
                     .foregroundStyle(Color.inkSoft)
+                if removeFailed {
+                    Text("Removing the debrief failed.")
+                        .font(.callout)
+                        .foregroundStyle(Color.clay)
+                }
             } else if !hasNotes {
                 Text("Attach the call's Granola notes first — the debrief reads them.")
                     .font(.callout)
@@ -78,6 +104,15 @@ struct DebriefSection: View {
     private func generate() {
         Task {
             await store.generate(for: stage, generatedAt: .now)
+        }
+    }
+
+    private func remove() {
+        do {
+            try store.removeDebrief(from: stage)
+            removeFailed = false
+        } catch {
+            removeFailed = true
         }
     }
 

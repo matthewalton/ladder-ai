@@ -150,3 +150,27 @@ JSON in a ```json fence despite the "only JSON" instruction ([CVIMPORT-18],
 [TAILOR-18]). The shared `FencedJSON` helper strips it before validation, so
 a fenced-but-valid result becomes a debrief without consuming the single
 repair request on a formatting quirk.
+
+## [DEBRIEF-18] A Stage's debrief collapses to an indicator row in the Stage form
+
+The docs/adr/0003 pattern: the row shows the debrief exists — labelled with
+its `generatedAt`, the Granola stance — and offers Open, Remove, and the
+existing Regenerate. The content (question entries, themes, signals, drills)
+never renders inline; `DebriefContentView` moves behind Open ([DEBRIEF-19]).
+Row chrome is visual-verify.
+
+## [DEBRIEF-19] Opening the debrief shows its content in a window
+
+`openWindow` carrying the Debrief's persistent ID — the [TRANSCRIPT-28]
+window pattern. The window renders the full debrief content read-only with
+text selection enabled, and shows a gone message when the Debrief no longer
+resolves. Window chrome is visual-verify.
+
+## [DEBRIEF-20] Removing the debrief requires confirmation before deleting it
+
+The debrief's first delete path — until now only regeneration replaced it,
+and [DEBRIEF-15] keeps its no-confirmation replace. Confirming deletes the
+`Debrief` and its question entries from the store with no orphans (the
+[DEBRIEF-3] cascade stance); the Achievements linked as missed ammo survive
+untouched. Declining changes nothing. An API call recreates it, hence the
+confirmation (docs/adr/0003). Dialog chrome is visual-verify.
