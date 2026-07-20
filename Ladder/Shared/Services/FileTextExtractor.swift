@@ -39,4 +39,32 @@ enum FileTextExtractor {
         }
         return text
     }
+
+    /// Fetched link bytes → plain text, for the pipeline-board JD link
+    /// import (PipelineBoard decisions/0006). A PDF payload (`%PDF` magic)
+    /// extracts via PDFKit — without the sniff the HTML importer renders
+    /// the raw bytes as garbage text. Anything else reads as HTML; the
+    /// importer sniffs the document's own charset.
+    static func extractText(fromFetchedData data: Data) throws -> String {
+        let text: String
+        if data.starts(with: Array("%PDF".utf8)) {
+            guard let document = PDFDocument(data: data) else {
+                throw TextExtractionError.noExtractableText
+            }
+            text = document.string ?? ""
+        } else {
+            guard let attributed = try? NSAttributedString(
+                data: data,
+                options: [.documentType: NSAttributedString.DocumentType.html],
+                documentAttributes: nil
+            ) else {
+                throw TextExtractionError.noExtractableText
+            }
+            text = attributed.string
+        }
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw TextExtractionError.noExtractableText
+        }
+        return text
+    }
 }

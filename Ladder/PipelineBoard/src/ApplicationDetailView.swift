@@ -18,8 +18,15 @@ struct ApplicationDetailView: View {
     @State private var isAddingStage = false
     @State private var saveFailed = false
     @State private var isPickingJDFile = false
-    @State private var pendingJDImportURL: URL?
+    @State private var isEnteringJDLink = false
+    @State private var jdLinkText = ""
+    @State private var pendingJDImport: JDImportSource?
     @State private var jdImportFailureMessage: String?
+
+    enum JDImportSource: Equatable {
+        case file(URL)
+        case link(URL)
+    }
 
     init(
         store: PipelineStore, application: Application,
@@ -99,14 +106,20 @@ struct ApplicationDetailView: View {
                 HStack {
                     Text("Job Description")
                     Spacer()
-                    Button {
-                        isPickingJDFile = true
+                    Menu {
+                        Button("From File…") { isPickingJDFile = true }
+                        Button("From Link…") {
+                            jdLinkText = ""
+                            isEnteringJDLink = true
+                        }
                     } label: {
-                        Label("Import from file", systemImage: "arrow.down.doc")
+                        Label("Import job description", systemImage: "arrow.down.doc")
                             .labelStyle(.iconOnly)
                     }
-                    .buttonStyle(.plain)
-                    .help("Import a PDF or docx job description")
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .help("Import a job description from a PDF/docx file or a link")
                 }
             }
             .listRowBackground(Color.paperRaised)
@@ -175,29 +188,32 @@ struct ApplicationDetailView: View {
             allowedContentTypes: [.pdf, Self.docxType]
         ) { result in
             guard case .success(let url) = result else { return }
-            if Self.jdImportNeedsConfirmation(existing: application.jobDescription) {
-                pendingJDImportURL = url
-            } else {
-                importJobDescription(from: url)
-            }
+            requestJDImport(.file(url))
+        }
+        .alert("Import from Link", isPresented: $isEnteringJDLink) {
+            TextField("https://…", text: $jdLinkText)
+            Button("Import") { submitJDLink() }
+            Button("Cancel", role: .cancel) { jdLinkText = "" }
+        } message: {
+            Text("The page's text will be imported as the job description.")
         }
         .confirmationDialog(
             "Replace the existing job description?",
             isPresented: Binding(
-                get: { pendingJDImportURL != nil },
-                set: { if !$0 { pendingJDImportURL = nil } }
+                get: { pendingJDImport != nil },
+                set: { if !$0 { pendingJDImport = nil } }
             ),
-            presenting: pendingJDImportURL
-        ) { url in
+            presenting: pendingJDImport
+        ) { source in
             Button("Replace", role: .destructive) {
-                pendingJDImportURL = nil
-                importJobDescription(from: url)
+                pendingJDImport = nil
+                performJDImport(source)
             }
             Button("Cancel", role: .cancel) {
-                pendingJDImportURL = nil
+                pendingJDImport = nil
             }
         } message: { _ in
-            Text("The imported file's text will replace the current job description.")
+            Text("The imported text will replace the current job description.")
         }
     }
 
@@ -208,7 +224,34 @@ struct ApplicationDetailView: View {
         !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private func importJobDescription(from url: URL) {
+    private func submitJDLink() {
+        let trimmed = jdLinkText.trimmingCharacters(in: .whitespacesAndNewlines)
+        jdLinkText = ""
+        guard let url = URL(string: trimmed), url.scheme?.hasPrefix("http") == true else {
+            jdImportFailureMessage = "That link isn't a valid URL."
+            return
+        }
+        requestJDImport(.link(url))
+    }
+
+    private func requestJDImport(_ source: JDImportSource) {
+        if Self.jdImportNeedsConfirmation(existing: application.jobDescription) {
+            pendingJDImport = source
+        } else {
+            performJDImport(source)
+        }
+    }
+
+    private func performJDImport(_ source: JDImportSource) {
+        switch source {
+        case .file(let url):
+            importJobDescription(fromFile: url)
+        case .link(let url):
+            Task { await importJobDescription(fromLink: url) }
+        }
+    }
+
+    private func importJobDescription(fromFile url: URL) {
         let didAccess = url.startAccessingSecurityScopedResource()
         defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
         do {
@@ -219,6 +262,18 @@ struct ApplicationDetailView: View {
             jdImportFailureMessage = "Only PDF and docx files can be imported."
         } catch {
             jdImportFailureMessage = "No text could be extracted from that file."
+        }
+    }
+
+    private func importJobDescription(fromLink url: URL) async {
+        do {
+            try await store.importJobDescription(fromLink: url, into: application)
+            jobDescription = application.jobDescription
+            jdImportFailureMessage = nil
+        } catch TextExtractionError.noExtractableText {
+            jdImportFailureMessage = "No text could be extracted from that page."
+        } catch {
+            jdImportFailureMessage = "The link couldn't be fetched."
         }
     }
 

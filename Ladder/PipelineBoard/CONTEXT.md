@@ -52,9 +52,10 @@ per DESIGN.md §6.
 _Avoid_: next step, upcoming stage (in UI copy); any use as a code identifier
 
 **JD import**:
-Attaching a job description to an existing Application by extracting a
-dropped PDF or docx file's text on-device (decisions/0005). The text lands
-raw and editable — no LLM cleanup, no structuring.
+Attaching a job description to an existing Application by extracting text
+on-device from a dropped PDF or docx file (decisions/0005) or from a pasted
+link's fetched page (decisions/0006). The text lands raw and editable — no
+LLM cleanup, no structuring.
 _Avoid_: JD upload, JD parsing, scraping
 
 **Days on trail**:

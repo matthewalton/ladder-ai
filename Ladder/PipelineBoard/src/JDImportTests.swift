@@ -71,6 +71,62 @@ struct JDImportTests {
         #expect(application.jobDescription == "the old JD")
     }
 
+    @Test("[PIPEBOARD-26] importing a job description link replaces the Application's job description with the page's extracted text")
+    func linkImportReplacesJobDescription() async throws {
+        let (store, application) = try makeStore(existingJD: "the old JD")
+        store.fetchLinkData = { _ in
+            Data(
+                """
+                <html><head><title>Careers</title></head><body>
+                <h1>Platform Engineer</h1>
+                <p>Own platform reliability across three product teams.</p>
+                </body></html>
+                """.utf8)
+        }
+
+        try await store.importJobDescription(
+            fromLink: try #require(URL(string: "https://jobs.example.com/platform-engineer")),
+            into: application)
+
+        #expect(application.jobDescription.contains("Own platform reliability across three product teams."))
+        #expect(!application.jobDescription.contains("<p>"), "text, not markup")
+        #expect(!application.jobDescription.contains("the old JD"), "replaced, not appended")
+    }
+
+    @Test("[PIPEBOARD-27] importing a job description link that serves a PDF replaces the job description with the PDF's extracted text")
+    func linkServingPDFReplacesJobDescription() async throws {
+        let (store, application) = try makeStore(existingJD: "the old JD")
+        let pdfData = try Data(contentsOf: fixtureURL("sample-cv", "pdf"))
+        store.fetchLinkData = { _ in pdfData }
+
+        try await store.importJobDescription(
+            fromLink: try #require(URL(string: "https://jobs.example.com/role.pdf")),
+            into: application)
+
+        #expect(application.jobDescription.contains("Alex Climber"))
+        #expect(!application.jobDescription.contains("the old JD"), "replaced, not appended")
+    }
+
+    @Test("[PIPEBOARD-24] a failed link import leaves the job description unchanged")
+    func failedLinkImportLeavesJobDescriptionUnchanged() async throws {
+        let (store, application) = try makeStore(existingJD: "the old JD")
+        let link = try #require(URL(string: "https://jobs.example.com/gone"))
+
+        // The link cannot be fetched.
+        store.fetchLinkData = { _ in throw URLError(.notConnectedToInternet) }
+        await #expect(throws: (any Error).self) {
+            try await store.importJobDescription(fromLink: link, into: application)
+        }
+        #expect(application.jobDescription == "the old JD")
+
+        // The page fetches but its text extracts to nothing.
+        store.fetchLinkData = { _ in Data("<html><body></body></html>".utf8) }
+        await #expect(throws: TextExtractionError.noExtractableText) {
+            try await store.importJobDescription(fromLink: link, into: application)
+        }
+        #expect(application.jobDescription == "the old JD")
+    }
+
     @Test("[PIPEBOARD-25] a job-description import onto a non-empty job description requires confirmation before replacing it")
     func importOntoNonEmptyJobDescriptionNeedsConfirmation() {
         #expect(ApplicationDetailView.jdImportNeedsConfirmation(existing: "Own platform reliability."))

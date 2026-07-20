@@ -19,7 +19,9 @@ decisions/0003. The board also owns the manual add (decisions/0004) — the
 second creation path beside cv-export's export, which remains the only path
 that attaches a CV. The application detail also owns the job description
 after creation: editing it in place and the JD import (decisions/0005), which
-extracts a PDF or docx file's text on-device via the shared extractor.
+extracts a PDF or docx file's text on-device via the shared extractor — or
+fetches a pasted link and extracts the page's text the same way
+(decisions/0006).
 
 Out of scope: calendar matching (the calendar-sync slice consumes the
 `calendarEventID` and `meetingURL` fields this slice only stores), the
@@ -204,16 +206,33 @@ split.
 
 ## [PIPEBOARD-24] A failed job-description import leaves the job description unchanged
 
-Both failure modes: a file with no extractable text (an image-only PDF) and
-a file that is neither PDF nor docx. The existing `jobDescription` value —
-empty or not — is untouched, and the failure is reported next to the import
-affordance; the message chrome is visual-verify.
+Every failure mode, file and link alike: a file with no extractable text (an
+image-only PDF), a file that is neither PDF nor docx, a link that cannot be
+fetched, and a fetched page whose text extracts to nothing. The existing
+`jobDescription` value — empty or not — is untouched, and the failure is
+reported next to the import affordance; the message chrome is visual-verify.
 
 ## [PIPEBOARD-25] A job-description import onto a non-empty job description requires confirmation before replacing it
 
 Protects a Tailor-written JD from a mis-click: when the existing
 `jobDescription` is non-empty the import waits for an explicit confirm;
 declining changes nothing. Onto an empty job description the import lands
-without a confirmation step. The needs-confirmation decision is a pure
-helper so the rule is testable without views; the dialog chrome is
-visual-verify.
+without a confirmation step. The rule is source-agnostic — the file and link
+paths share it. The needs-confirmation decision is a pure helper so the rule
+is testable without views; the dialog chrome is visual-verify.
+
+## [PIPEBOARD-26] Importing a job description link replaces the Application's job description with the page's extracted text
+
+The link path (decisions/0006, superseding decisions/0005's out-of-scope
+line): paste a URL, a plain fetch pulls the page, and on-device HTML→text
+conversion — no WebKit render, no LLM — lands the result raw as the
+`jobDescription`. Server-rendered job pages (Greenhouse, Lever, Ashby…) are
+the target; JS-only or auth-walled pages fail or land junk, and the editor
+([PIPEBOARD-21]) is the correction path. The fetch is injected into the
+store so tests run offline. The link itself is not stored anywhere.
+
+## [PIPEBOARD-27] Importing a job description link that serves a PDF replaces the job description with the PDF's extracted text
+
+Some postings link straight to a PDF. The fetched bytes are sniffed
+(`%PDF` magic) and extracted via PDFKit instead of the HTML path — the
+[PIPEBOARD-22] outcome through the link route.

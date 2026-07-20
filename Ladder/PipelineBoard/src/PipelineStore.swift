@@ -141,6 +141,26 @@ final class PipelineStore {
         try context.save()
     }
 
+    /// Injected so link-import criteria run offline; the default is a plain
+    /// GET accepting only 2xx.
+    var fetchLinkData: (URL) async throws -> Data = PipelineStore.fetchOverHTTP
+
+    private static func fetchOverHTTP(_ url: URL) async throws -> Data {
+        let (data, response) = try await URLSession.shared.data(from: url)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw URLError(.badServerResponse)
+        }
+        return data
+    }
+
+    /// The link path of the JD import (decisions/0006): fetch the pasted
+    /// URL, extract on-device, land the text raw. The link is not stored.
+    func importJobDescription(fromLink url: URL, into application: Application) async throws {
+        let data = try await fetchLinkData(url)
+        application.jobDescription = try FileTextExtractor.extractText(fromFetchedData: data)
+        try context.save()
+    }
+
     func application(for id: PersistentIdentifier) -> Application? {
         context.model(for: id) as? Application
     }
