@@ -1,10 +1,13 @@
 import SwiftData
 import SwiftUI
 
-struct PipelineRootView: View {
+struct PipelineRootView<SidebarFooter: View>: View {
     @Bindable var store: PipelineStore
     /// Passed through to the detail's look-back button; nil renders none.
     var onLookBack: ((Application) -> Void)?
+    /// Rendered at the bottom of the sidebar list — the slot the calendar
+    /// section plugs into (CalendarSync decisions/0009). Unspecced here.
+    @ViewBuilder var sidebarFooter: () -> SidebarFooter
 
     enum ContentPane: String, CaseIterable {
         case board = "Board"
@@ -36,15 +39,18 @@ struct PipelineRootView: View {
 
     private var shell: some View {
             NavigationSplitView {
-                List(store.applications, selection: $selection) { application in
-                    VStack(alignment: .leading) {
-                        Text(application.company)
-                            .foregroundStyle(Color.ink)
-                        Text(application.roleTitle)
-                            .font(.caption)
-                            .foregroundStyle(Color.inkSoft)
+                List(selection: $selection) {
+                    ForEach(store.applications) { application in
+                        VStack(alignment: .leading) {
+                            Text(application.company)
+                                .foregroundStyle(Color.ink)
+                            Text(application.roleTitle)
+                                .font(.caption)
+                                .foregroundStyle(Color.inkSoft)
+                        }
+                        .tag(application.persistentModelID)
                     }
-                    .tag(application.persistentModelID)
+                    sidebarFooter()
                 }
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220)
             } detail: {
@@ -117,6 +123,12 @@ struct PipelineRootView: View {
             ContourBackground()
                 .background(Color.paper)
         }
+    }
+}
+
+extension PipelineRootView where SidebarFooter == EmptyView {
+    init(store: PipelineStore, onLookBack: ((Application) -> Void)? = nil) {
+        self.init(store: store, onLookBack: onLookBack) { EmptyView() }
     }
 }
 

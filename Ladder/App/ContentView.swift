@@ -17,14 +17,17 @@ struct ContentView: View {
                 ProfileRootView(store: store)
             }
             Tab("Applications", systemImage: "map", value: AppSection.applications) {
-                PipelineRootView(
-                    store: pipelineStore,
-                    onLookBack: { application in
-                        Task { await calendarStore.lookBack(for: application) }
-                    }
-                )
-                .safeAreaInset(edge: .top, spacing: 0) {
+                VStack(spacing: 0) {
                     CalendarProposalsBar(store: calendarStore)
+                    Divider()
+                    PipelineRootView(
+                        store: pipelineStore,
+                        onLookBack: { application in
+                            Task { await calendarStore.lookBack(for: application) }
+                        }
+                    ) {
+                        CalendarSidebarSection(store: calendarStore)
+                    }
                 }
             }
         }

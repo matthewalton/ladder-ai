@@ -1,12 +1,45 @@
 import SwiftData
 import SwiftUI
 
+/// What the bar shows below its header — never proposals; the calendar
+/// section owns those (decisions/0009). By construction this type has no
+/// proposals case.
+enum CalendarBarContent: Equatable {
+    case headerOnly
+    case deniedExplainer
+    case noTrackedExplainer
+    case noMatchesExplainer
+
+    /// The explainer signals stay [CALSYNC-17]/[CALSYNC-19]/[CALSYNC-20]:
+    /// denied wins, an empty ready scan explains itself, everything else —
+    /// idle, scanning, or proposals pending — is the header row alone.
+    static func content(
+        scanState: CalendarScanState, hasProposals: Bool, hasTrackedApplications: Bool
+    ) -> CalendarBarContent {
+        switch scanState {
+        case .denied:
+            .deniedExplainer
+        case .ready where !hasProposals:
+            hasTrackedApplications ? .noMatchesExplainer : .noTrackedExplainer
+        default:
+            .headerOnly
+        }
+    }
+}
+
 /// Before a scan has run this renders only its header — the board never
 /// depends on a scan having run.
 struct CalendarProposalsBar: View {
     @Bindable var store: CalendarSyncStore
-    @State private var reviewing: StageProposal?
     @State private var showingResults = false
+
+    private var content: CalendarBarContent {
+        CalendarBarContent.content(
+            scanState: store.scanState,
+            hasProposals: !store.proposals.isEmpty,
+            hasTrackedApplications: store.hasTrackedApplications
+        )
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -34,52 +67,37 @@ struct CalendarProposalsBar: View {
                 }
                 .buttonStyle(.borderless)
             }
-            switch store.scanState {
-            case .denied:
+            switch content {
+            case .headerOnly:
+                EmptyView()
+            case .deniedExplainer:
                 deniedExplainer
-            case .ready where store.proposals.isEmpty:
-                emptyScanExplainer
-            default:
-                if !store.proposals.isEmpty {
-                    proposalList
-                }
+            case .noTrackedExplainer:
+                emptyScanExplainer(
+                    "Nothing to match yet — matching starts once an application is past Draft. Move one along, or add one to the board."
+                )
+            case .noMatchesExplainer:
+                emptyScanExplainer(
+                    "No calendar events matched a tracked company — scans cover a week back and a month ahead."
+                )
             }
         }
         .padding(12)
         .background(Color.paper)
-        .sheet(item: $reviewing) { proposal in
-            StageProposalSheet(store: store, proposal: proposal)
-        }
         .sheet(isPresented: $showingResults, onDismiss: store.discardOtherEvents) {
             CheckResultsSheet(store: store)
         }
     }
 
-    private var proposalList: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(store.proposals) { proposal in
-                ProposalRow(
-                    proposal: proposal,
-                    onReview: { reviewing = proposal },
-                    onDismiss: { try? store.dismiss(proposal) }
-                )
-            }
-        }
-    }
-
     /// Only reachable in `.ready` — idle, scanning, and denied render other
     /// branches.
-    private var emptyScanExplainer: some View {
+    private func emptyScanExplainer(_ message: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "calendar")
                 .foregroundStyle(Color.inkSoft)
-            Text(
-                store.hasTrackedApplications
-                    ? "No calendar events matched a tracked company — scans cover a week back and a month ahead."
-                    : "Nothing to match yet — matching starts once an application is past Draft. Move one along, or add one to the board."
-            )
-            .font(.callout)
-            .foregroundStyle(Color.inkSoft)
+            Text(message)
+                .font(.callout)
+                .foregroundStyle(Color.inkSoft)
             Spacer()
         }
         .padding(10)
@@ -104,7 +122,7 @@ struct CalendarProposalsBar: View {
     }
 }
 
-#Preview("Proposals") {
+#Preview("Proposals pending — header only") {
     let pipeline = PipelineStore(container: try! ProfileStore.container(inMemory: true))
     let store = CalendarSyncStore(
         pipeline: pipeline,

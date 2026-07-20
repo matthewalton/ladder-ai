@@ -31,6 +31,11 @@ user-initiated scan — populates them ([CALSYNC-31]), automatic re-scans
 leave them empty ([CALSYNC-32]), and closing the check-results sheet
 discards them ([CALSYNC-33]). There is no standing browse surface.
 
+The standing surface for proposals is the calendar section of the
+Applications sidebar (decisions/0009): tracked applications first, a
+divider, then every pending proposal ([CALSYNC-35]). The bar keeps the
+check gesture and the explainers but never lists proposals ([CALSYNC-36]).
+
 Out of scope: any write to the calendar (the entitlement posture is read-only,
 decisions/0001), the per-Application timeline view (the timeline slice), email
 parsing, and Phase 3+ capture behaviour.
@@ -218,10 +223,10 @@ the link signal catches most of them one step earlier.
 
 ## [CALSYNC-23] An event matching no tracked Application with neither an interview keyword nor a recognised meeting link yields no proposal
 
-The heuristic's negative space, keeping the bar quiet: dentist appointments
-and team standups in the window stay invisible on the bar. They remain
-reachable as a check's other events ([CALSYNC-31], [CALSYNC-28]) — invisible
-is not gone.
+The heuristic's negative space, keeping the calendar section quiet: dentist
+appointments and team standups in the window stay invisible in the sidebar.
+They remain reachable as a check's other events ([CALSYNC-31],
+[CALSYNC-28]) — invisible is not gone.
 
 ## [CALSYNC-24] The company guess takes the registrable-domain label of a non-public attendee or organizer email
 
@@ -277,7 +282,8 @@ thirty-ahead stands untouched (decisions/0003). Pinned at the seam the
 
 ## [CALSYNC-30] A look-back scan proposes only events matching its application's company
 
-The scope that keeps ninety days of calendar from flooding the bar: the
+The scope that keeps ninety days of calendar from flooding the calendar
+section: the
 look-back matches against exactly one company — the application the action
 was invoked on — with the same matching policy (decisions/0002) and the same
 linked/dismissed suppression. Every proposal it emits carries that
@@ -310,9 +316,9 @@ to check again.
 ## [CALSYNC-33] Closing the check-results sheet discards the other events
 
 The ephemerality gesture (decisions/0008): ending the review empties the
-store's other events — the bar afterwards shows proposals only, and the
-list only comes back with the next check. The measurable clause is the
-store's discard; the sheet's close wiring is visual-verify.
+store's other events — the calendar section afterwards shows proposals
+only, and the list only comes back with the next check. The measurable
+clause is the store's discard; the sheet's close wiring is visual-verify.
 
 ## [CALSYNC-34] The other-events filter narrows the list to events whose title contains the typed text
 
@@ -321,3 +327,29 @@ a filter field; "hooli" keeps "Interview with Hooli" and drops "Team
 standup". Containment ignores case; an empty filter shows the whole list.
 Pure filtering over the other events, testable with no UI — the field
 itself is visual-verify.
+
+## [CALSYNC-35] The calendar section derives one sidebar row per pending proposal
+
+The proposals' standing surface after decisions/0009: the calendar section —
+the Applications sidebar beneath the tracked-applications list, separated
+by a divider — lists every pending proposal, matched and possible-interview
+alike, in scan order. The measurable clause is the section model, a pure
+helper over the store's proposals: one row per proposal carrying the event
+title, its start, and either the possible-interview flag or the kind guess;
+zero proposals → no section at all, so the divider never renders alone and
+the sidebar reads as it did before the slice existed. The sidebar rendering
+of those rows is visual-verify. Interaction is compact for the narrow
+surface: clicking a row opens the confirmation sheet, and dismissal is a
+hover ✕ and a right-click context menu — both through
+`CalendarSyncStore.dismiss`, so suppression and its persistence stay
+[CALSYNC-11] and [CALSYNC-12].
+
+## [CALSYNC-36] The bar renders only its header row and the explainers
+
+The flip side of [CALSYNC-35] (decisions/0009): the bar never lists
+proposals again. It keeps the "From your calendar" header, the "Check
+calendar" control — still the explicit gesture that first requests calendar
+access (decisions/0008) — and the explainers ([CALSYNC-17], [CALSYNC-19],
+[CALSYNC-20]), whose store signals stay the measurable clauses they were.
+With proposals pending and no explainer state active the bar shows its
+header row alone; the constant-height strip is visual-verify.

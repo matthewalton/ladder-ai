@@ -58,6 +58,18 @@ A scan that completes (`.ready`) with zero proposals. Not the denied state —
 access was granted and the pass ran; there was simply nothing to propose.
 _Avoid_: failed scan, no results, empty state
 
+**Bar**:
+The slim strip above the board carrying the "From your calendar" header,
+the check control, and the explainers — never proposals (decisions/0009).
+_Avoid_: banner, overlay, proposals bar
+
+**Calendar section**:
+The proposals' standing surface (decisions/0009): the area of the
+Applications sidebar beneath the tracked-applications list, separated by a
+divider, listing every pending proposal as a compact row. Absent entirely
+when no proposal is pending.
+_Avoid_: proposals list, inbox, tray, sidebar section
+
 **Explainer**:
 The quiet one-line message the bar renders below its header when there is
 nothing to show — one for the denied state ([CALSYNC-17]) and one per empty
