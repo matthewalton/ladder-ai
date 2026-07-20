@@ -84,6 +84,13 @@ struct StageFormView: View {
                     TextEditor(text: $prepContext)
                         .frame(minHeight: 80)
                 }
+
+                // Import entry + readout live on the Stage form — the app's
+                // Stage detail surface (TranscriptImport decisions/0004).
+                // Only a persisted Stage can carry a transcript.
+                if let stage {
+                    TranscriptSectionView(container: store.container, stage: stage)
+                }
             }
             .formStyle(.grouped)
 

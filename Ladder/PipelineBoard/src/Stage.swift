@@ -63,6 +63,11 @@ final class Stage {
     var sortIndex: Int
     var application: Application?
 
+    /// One conversation per Stage; deleting the Stage deletes it too
+    /// (owned by the transcript-import slice — see Ladder/TranscriptImport/).
+    @Relationship(deleteRule: .cascade, inverse: \Transcript.stage)
+    var transcript: Transcript?
+
     var kind: StageKind {
         get { StageKind(rawValue: kindRaw) }
         set { kindRaw = newValue.rawValue }
