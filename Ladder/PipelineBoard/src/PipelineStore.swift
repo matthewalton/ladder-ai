@@ -123,11 +123,21 @@ final class PipelineStore {
         _ application: Application,
         source: String?,
         notes: String,
-        appliedAt: Date?
+        appliedAt: Date?,
+        jobDescription: String
     ) throws {
         application.source = source
         application.notes = notes
         application.appliedAt = appliedAt
+        application.jobDescription = jobDescription
+        try context.save()
+    }
+
+    /// The JD import (decisions/0005): the file's extracted text lands raw
+    /// as the job description — no LLM cleanup, no structuring. Throws
+    /// `TextExtractionError` with the job description untouched.
+    func importJobDescription(from url: URL, into application: Application) throws {
+        application.jobDescription = try FileTextExtractor.extractText(from: url)
         try context.save()
     }
 

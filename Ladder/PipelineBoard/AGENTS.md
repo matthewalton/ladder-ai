@@ -3,7 +3,10 @@
 The slice owns the `Stage` model (defined here in `src/`), the Phase 2 growth
 of the `Application` model (migrated in place in `Ladder/CVExport/src/
 Application.swift` — decisions/0001), the transition map, the board and
-application detail views, and the app shell's Profile/Applications sections.
+application detail views, the job-description edit and JD import on the
+detail (decisions/0005 — the shared file→text extractor lives in
+`Ladder/Shared/Services/`, not here), and the app shell's
+Profile/Applications sections.
 
 ## Commands
 

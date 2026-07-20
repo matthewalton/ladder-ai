@@ -261,7 +261,8 @@ struct StagePersistenceTests {
                 application,
                 source: "Referral — Jamie",
                 notes: "Second round rescheduled twice.",
-                appliedAt: editedAppliedAt
+                appliedAt: editedAppliedAt,
+                jobDescription: "JD"
             )
         }
 
@@ -271,6 +272,38 @@ struct StagePersistenceTests {
         #expect(application.source == "Referral — Jamie")
         #expect(application.notes == "Second round rescheduled twice.")
         #expect(application.appliedAt == editedAppliedAt)
+    }
+
+    @Test("[PIPEBOARD-21] job-description edits on the application detail persist across a store reopen")
+    func jobDescriptionEditPersists() throws {
+        let url = temporaryStoreURL()
+        defer { removeStore(at: url) }
+
+        do {
+            let container = try ProfileStore.container(at: url)
+            let context = ModelContext(container)
+            context.insert(
+                Application(
+                    company: "Summit Labs", roleTitle: "Engineer", jobDescription: "",
+                    status: .applied, appliedAt: .now))
+            try context.save()
+
+            let store = PipelineStore(container: container)
+            try store.load()
+            let application = try #require(store.applications.first)
+            try store.updateDetails(
+                application,
+                source: nil,
+                notes: "",
+                appliedAt: application.appliedAt,
+                jobDescription: "Own platform reliability across three product teams."
+            )
+        }
+
+        let reopened = try ProfileStore.container(at: url)
+        let context = ModelContext(reopened)
+        let application = try #require(try context.fetch(FetchDescriptor<Application>()).first)
+        #expect(application.jobDescription == "Own platform reliability across three product teams.")
     }
 
     @Test("[PIPEBOARD-15] Stage edits persist across a store reopen")

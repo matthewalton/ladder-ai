@@ -52,7 +52,14 @@ final class ImportStore {
         phase = .importing
         review = nil
         do {
-            let text = try CVTextExtractor.extractText(from: url)
+            let text: String
+            do {
+                text = try FileTextExtractor.extractText(from: url)
+            } catch TextExtractionError.unsupportedFileType {
+                throw ImportError.unsupportedFileType
+            } catch {
+                throw ImportError.extractionFailed
+            }
             let prompt = try ImportPrompt.text(from: bundle)
             let service = makeIntelligence(key)
             let response: Data

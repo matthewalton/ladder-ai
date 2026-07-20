@@ -1,7 +1,10 @@
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ApplicationDetailView: View {
+    private static let docxType = UTType(filenameExtension: "docx") ?? .data
+
     @Bindable var store: PipelineStore
     var application: Application
     /// Injected as a closure so this slice never depends on a calendar-sync
@@ -10,9 +13,13 @@ struct ApplicationDetailView: View {
 
     @State private var source: String
     @State private var notes: String
+    @State private var jobDescription: String
     @State private var stageBeingEdited: Stage?
     @State private var isAddingStage = false
     @State private var saveFailed = false
+    @State private var isPickingJDFile = false
+    @State private var pendingJDImportURL: URL?
+    @State private var jdImportFailureMessage: String?
 
     init(
         store: PipelineStore, application: Application,
@@ -23,6 +30,7 @@ struct ApplicationDetailView: View {
         self.onLookBack = onLookBack
         _source = State(initialValue: application.source ?? "")
         _notes = State(initialValue: application.notes)
+        _jobDescription = State(initialValue: application.jobDescription)
     }
 
     var body: some View {
@@ -74,6 +82,32 @@ struct ApplicationDetailView: View {
                     .frame(minHeight: 60)
                     .scrollContentBackground(.hidden)
                     .onChange(of: notes) { saveDetails() }
+            }
+            .listRowBackground(Color.paperRaised)
+
+            Section {
+                TextEditor(text: $jobDescription)
+                    .frame(minHeight: 60)
+                    .scrollContentBackground(.hidden)
+                    .onChange(of: jobDescription) { saveDetails() }
+                if let jdImportFailureMessage {
+                    Text(jdImportFailureMessage)
+                        .font(.callout)
+                        .foregroundStyle(Color.clay)
+                }
+            } header: {
+                HStack {
+                    Text("Job Description")
+                    Spacer()
+                    Button {
+                        isPickingJDFile = true
+                    } label: {
+                        Label("Import from file", systemImage: "arrow.down.doc")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Import a PDF or docx job description")
+                }
             }
             .listRowBackground(Color.paperRaised)
 
@@ -136,6 +170,56 @@ struct ApplicationDetailView: View {
         .sheet(item: $stageBeingEdited) { stage in
             StageFormView(store: store, application: application, stage: stage)
         }
+        .fileImporter(
+            isPresented: $isPickingJDFile,
+            allowedContentTypes: [.pdf, Self.docxType]
+        ) { result in
+            guard case .success(let url) = result else { return }
+            if Self.jdImportNeedsConfirmation(existing: application.jobDescription) {
+                pendingJDImportURL = url
+            } else {
+                importJobDescription(from: url)
+            }
+        }
+        .confirmationDialog(
+            "Replace the existing job description?",
+            isPresented: Binding(
+                get: { pendingJDImportURL != nil },
+                set: { if !$0 { pendingJDImportURL = nil } }
+            ),
+            presenting: pendingJDImportURL
+        ) { url in
+            Button("Replace", role: .destructive) {
+                pendingJDImportURL = nil
+                importJobDescription(from: url)
+            }
+            Button("Cancel", role: .cancel) {
+                pendingJDImportURL = nil
+            }
+        } message: { _ in
+            Text("The imported file's text will replace the current job description.")
+        }
+    }
+
+    /// Empty (or whitespace-only) job descriptions have nothing worth
+    /// protecting — the import lands without a confirmation step
+    /// ([PIPEBOARD-25]).
+    static func jdImportNeedsConfirmation(existing: String) -> Bool {
+        !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func importJobDescription(from url: URL) {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
+        do {
+            try store.importJobDescription(from: url, into: application)
+            jobDescription = application.jobDescription
+            jdImportFailureMessage = nil
+        } catch TextExtractionError.unsupportedFileType {
+            jdImportFailureMessage = "Only PDF and docx files can be imported."
+        } catch {
+            jdImportFailureMessage = "No text could be extracted from that file."
+        }
     }
 
     private func saveDetails() {
@@ -145,7 +229,8 @@ struct ApplicationDetailView: View {
                 application,
                 source: trimmedSource.isEmpty ? nil : trimmedSource,
                 notes: notes,
-                appliedAt: application.appliedAt
+                appliedAt: application.appliedAt,
+                jobDescription: jobDescription
             )
         } catch {
             saveFailed = true

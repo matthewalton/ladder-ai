@@ -17,7 +17,9 @@ The `Application` model is migrated in place in `Ladder/CVExport/src/`
 raw string (decisions/0002); the transition map and auto-advance rules are
 decisions/0003. The board also owns the manual add (decisions/0004) — the
 second creation path beside cv-export's export, which remains the only path
-that attaches a CV.
+that attaches a CV. The application detail also owns the job description
+after creation: editing it in place and the JD import (decisions/0005), which
+extracts a PDF or docx file's text on-device via the shared extractor.
 
 Out of scope: calendar matching (the calendar-sync slice consumes the
 `calendarEventID` and `meetingURL` fields this slice only stores), the
@@ -173,4 +175,45 @@ in the Applications shell, and an action in the board's empty state — which
 previously had none, leaving an empty board creatable only via export. The
 measurable clause is that the form and both hosting roots render; button
 chrome, sheet presentation, and the updated empty-state copy are
+visual-verify.
+
+## [PIPEBOARD-21] Job-description edits on the application detail persist across a store reopen
+
+`updateDetails` grows a `jobDescription` parameter, the [PIPEBOARD-12]
+pattern: write and save immediately, values survive a close and reopen.
+Until this criterion the Tailor export was the only writer — a manually
+added Application ([PIPEBOARD-17]) carried an empty job description forever,
+starving the prep-pack input guard ([PREP-5]) and the debrief payload. The
+detail form gains a job-description editor section; its chrome is
+visual-verify.
+
+## [PIPEBOARD-22] Importing a PDF job description file replaces the Application's job description with its extracted text
+
+The JD import (decisions/0005): pick a PDF on the application detail, the
+shared extractor turns it into plain text entirely on-device, and that text
+— raw, no LLM cleanup, no structuring — becomes the Application's
+`jobDescription`, persisted through the store. The user tidies artefacts in
+the editor ([PIPEBOARD-21]) if they care to.
+
+## [PIPEBOARD-23] Importing a docx job description file replaces the Application's job description with its extracted text
+
+Same path as [PIPEBOARD-22] through the docx branch of the shared extractor
+(Office Open XML reading) — JDs are shared as Word files often enough that
+the free second format is worth its own claim, the [CVIMPORT-1]/[CVIMPORT-2]
+split.
+
+## [PIPEBOARD-24] A failed job-description import leaves the job description unchanged
+
+Both failure modes: a file with no extractable text (an image-only PDF) and
+a file that is neither PDF nor docx. The existing `jobDescription` value —
+empty or not — is untouched, and the failure is reported next to the import
+affordance; the message chrome is visual-verify.
+
+## [PIPEBOARD-25] A job-description import onto a non-empty job description requires confirmation before replacing it
+
+Protects a Tailor-written JD from a mis-click: when the existing
+`jobDescription` is non-empty the import waits for an explicit confirm;
+declining changes nothing. Onto an empty job description the import lands
+without a confirmation step. The needs-confirmation decision is a pure
+helper so the rule is testable without views; the dialog chrome is
 visual-verify.
