@@ -200,9 +200,10 @@ Edge cases:
 
 `documentTranscript` is null unless the link was shared with its transcript
 included. The preview still carries the notes overview ([TRANSCRIPT-22]);
-confirming attaches a notes-only Transcript with zero segments — the
-readout shows the notes card alone. The sheet's "no transcript in this
-link" hint is visual-verify.
+confirming attaches a notes-only Transcript with zero segments. On the
+Stage detail the notes overview renders in its own section — never inside
+the transcript section — and the transcript section explains that the link
+carried none. The sheet's hints and the section split are visual-verify.
 
 ## [TRANSCRIPT-25] A link import's fallback recorded date is the shared document's created date
 

@@ -28,20 +28,35 @@ struct TranscriptSectionView: View {
     }
 
     var body: some View {
-        Section("Transcript") {
-            if let transcript = stage.transcript {
-                TranscriptReadoutView(transcript: transcript)
-                Button("Replace Transcript…") { openImport() }
-            } else {
-                Text("Import the call from its Granola share link — or paste the transcript, or drop a .txt or .md file.")
-                    .font(.callout)
-                    .foregroundStyle(Color.inkSoft)
-                Button("Import Transcript…") { openImport() }
+        Group {
+            // The two artifacts never share a section: notes overview first,
+            // transcript below ([TRANSCRIPT-24]).
+            if let notes = stage.transcript?.notesSummary {
+                Section("Notes overview") {
+                    NotesOverviewCard(notes: notes)
+                }
             }
-            if dropFailed {
-                Text("Only .txt or .md files can be imported.")
-                    .font(.callout)
-                    .foregroundStyle(Color.clay)
+            Section("Transcript") {
+                if let transcript = stage.transcript {
+                    if transcript.segments.isEmpty {
+                        Text("This import carried no transcript — the link was shared without one. Replace it with a transcript-included share, or paste the text.")
+                            .font(.callout)
+                            .foregroundStyle(Color.inkSoft)
+                    } else {
+                        TranscriptReadoutView(transcript: transcript)
+                    }
+                    Button("Replace Import…") { openImport() }
+                } else {
+                    Text("Import the call from its Granola share link — or paste the transcript, or drop a .txt or .md file.")
+                        .font(.callout)
+                        .foregroundStyle(Color.inkSoft)
+                    Button("Import Transcript…") { openImport() }
+                }
+                if dropFailed {
+                    Text("Only .txt or .md files can be imported.")
+                        .font(.callout)
+                        .foregroundStyle(Color.clay)
+                }
             }
         }
         .dropDestination(for: URL.self) { urls, _ in

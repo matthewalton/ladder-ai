@@ -76,12 +76,15 @@ struct TranscriptImportSheet: View {
                             .foregroundStyle(Color.clay)
                         }
                         if !notesOverview.isEmpty {
-                            Text(notesOverview)
-                                .font(.trailNarrative(.callout))
-                                .foregroundStyle(Color.ink)
-                                .padding(8)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.pineTint, in: RoundedRectangle(cornerRadius: 6))
+                            Text("Notes overview")
+                                .font(.callout.weight(.semibold))
+                                .foregroundStyle(Color.inkSoft)
+                            NotesOverviewCard(notes: notesOverview)
+                        }
+                        if !preview.segments.isEmpty, !notesOverview.isEmpty {
+                            Text("Transcript")
+                                .font(.callout.weight(.semibold))
+                                .foregroundStyle(Color.inkSoft)
                         }
                         ForEach(TranscriptReadoutModel.rows(for: preview.segments)) { row in
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
