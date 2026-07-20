@@ -68,6 +68,11 @@ final class Stage {
     @Relationship(deleteRule: .cascade, inverse: \Transcript.stage)
     var transcript: Transcript?
 
+    /// One debrief per Stage; deleting the Stage deletes it too
+    /// (owned by the debrief slice — see Ladder/Debrief/).
+    @Relationship(deleteRule: .cascade, inverse: \Debrief.stage)
+    var debrief: Debrief?
+
     var kind: StageKind {
         get { StageKind(rawValue: kindRaw) }
         set { kindRaw = newValue.rawValue }

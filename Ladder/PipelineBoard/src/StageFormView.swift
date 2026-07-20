@@ -87,9 +87,11 @@ struct StageFormView: View {
 
                 // Granola notes attach directly from the Stage form
                 // (TranscriptImport decisions/0007). Only a persisted Stage
-                // can carry them.
+                // can carry them — and only then is there anything to
+                // debrief (Ladder/Debrief/).
                 if let stage {
                     GranolaNotesSection(container: store.container, stage: stage)
+                    DebriefSection(container: store.container, stage: stage)
                 }
             }
             .formStyle(.grouped)

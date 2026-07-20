@@ -1,0 +1,31 @@
+{
+  "questions": [
+    {
+      "question": "How did you handle the payments outage?",
+      "answerSummary": "Walked through the incident timeline but never mentioned leading the response",
+      "quality": "adequate",
+      "quote": "Walked through the incident timeline and on-call rotation",
+      "missedAmmo": [2]
+    },
+    {
+      "question": "How do you keep CI fast?",
+      "answerSummary": "Described the build-time work with concrete numbers",
+      "quality": "strong",
+      "quote": "Discussed build times and flaky tests",
+      "missedAmmo": []
+    }
+  ],
+  "themes": [
+    {
+      "text": "Reliability ran through the whole conversation",
+      "quote": "Walked through the incident timeline and on-call rotation"
+    }
+  ],
+  "signals": [
+    {
+      "text": "The interviewer probed Kubernetes depth twice",
+      "quote": "Interviewer asked twice about Kubernetes experience"
+    }
+  ],
+  "drills": ["Rehearse the payments outage story leading with the incident-command role"]
+}
