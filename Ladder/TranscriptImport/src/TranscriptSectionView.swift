@@ -14,9 +14,18 @@ struct TranscriptSectionView: View {
         var initialText: String
     }
 
-    @State private var importStore: TranscriptImportStore?
+    // Non-optional from init: the sheet's content closure reads this, and an
+    // optional set in the same transaction as the presentation reads stale
+    // nil on first present — an empty sheet.
+    @State private var importStore: TranscriptImportStore
     @State private var importRequest: ImportRequest?
     @State private var dropFailed = false
+
+    init(container: ModelContainer, stage: Stage) {
+        self.container = container
+        self.stage = stage
+        _importStore = State(initialValue: TranscriptImportStore(container: container))
+    }
 
     var body: some View {
         Section("Transcript") {
@@ -39,15 +48,12 @@ struct TranscriptSectionView: View {
             handleDrop(of: urls)
         }
         .sheet(item: $importRequest) { request in
-            if let importStore {
-                TranscriptImportSheet(
-                    store: importStore, stage: stage, initialText: request.initialText)
-            }
+            TranscriptImportSheet(
+                store: importStore, stage: stage, initialText: request.initialText)
         }
     }
 
     private func openImport(withText text: String = "") {
-        importStore = importStore ?? TranscriptImportStore(container: container)
         importRequest = ImportRequest(initialText: text)
     }
 
