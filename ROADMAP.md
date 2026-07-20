@@ -36,7 +36,7 @@ Acceptance criteria for behaviour live in each slice's SPEC.md (Speccle owns the
 
 Native capture is deferred (ADR 0002): interim transcripts come from Granola and enter the app by hand. The recorder slice was built (fe22ae5) then removed from the tree; it restores from git history when native capture returns.
 
-1. **transcript-import** — `Transcript` + `Segment` models (ARCHITECTURE.md §3) colocated in the slice → `Stage.transcript` link → paste or text/markdown file-drop of an external (Granola) transcript onto a Stage → speaker labels in the text parsed into me/them attribution → timestamped readout on the Stage detail. Tracer: paste a Granola transcript onto a Stage, relaunch, it's still on the Stage.
+1. **transcript-import** — `Transcript` + `Segment` models (ARCHITECTURE.md §3) colocated in the slice → `Stage.transcript` link → **rescoped 2026-07-20 to notes-only** (slice decisions/0007): a `notes.granola.ai` share link pasted in the Stage's settings fetches the call's notes overview and attaches it in one step; the Stage shows an attached indicator, full notes open in their own window. Transcript parsing/attribution retired — Granola share pages expose notes only (slice decisions/0006), so transcripts return with native capture. `segments` stays on the model, empty, for Phase 4.
 
 ### Deferred slices — native capture (ADR 0002; restore when the rest of the app has settled)
 - **recorder** — `CaptureService` protocol + fixture → `MenuBarExtra` record control, level meters, consent, mic detect-and-guide. Built at fe22ae5; restore from history rather than rebuild.
@@ -47,7 +47,7 @@ Native capture is deferred (ADR 0002): interim transcripts come from Granola and
 The deferred slices carry the native-capture privacy criteria with them (raw audio never persisted beyond the session; transcription fully on-device, no network egress; visible recording indicator; first-run consent; mic/screen-recording/notification denial never crashes).
 
 ## Phase 3 exit criteria
-1. Fresh path: Granola transcript of a real interview → attributed (me/them) transcript attached to the right Stage, surviving relaunch.
+1. Fresh path: Granola share link of a real interview → its notes overview attached to the right Stage, surviving relaunch. *(Rescoped from attributed transcripts, 2026-07-20 — slice decisions/0007; the attributed-transcript path returns with native capture.)*
 2. Migration safety: relaunching over a Phase 2 store keeps every Application, Stage, and `cvSnapshot` byte-identical.
 3. No raw hex/fonts in views; all tests green headlessly; previews compile.
 
