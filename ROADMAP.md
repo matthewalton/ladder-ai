@@ -51,5 +51,19 @@ The deferred slices carry the native-capture privacy criteria with them (raw aud
 2. Migration safety: relaunching over a Phase 2 store keeps every Application, Stage, and `cvSnapshot` byte-identical.
 3. No raw hex/fonts in views; all tests green headlessly; previews compile.
 
+## Phase 4 slices *(build in order with `/feature`)*
+
+All calls go through the existing `IntelligenceService` seam (live since tailor) with JSON-schema-validated structured output and one retry-with-repair; prompts are versioned files in `Prompts/`. Nothing is sent to the API except on an explicit user action. Interim grounding: debriefs read the notes overview — `segments` is empty until native capture returns (ADR 0002; TranscriptImport decisions/0007).
+
+1. **debrief** — `Debrief` model + `Stage.debrief` link → generate from the Stage's attached notes overview + Stage context + Profile → every claim quotes the notes text it is grounded in; no scores, no offer probabilities → "missed ammo" links to Profile Achievements → `Prompts/debrief.md`. Segment-level citations return as an amendment with native capture. Tracer: generate a debrief from a fixture notes overview, relaunch, it's still there.
+2. **prep-pack** — `PrepPack` model + `Stage.prepPack` link → generate from the Stage's kind + JD + `prepContext` + all prior Debriefs in the Application → likely questions + talking points mapped to Achievements + company brief from JD/pasted context only (no scraping) → mock tasks for technical stages, exported as markdown → `Prompts/prep.md`.
+3. **journey-synthesis** — on `.offer`, generate the retrospective narrative over the full Stage chain → persisted on the Application, shown as plain text on the Application detail → `Prompts/journey.md`. The illustrated celebration view stays Phase 5.
+
+## Phase 4 exit criteria
+1. Fresh path: a real interview's attached notes → a debrief that surfaces at least one "missed ammo" link back to a Profile Achievement; the next stage's prep pack draws on that debrief.
+2. Migration safety: relaunching over a Phase 3 store keeps every Application, Stage, attached notes, and `cvSnapshot` byte-identical.
+3. Posture: debrief output contains no numeric scores or offer probabilities; API calls happen only on explicit user action.
+4. No raw hex/fonts in views; all tests green headlessly; previews compile; every prompt in `Prompts/`, versioned.
+
 ## Later phases
-See ARCHITECTURE.md §4 for Phase 4–5 module definitions. Slice maps for those phases get drawn when the phase opens.
+See ARCHITECTURE.md §4–5 for the Phase 5 (Journey) module definition. Its slice map gets drawn when the phase opens.
