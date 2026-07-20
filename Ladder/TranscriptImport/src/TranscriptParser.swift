@@ -80,6 +80,9 @@ enum TranscriptParser {
             return String(line[r])
         }
         guard let label = group("label") else { return nil }
+        // "https://…" is a URL, not a speaker turn — without this, "https"
+        // reads as a label and [TRANSCRIPT-27] could never refuse.
+        if group("text")?.hasPrefix("//") == true { return nil }
         let start = group("bStart") ?? group("pStart")
         let end = group("bEnd") ?? group("pEnd")
         return LabeledTurn(

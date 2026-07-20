@@ -2,8 +2,9 @@
 
 The slice owns the `Transcript` model, the `Segment` value type, the parser
 that turns Granola-style labeled text into attributed segments, the
-paste/drop → preview → confirm import flow, and the readout on the Stage
-detail. It also adds the `Stage.transcript` link — the one edit outside the
+paste/drop/share-link → preview → confirm import flow (the link door's
+fetch sits behind `GranolaShareFetching` with a fixture in tests), and the
+readout on the Stage detail. It also adds the `Stage.transcript` link — the one edit outside the
 folder, in `Ladder/PipelineBoard/src/Stage.swift`, because pipeline-board
 owns the Stage model.
 

@@ -56,6 +56,17 @@ Segment in stored order, timestamp labels when the segments carry times.
 _Avoid_: transcript view, log, feed, timeline (that word belongs to the
 timeline slice)
 
+**Share link**:
+A public `notes.granola.ai/t/…` URL — the URL door (decisions/0006).
+Fetched over plain HTTPS; carries the shared document, and the transcript
+only when sharing included it.
+_Avoid_: deep link, integration, sync
+
+**Shared document**:
+What a share link's page embeds: title, created date, the notes tree, and
+optionally the transcript.
+_Avoid_: note (ambiguous with the notes overview), doc
+
 **Notes overview**:
 Granola's AI-generated summary of the call, optionally pasted alongside the
 transcript and stored verbatim as `notesSummary` on the Transcript

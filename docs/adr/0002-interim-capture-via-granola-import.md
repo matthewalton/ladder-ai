@@ -11,3 +11,4 @@ Ladder itself stays ignorant of Granola. It does not speak MCP (an app-side MCP 
 - `Transcript`, `Segment`, and the `Stage.transcript` link land in the transcript-import slice instead, in the shape ARCHITECTURE.md §3 defines — imported and natively-captured transcripts are indistinguishable downstream, so nothing Phase 4 builds against them is throwaway.
 - Speaker attribution comes from labels in the imported text (Granola marks the speakers) rather than from stream identity (mic = me / system = them).
 - When native capture returns, import remains as a fallback path for meetings Ladder didn't record.
+- Amended 2026-07-20: public share links (`notes.granola.ai/t/…`) are additionally fetched over plain unauthenticated HTTPS as a third import door — still no MCP, no cache reading, no login; the app reads only what the link already makes public (TranscriptImport decisions/0006).

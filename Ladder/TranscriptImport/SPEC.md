@@ -19,11 +19,19 @@ confirmed preview (decisions/0004) — the CV-import and calendar-sync house
 pattern. A Granola notes overview may ride along as a second paste, stored
 on the Transcript (decisions/0005).
 
-Out of scope: any Granola integration — no MCP client, no cache reading
-(ADR 0002); native capture and its privacy criteria (the deferred recorder /
-transcription / system-audio / pre-call slices); debrief generation and
-anything under `Intelligence/` beyond the protocol stub (Phase 4, gated);
-editing segments after import — a bad parse is fixed by re-importing.
+A third door is the share link (decisions/0006): a public
+`notes.granola.ai/t/…` URL is fetched over plain HTTPS and its
+server-embedded payload — notes document, and the transcript when the link
+was shared with one — feeds the same preview. This stays inside ADR 0002's
+spirit: no MCP client, no cache reading, no authentication; the app only
+reads what the link already makes public.
+
+Out of scope: authenticated Granola access — no MCP client, no cache
+reading, no login (ADR 0002); native capture and its privacy criteria (the
+deferred recorder / transcription / system-audio / pre-call slices);
+debrief generation and anything under `Intelligence/` beyond the protocol
+stub (Phase 4, gated); editing segments after import — a bad parse is fixed
+by re-importing.
 
 ## [TRANSCRIPT-1] A transcript confirmed onto a Stage is still on the Stage after the app relaunches
 
@@ -104,8 +112,10 @@ Extension matching is case-insensitive (`.TXT` drops fine).
 ## [TRANSCRIPT-12] A dropped file that is neither .txt nor .md is rejected
 
 The [CVIMPORT-12] pattern: the drop is refused with the reason, and no
-preview opens. PDFs, audio, and Granola URLs are all rejected — text is the
-only door (ADR 0002).
+preview opens. PDFs and audio are rejected — a dropped *file* must be text.
+(A pasted Granola share link is its own door, [TRANSCRIPT-21]; this
+criterion's original "Granola URLs are rejected" line is superseded by
+decisions/0006.)
 
 ## [TRANSCRIPT-13] Cancelling the preview leaves the Stage unchanged
 
@@ -152,4 +162,60 @@ The fallback (decisions/0002): sequence order alone, no time column, never
 `recordedAt` is the Stage's `scheduledAt` when set — the interview happened
 at the scheduled moment, not the import moment. An unscheduled Stage falls
 back to the import moment, passed in as an explicit date so tests never
-depend on the clock (the [PIPEBOARD-16] pattern).
+depend on the clock (the [PIPEBOARD-16] pattern). A link import sharpens
+the fallback to the shared document's created date ([TRANSCRIPT-25]).
+
+## [TRANSCRIPT-21] A pasted Granola share link fetches the shared document into the preview
+
+The URL door (decisions/0006): when the transcript field holds a lone
+`notes.granola.ai/t/…` URL, previewing fetches the page over plain HTTPS
+and parses its server-embedded payload — no MCP, no authentication, only
+what the link already makes public. The fetch sits behind the
+`GranolaShareFetching` seam; tests use a fixture fetcher, the app the live
+one — the `IntelligenceService` pattern.
+
+## [TRANSCRIPT-22] The shared document's notes render as the notes overview text
+
+The payload's notes tree (headings, bullet lists, paragraphs) flattens to
+plain text — headings as `## ` lines, bullet items as `- ` lines indented
+by nesting — and lands in the import's notes overview for the user to edit
+before confirming. Stored through the same [TRANSCRIPT-16] path.
+
+## [TRANSCRIPT-23] A shared transcript's microphone source attributes to me and any other source to them
+
+Stream identity, the rule native capture was going to use (ADR 0002):
+Granola records the mic side as the user. Segment text and timestamps come
+along when the payload carries them.
+
+Edge cases:
+
+- The shape is unverified until a transcript-shared link is seen
+  (decisions/0006): a `documentTranscript` that is a plain string runs the
+  [TRANSCRIPT-5] paste parser instead; an unrecognized shape imports as
+  notes-only ([TRANSCRIPT-24]), never a guess.
+
+## [TRANSCRIPT-24] A share link carrying no transcript produces a preview with no segments
+
+`documentTranscript` is null unless the link was shared with its transcript
+included. The preview still carries the notes overview ([TRANSCRIPT-22]);
+confirming attaches a notes-only Transcript with zero segments — the
+readout shows the notes card alone. The sheet's "no transcript in this
+link" hint is visual-verify.
+
+## [TRANSCRIPT-25] A link import's fallback recorded date is the shared document's created date
+
+The Stage's `scheduledAt` still wins ([TRANSCRIPT-20]); when the Stage is
+unscheduled, the document's `created_at` — the call's actual moment —
+replaces the import moment as the fallback.
+
+## [TRANSCRIPT-26] A share-link fetch failure ends the import in a refused state naming the reason
+
+Offline, a 404, or a page whose payload carries no shared document all
+refuse with the reason; nothing is written and the pasted URL stays in the
+field for retry.
+
+## [TRANSCRIPT-27] A pasted URL that is not a Granola share link is refused as unlabeled text
+
+Only `notes.granola.ai` share paths open the URL door. Any other lone URL
+falls through to the paste parser and refuses via [TRANSCRIPT-9] — the app
+never fetches arbitrary URLs.

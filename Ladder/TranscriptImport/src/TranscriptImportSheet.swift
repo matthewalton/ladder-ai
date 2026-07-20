@@ -14,6 +14,10 @@ struct TranscriptImportSheet: View {
     @State private var notesOverview = ""
     @State private var preview: TranscriptImportPreview?
     @State private var failureMessage: String?
+    @State private var isFetching = false
+    /// The [TRANSCRIPT-25] fallback, set by a share-link fetch.
+    @State private var suggestedImportDate: Date?
+    @State private var linkHasNoTranscript = false
 
     init(store: TranscriptImportStore, stage: Stage, initialText: String = "") {
         self.store = store
@@ -37,6 +41,14 @@ struct TranscriptImportSheet: View {
                 }
                 if let preview {
                     Section("Preview") {
+                        if linkHasNoTranscript {
+                            Label(
+                                "This link carries no transcript — notes only. Share it with the transcript included, or paste the transcript text.",
+                                systemImage: "info.circle"
+                            )
+                            .font(.callout)
+                            .foregroundStyle(Color.inkSoft)
+                        }
                         if preview.replacesExisting {
                             Label(
                                 "This stage already has a transcript. Confirming replaces it.",
@@ -63,7 +75,11 @@ struct TranscriptImportSheet: View {
                 }
             }
             .formStyle(.grouped)
-            .onChange(of: transcriptText) { preview = nil }
+            .onChange(of: transcriptText) {
+                preview = nil
+                suggestedImportDate = nil
+                linkHasNoTranscript = false
+            }
 
             Divider()
             HStack {
@@ -75,10 +91,12 @@ struct TranscriptImportSheet: View {
                 Spacer()
                 Button("Cancel") { dismiss() }
                 if preview == nil {
-                    Button("Preview") { derivePreview() }
+                    Button(isFetching ? "Fetching…" : "Preview") { derivePreview() }
                         .buttonStyle(.borderedProminent)
                         .tint(Color.pine)
-                        .disabled(transcriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(
+                            isFetching
+                                || transcriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 } else {
                     Button("Attach Transcript") { confirm() }
                         .buttonStyle(.borderedProminent)
@@ -93,6 +111,12 @@ struct TranscriptImportSheet: View {
 
     private func derivePreview() {
         failureMessage = nil
+        // The URL door ([TRANSCRIPT-21]): a lone share link fetches instead
+        // of parsing.
+        if let url = GranolaSharePayload.shareLink(in: transcriptText) {
+            fetchShareImport(from: url)
+            return
+        }
         do {
             preview = try store.preview(of: transcriptText, for: stage)
         } catch {
@@ -100,10 +124,32 @@ struct TranscriptImportSheet: View {
         }
     }
 
+    private func fetchShareImport(from url: URL) {
+        isFetching = true
+        Task {
+            defer { isFetching = false }
+            do {
+                let imported = try await store.fetchShareImport(from: url, for: stage)
+                if notesOverview.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    notesOverview = imported.notesOverview
+                }
+                suggestedImportDate = imported.suggestedImportDate
+                linkHasNoTranscript = !imported.hasTranscript
+                preview = imported.preview
+            } catch GranolaShareError.noSharedDocument {
+                failureMessage = "That link doesn't look like a Granola share page."
+            } catch {
+                failureMessage = "Fetching the share link failed — check the connection and try again."
+            }
+        }
+    }
+
     private func confirm() {
         guard let preview else { return }
         do {
-            try store.confirm(preview, notesOverview: notesOverview, onto: stage, importedAt: .now)
+            try store.confirm(
+                preview, notesOverview: notesOverview, onto: stage,
+                importedAt: suggestedImportDate ?? .now)
             dismiss()
         } catch {
             failureMessage = "Attaching the transcript failed."

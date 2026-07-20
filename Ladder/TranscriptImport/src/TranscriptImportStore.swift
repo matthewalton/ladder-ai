@@ -15,14 +15,47 @@ enum TranscriptFileError: Error, Equatable {
     case unsupportedFileType(String)
 }
 
+/// What a share-link fetch hands the sheet ([TRANSCRIPT-21]): the preview,
+/// plus the notes overview and the call's created date to prefill.
+struct ShareImport {
+    var preview: TranscriptImportPreview
+    var notesOverview: String
+    /// The shared document's created date — the [TRANSCRIPT-25] fallback.
+    var suggestedImportDate: Date?
+    var hasTranscript: Bool
+}
+
 /// Parse → preview → confirm. Parsing is pure; only `confirm` writes.
 @MainActor
 @Observable
 final class TranscriptImportStore {
     private let context: ModelContext
+    private let fetcher: GranolaShareFetching
 
-    init(container: ModelContainer) {
+    init(container: ModelContainer, fetcher: GranolaShareFetching = LiveGranolaShareFetcher()) {
         self.context = ModelContext(container)
+        self.fetcher = fetcher
+    }
+
+    /// The URL door (decisions/0006): fetch the share page and parse its
+    /// embedded payload into the same preview the other doors feed.
+    func fetchShareImport(from url: URL, for stage: Stage) async throws -> ShareImport {
+        let html: String
+        do {
+            html = try await fetcher.html(from: url)
+        } catch {
+            throw GranolaShareError.fetchFailed
+        }
+        let document = try GranolaSharePayload.parse(html: html)
+        return ShareImport(
+            preview: TranscriptImportPreview(
+                segments: document.segments ?? [],
+                replacesExisting: stage.transcript != nil
+            ),
+            notesOverview: document.notesText,
+            suggestedImportDate: document.createdAt,
+            hasTranscript: document.segments != nil
+        )
     }
 
     /// Derives the preview for pasted or file-read text. Throws
