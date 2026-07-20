@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Template variant: the rungs alone in currentColor, no plaque.
+       For monochrome contexts (menu bar extra per DESIGN.md §6). -->
+  <path d="M34 91 L60 75 L86 91" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 68 L60 52 L86 68" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 45 L60 29 L86 45" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

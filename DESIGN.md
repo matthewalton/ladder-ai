@@ -106,7 +106,7 @@ Type scale (celebration view only, fixed sizes acceptable there):
 
 - SF Symbols throughout for standard actions.
 - One small custom set: **trail blazes** — the stage-kind markers. Simple geometric badges inspired by painted trail markers: circle (screen), diamond (technical), square (behavioral), double-chevron (final), flag (offer). Drawn as SwiftUI `Shape`s so they scale and tint freely. These appear on the board, the timeline, and as the waypoints in the journey view — a single icon language from tracking through to celebration.
-- App icon direction: a trail blaze / summit flag mark in `pine` and `summitGold` on `paper` — flat, friendly, confident. No gradients, no glass.
+- App icon (decided 2026-07): the **trail badge** — the double-chevron blaze stacked into three ladder rungs, cut out of a solid `pine` plaque in `paper`, top rung `summitGold`. (This inverts the original pine-on-paper sketch: the plaque ground won the logo round.) Flat, friendly, confident — no gradients, no glass. Master SVGs live in `docs/brand/`; the menu-bar template icon is the rungs alone in `currentColor`.
 
 ---
 

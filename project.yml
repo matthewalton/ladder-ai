@@ -45,6 +45,8 @@ targets:
         # Pine as the app accent: macOS draws list selection and control
         # accents from this asset, not from SwiftUI .tint (DESIGN.md §2).
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # Trail-badge app icon (DESIGN.md §5; master SVGs in docs/brand/).
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   LadderTests:
     type: bundle.unit-test

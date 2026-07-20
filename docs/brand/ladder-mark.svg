@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Trail badge — Daylight. Rungs: paper on pine plaque, top rung summitGold. -->
+  <rect x="8" y="8" width="104" height="104" rx="26" fill="#2F5D46"/>
+  <path d="M34 91 L60 75 L86 91" fill="none" stroke="#F6F5F0" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 68 L60 52 L86 68" fill="none" stroke="#F6F5F0" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 45 L60 29 L86 45" fill="none" stroke="#D99A2B" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
