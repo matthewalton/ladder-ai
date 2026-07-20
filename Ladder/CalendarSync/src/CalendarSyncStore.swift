@@ -33,18 +33,28 @@ final class CalendarSyncStore {
 
     private(set) var scanState: CalendarScanState = .idle
     private(set) var proposals: [StageProposal] = []
-    private var fetchedEvents: [CalendarEvent] = []
+    /// Fetched by the most recent check — an automatic scan never fills
+    /// this, and it is never persisted (decisions/0008).
+    private var checkedEvents: [CalendarEvent] = []
 
-    var browseEvents: [CalendarEvent] {
+    /// The check's fetched events that produced no proposal — linked,
+    /// dismissed, and proposed events excluded, in start order. Computed
+    /// live so a confirmation or dismissal mid-review drops out.
+    var otherEvents: [CalendarEvent] {
         let linked = linkedEventIDs()
         let dismissed = dismissedEventIDs()
-        return fetchedEvents
-            .filter { !linked.contains($0.identifier) && !dismissed.contains($0.identifier) }
+        let proposed = Set(proposals.map(\.id))
+        return checkedEvents
+            .filter {
+                !linked.contains($0.identifier)
+                    && !dismissed.contains($0.identifier)
+                    && !proposed.contains($0.identifier)
+            }
             .sorted { $0.start < $1.start }
     }
 
-    /// A proposal on demand for a browsed event — the interview heuristic's
-    /// verdict is ignored here.
+    /// A proposal on demand for a picked other event — the interview
+    /// heuristic's verdict is ignored here.
     func proposal(for event: CalendarEvent) -> StageProposal {
         makeProposal(
             for: event,
@@ -112,9 +122,30 @@ final class CalendarSyncStore {
         )
     }
 
-    /// Only ever runs from an explicit user action or an already-granted
-    /// launch — the access prompt is never unprompted.
+    /// The automatic form — launch and the calendar-change signal.
+    /// Refreshes proposals and populates no other events (decisions/0008).
     func scan(asOf: Date = .now) async {
+        checkedEvents = []
+        await performScan(asOf: asOf)
+    }
+
+    /// The user-initiated form — "Check calendar". The one scan that keeps
+    /// its unproposed events as other events (decisions/0008), and also the
+    /// explicit gesture that first requests calendar access.
+    func check(asOf: Date = .now) async {
+        checkedEvents = await performScan(asOf: asOf)
+    }
+
+    /// Closing the check-results sheet ends the review; the other events
+    /// only come back with the next check (decisions/0008).
+    func discardOtherEvents() {
+        checkedEvents = []
+    }
+
+    /// The access prompt is never unprompted: this only runs from an
+    /// explicit user action or an already-granted launch.
+    @discardableResult
+    private func performScan(asOf: Date) async -> [CalendarEvent] {
         scanState = .scanning
         var access = await service.accessState()
         if access == .notDetermined {
@@ -123,18 +154,19 @@ final class CalendarSyncStore {
         guard access == .granted else {
             proposals = []
             scanState = .denied
-            return
+            return []
         }
 
         do {
             let events = try await service.events(in: Self.scanWindow(asOf: asOf))
-            fetchedEvents = events
             proposals = buildProposals(from: events)
+            scanState = .ready
+            return events
         } catch {
-            fetchedEvents = []
             proposals = []
+            scanState = .ready
+            return []
         }
-        scanState = .ready
     }
 
     /// Subscription is synchronous so a signal posted right after this call

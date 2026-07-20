@@ -33,17 +33,23 @@ Acceptance criteria for behaviour live in each slice's SPEC.md (Speccle owns the
 4. No raw hex/fonts in views; all tests green headlessly with no calendar permission granted; previews compile.
 
 ## Phase 3 slices *(build in order with `/feature`)*
-1. **recorder** — `CaptureService` protocol + fixture (mirrors the `CalendarSyncService` seam) → `MenuBarExtra` scene alongside `WindowGroup`/`Settings` with record control, level meters, elapsed time → mic stream via AVAudioEngine → visible recording indicator + first-run consent screen → mic permission detect-and-guide; `NSMicrophoneUsageDescription` is born here. Tracer: start a capture from the menu bar — the meter moves and elapsed time runs; stop — the session ends cleanly and nothing persists (raw audio never outlives the session).
-2. **transcription** — `Transcriber` protocol + fixture over on-device `SpeechAnalyzer`/`SpeechTranscriber` (ADR 0001) → `Transcript` + `Segment` models (ARCHITECTURE.md §3) colocated in the slice → `Stage.transcript` link, Stage picked at record time. Tracer: record your own voice, relaunch, the transcript is still on the Stage.
-3. **system-audio** — second stream via ScreenCaptureKit audio / Core Audio process taps → screen-recording permission onboarding with explanatory copy → timestamp merge with mic = `.me` / system = `.them` attribution → `sourceApp` detection. Completes the phase accept criterion.
-4. **pre-call** — EventKit pre-call notification ("Interview with {company} at 14:00 — record?") driven off the calendar-sync seam / `Stage.calendarEventID` → opens the recorder armed on the right Stage → notification permission detect-and-guide. First UserNotifications usage in the app.
+
+Native capture is deferred (ADR 0002): interim transcripts come from Granola and enter the app by hand. The recorder slice was built (fe22ae5) then removed from the tree; it restores from git history when native capture returns.
+
+1. **transcript-import** — `Transcript` + `Segment` models (ARCHITECTURE.md §3) colocated in the slice → `Stage.transcript` link → paste or text/markdown file-drop of an external (Granola) transcript onto a Stage → speaker labels in the text parsed into me/them attribution → timestamped readout on the Stage detail. Tracer: paste a Granola transcript onto a Stage, relaunch, it's still on the Stage.
+
+### Deferred slices — native capture (ADR 0002; restore when the rest of the app has settled)
+- **recorder** — `CaptureService` protocol + fixture → `MenuBarExtra` record control, level meters, consent, mic detect-and-guide. Built at fe22ae5; restore from history rather than rebuild.
+- **transcription** — `Transcriber` protocol + fixture over on-device `SpeechAnalyzer`/`SpeechTranscriber` (ADR 0001), Stage picked at record time. Was specced; contract shelved with the recorder removal.
+- **system-audio** — second stream via ScreenCaptureKit audio / Core Audio process taps → screen-recording onboarding → timestamp merge with mic = `.me` / system = `.them` attribution → `sourceApp` detection.
+- **pre-call** — EventKit pre-call notification driven off `Stage.calendarEventID` → opens the recorder armed on the right Stage → notification detect-and-guide.
+
+The deferred slices carry the native-capture privacy criteria with them (raw audio never persisted beyond the session; transcription fully on-device, no network egress; visible recording indicator; first-run consent; mic/screen-recording/notification denial never crashes).
 
 ## Phase 3 exit criteria
-1. Fresh path: record a real video call → attributed (me/them) transcript attached to the right Stage, fully offline.
-2. Privacy posture: raw audio never persisted beyond the session; transcription fully on-device, no network egress; visible recording indicator whenever capture is live; first-run consent before the first capture.
-3. Permissions posture: mic / screen-recording / notifications denial never crashes; detect-and-guide; the app stays fully usable with everything denied.
-4. Migration safety: relaunching over a Phase 2 store keeps every Application, Stage, and `cvSnapshot` byte-identical.
-5. No raw hex/fonts in views; all tests green headlessly with no permissions granted; previews compile.
+1. Fresh path: Granola transcript of a real interview → attributed (me/them) transcript attached to the right Stage, surviving relaunch.
+2. Migration safety: relaunching over a Phase 2 store keeps every Application, Stage, and `cvSnapshot` byte-identical.
+3. No raw hex/fonts in views; all tests green headlessly; previews compile.
 
 ## Later phases
 See ARCHITECTURE.md §4 for Phase 4–5 module definitions. Slice maps for those phases get drawn when the phase opens.

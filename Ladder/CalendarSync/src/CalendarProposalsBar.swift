@@ -6,7 +6,7 @@ import SwiftUI
 struct CalendarProposalsBar: View {
     @Bindable var store: CalendarSyncStore
     @State private var reviewing: StageProposal?
-    @State private var isBrowsing = false
+    @State private var showingResults = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -19,18 +19,16 @@ struct CalendarProposalsBar: View {
                     ProgressView()
                         .controlSize(.small)
                 }
-                if !store.browseEvents.isEmpty {
-                    Button {
-                        isBrowsing = true
-                    } label: {
-                        Label("Browse events", systemImage: "list.bullet")
-                    }
-                    .buttonStyle(.borderless)
-                }
                 // Also the explicit gesture that first requests calendar
-                // access.
+                // access. Only a check opens the results sheet — automatic
+                // re-scans never present anything (decisions/0008).
                 Button {
-                    Task { await store.scan() }
+                    Task {
+                        await store.check()
+                        showingResults =
+                            store.scanState == .ready
+                            && !(store.proposals.isEmpty && store.otherEvents.isEmpty)
+                    }
                 } label: {
                     Label("Check calendar", systemImage: "arrow.clockwise")
                 }
@@ -52,49 +50,19 @@ struct CalendarProposalsBar: View {
         .sheet(item: $reviewing) { proposal in
             StageProposalSheet(store: store, proposal: proposal)
         }
-        .sheet(isPresented: $isBrowsing) {
-            BrowseEventsSheet(store: store) { event in
-                isBrowsing = false
-                reviewing = store.proposal(for: event)
-            }
+        .sheet(isPresented: $showingResults, onDismiss: store.discardOtherEvents) {
+            CheckResultsSheet(store: store)
         }
     }
 
     private var proposalList: some View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(store.proposals) { proposal in
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(proposal.event.title)
-                            .foregroundStyle(Color.ink)
-                        Text(
-                            proposal.event.start
-                                .formatted(date: .abbreviated, time: .shortened)
-                        )
-                        .font(.caption)
-                        .foregroundStyle(Color.inkSoft)
-                    }
-                    Spacer()
-                    if proposal.isPossibleInterview {
-                        Text("Possible interview")
-                            .font(.caption)
-                            .foregroundStyle(Color.skyline)
-                    }
-                    if let guess = proposal.kindGuess {
-                        Text(guess.label)
-                            .font(.caption)
-                            .foregroundStyle(Color.pine)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.pineTint, in: Capsule())
-                    }
-                    Button("Review…") { reviewing = proposal }
-                    Button("Dismiss") { try? store.dismiss(proposal) }
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(Color.inkSoft)
-                }
-                .padding(10)
-                .background(Color.paperRaised, in: RoundedRectangle(cornerRadius: 8))
+                ProposalRow(
+                    proposal: proposal,
+                    onReview: { reviewing = proposal },
+                    onDismiss: { try? store.dismiss(proposal) }
+                )
             }
         }
     }

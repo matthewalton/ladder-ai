@@ -502,51 +502,95 @@ struct CalendarSyncFlowTests {
         #expect(sync.proposals.map(\.id) == ["evt-2"])
     }
 
-    // MARK: - Calendar-first: the browse list and the look-back scan
+    // MARK: - Calendar-first: the check's other events and the look-back scan
 
-    @Test("[CALSYNC-27] the browse list carries every event in the scan window except linked and dismissed ones")
-    func browseListCarriesWindowEvents() async throws {
+    @Test("[CALSYNC-31] a check lists every fetched event without a proposal as an other event")
+    func checkListsUnproposedEventsAsOtherEvents() async throws {
         let (pipeline, sync, _) = try makeStores(events: [
             event(title: "Acme interview"),
             event(id: "evt-2", title: "Dentist", start: Self.now.addingTimeInterval(2 * 86_400)),
             event(id: "evt-3", title: "Globex screen", start: Self.now.addingTimeInterval(3 * 86_400)),
-            event(id: "evt-4", title: "Acme final", start: Self.now.addingTimeInterval(4 * 86_400)),
-            event(id: "evt-5", title: "Acme screen", start: Self.now.addingTimeInterval(5 * 86_400)),
+            event(id: "evt-4", title: "Team standup", start: Self.now.addingTimeInterval(4 * 86_400)),
+            event(id: "evt-5", title: "Coffee with Jane", start: Self.now.addingTimeInterval(5 * 86_400)),
         ])
         let application = try seedApplication(in: pipeline)
-        await sync.scan(asOf: Self.now)
+        await sync.check(asOf: Self.now)
 
-        // Linked and dismissed events leave the browse list; matched,
-        // flagged, and plain events all stay, in start order.
-        let confirming = try #require(sync.proposals.first { $0.id == "evt-4" })
+        // Proposed events never appear twice: the matched (evt-1) and
+        // flagged (evt-3) events surface as proposals; everything else is
+        // an other event, in start order.
+        #expect(sync.proposals.map(\.id) == ["evt-1", "evt-3"])
+        #expect(sync.otherEvents.map(\.identifier) == ["evt-2", "evt-4", "evt-5"])
+
+        // Linked and dismissed events stay excluded on a later check.
+        let confirming = try #require(sync.proposals.first { $0.id == "evt-1" })
         try sync.confirm(confirming, application: application, kind: .final)
-        let dismissing = try #require(sync.proposals.first { $0.id == "evt-5" })
+        let dismissing = try #require(sync.proposals.first { $0.id == "evt-3" })
         try sync.dismiss(dismissing, asOf: Self.now)
+        await sync.check(asOf: Self.now)
 
-        #expect(sync.browseEvents.map(\.identifier) == ["evt-1", "evt-2", "evt-3"])
+        #expect(sync.proposals.isEmpty)
+        #expect(sync.otherEvents.map(\.identifier) == ["evt-2", "evt-4", "evt-5"])
     }
 
-    @Test("[CALSYNC-28] picking a browsed event yields a proposal for that event")
-    func pickingBrowsedEventYieldsProposal() async throws {
+    @Test("[CALSYNC-28] picking an other event yields a proposal for that event")
+    func pickingOtherEventYieldsProposal() async throws {
         let (pipeline, sync, _) = try makeStores(events: [
             // Unmatched and heuristic-silent — invisible to the scan.
             event(title: "Coffee with Jane"),
-            event(id: "evt-2", title: "Acme catch-up", start: Self.now.addingTimeInterval(2 * 86_400)),
+            event(id: "evt-2", title: "Globex catch-up", start: Self.now.addingTimeInterval(2 * 86_400)),
         ])
-        let application = try seedApplication(in: pipeline, company: "Acme")
-        await sync.scan(asOf: Self.now)
-        #expect(!sync.proposals.contains { $0.id == "evt-1" })
+        await sync.check(asOf: Self.now)
+        #expect(sync.proposals.isEmpty)
 
         // Picking proposes on demand, heuristic verdict ignored.
-        let browsed = try #require(sync.browseEvents.first { $0.identifier == "evt-1" })
-        let picked = sync.proposal(for: browsed)
-        #expect(picked.isPossibleInterview)
-        #expect(picked.companyGuess?.isEmpty == false)
+        let picked = try #require(sync.otherEvents.first { $0.identifier == "evt-1" })
+        let proposal = sync.proposal(for: picked)
+        #expect(proposal.isPossibleInterview)
+        #expect(proposal.companyGuess?.isEmpty == false)
 
-        // A matched pick carries its candidates.
-        let matchedEvent = try #require(sync.browseEvents.first { $0.identifier == "evt-2" })
+        // Matching runs live at pick time: an Application tracked since
+        // the check gives the pick its candidates ([CALSYNC-6] semantics).
+        let application = try seedApplication(in: pipeline, company: "Globex")
+        let matchedEvent = try #require(sync.otherEvents.first { $0.identifier == "evt-2" })
         let matched = sync.proposal(for: matchedEvent)
         #expect(matched.candidates.map(\.persistentModelID) == [application.persistentModelID])
+    }
+
+    @Test("[CALSYNC-32] an automatic re-scan leaves the other-events list empty")
+    func automaticRescanLeavesOtherEventsEmpty() async throws {
+        let (_, sync, _) = try makeStores(events: [
+            event(title: "Acme interview"),
+            event(id: "evt-2", title: "Dentist", start: Self.now.addingTimeInterval(2 * 86_400)),
+        ])
+        // The launch-path scan populates nothing.
+        await sync.scan(asOf: Self.now)
+        #expect(sync.otherEvents.isEmpty)
+
+        // A check fills the list; the next automatic re-scan — the
+        // calendar-change signal's path — clears it, proposals refreshed
+        // as ever.
+        await sync.check(asOf: Self.now)
+        #expect(sync.otherEvents.map(\.identifier) == ["evt-2"])
+        await sync.scan(asOf: Self.now)
+        #expect(sync.otherEvents.isEmpty)
+        #expect(sync.proposals.map(\.id) == ["evt-1"])
+    }
+
+    @Test("[CALSYNC-33] closing the check-results sheet discards the other events")
+    func discardEmptiesOtherEvents() async throws {
+        let (_, sync, _) = try makeStores(events: [
+            event(title: "Acme interview"),
+            event(id: "evt-2", title: "Dentist", start: Self.now.addingTimeInterval(2 * 86_400)),
+        ])
+        await sync.check(asOf: Self.now)
+        #expect(sync.otherEvents.map(\.identifier) == ["evt-2"])
+
+        sync.discardOtherEvents()
+
+        #expect(sync.otherEvents.isEmpty)
+        // Proposals survive the discard — the bar keeps showing them.
+        #expect(sync.proposals.map(\.id) == ["evt-1"])
     }
 
     @Test("[CALSYNC-29] a look-back scan requests events from ninety days back to the scan instant")

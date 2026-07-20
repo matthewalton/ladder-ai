@@ -1,7 +1,9 @@
 # 0007 — Calendar-first import: heuristic + browse surfacing, create-on-confirm, on-demand look-back
 
 Status: accepted (agreed with the human at plan, 2026-07-19; the look-back
-range is **defaulted**, see below)
+range is **defaulted**, see below). The browse-surfacing part — the standing
+browse list and its bar button — is superseded by decisions/0008; the
+heuristic, company guess, create-on-confirm, and look-back stand.
 
 ## Context
 

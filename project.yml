@@ -38,9 +38,6 @@ targets:
         # but reading needs the full-access tier. [CALSYNC-18] pins the copy.
         CODE_SIGN_ENTITLEMENTS: Ladder/App/Ladder.entitlements
         INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "Ladder looks for interviews for jobs you're tracking — nothing more. It only reads: no event is ever added or changed, and nothing about your calendar leaves this Mac."
-        # recorder (Recorder decisions/0001): buffers exist only in flight,
-        # nothing is ever written. [RECORDER-10] pins the copy.
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: 'Ladder listens only while you record an interview, to show levels now and transcribe on this Mac later. Nothing is stored, and no audio ever leaves this Mac.'
         SWIFT_VERSION: '6.0'
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: '-'

@@ -53,9 +53,10 @@ Ladder/
   CVExport/       Phase 1 slice: CV render + export (owns the Application model)
   PipelineBoard/  Phase 2 slice: Stage model, applications board, transitions
                   (Phase 2 slices are siblings like this — no umbrella Pipeline/)
-  Recorder/       Phase 3 slice: menu-bar recorder (mic stream, level meters)
-                  (Phase 3 slices are siblings — no umbrella Capture/; Transcription/,
-                   SystemAudio/, PreCall/ join as they are built)
+  TranscriptImport/ Phase 3 slice: import external (Granola) transcripts onto a Stage
+                  (Phase 3 slices are siblings — no umbrella Capture/. Native capture
+                   is deferred per ADR 0002: Recorder/ was built then removed at
+                   fe22ae5; Transcription/, SystemAudio/, PreCall/ return with it)
   Intelligence/   Phase 4 (gated; protocol stub only for now)
   Journey/        Phase 5 (gated)
 Prompts/          versioned LLM prompt files (*.md) — canonical location (never TailorPrompts/)

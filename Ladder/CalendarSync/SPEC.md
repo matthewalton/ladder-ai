@@ -20,11 +20,16 @@ created new, or linked onto a Stage the user already tracks.
 The calendar-first path (decisions/0007) covers the reverse arrival order:
 an interview already in the calendar with no Application yet on the board.
 The interview heuristic flags such events as possible-interview proposals
-([CALSYNC-21], [CALSYNC-22]), the browse list is the fallback for events it
-misses ([CALSYNC-27], [CALSYNC-28]), confirmation is the one gesture that
-creates the Application along with its Stage ([CALSYNC-26]), and the
-on-demand look-back scan reaches further into the past for one application's
-company ([CALSYNC-29], [CALSYNC-30]).
+([CALSYNC-21], [CALSYNC-22]), the check's other events are the fallback for
+events it misses (decisions/0008: [CALSYNC-31], [CALSYNC-28]), confirmation
+is the one gesture that creates the Application along with its Stage
+([CALSYNC-26]), and the on-demand look-back scan reaches further into the
+past for one application's company ([CALSYNC-29], [CALSYNC-30]).
+
+Other events are ephemeral by design (decisions/0008): only a check — the
+user-initiated scan — populates them ([CALSYNC-31]), automatic re-scans
+leave them empty ([CALSYNC-32]), and closing the check-results sheet
+discards them ([CALSYNC-33]). There is no standing browse surface.
 
 Out of scope: any write to the calendar (the entitlement posture is read-only,
 decisions/0001), the per-Application timeline view (the timeline slice), email
@@ -214,8 +219,9 @@ the link signal catches most of them one step earlier.
 ## [CALSYNC-23] An event matching no tracked Application with neither an interview keyword nor a recognised meeting link yields no proposal
 
 The heuristic's negative space, keeping the bar quiet: dentist appointments
-and team standups in the window stay invisible. They remain reachable through
-the browse list ([CALSYNC-27], [CALSYNC-28]) — invisible is not gone.
+and team standups in the window stay invisible on the bar. They remain
+reachable as a check's other events ([CALSYNC-31], [CALSYNC-28]) — invisible
+is not gone.
 
 ## [CALSYNC-24] The company guess takes the registrable-domain label of a non-public attendee or organizer email
 
@@ -250,23 +256,16 @@ interview, and the date is editable like any manual add) then
 the detected meeting link — so the [PIPEBOARD-7] auto-advance carries the new
 Application straight to active, mirroring [CALSYNC-8].
 
-## [CALSYNC-27] The browse list carries every event in the scan window except linked and dismissed ones
+## [CALSYNC-28] Picking an other event yields a proposal for that event
 
-The fallback surface (decisions/0007) for interviews the heuristic misses:
-matched, flagged, and plain events alike, in start order — only [CALSYNC-10]
-and [CALSYNC-11] suppression applies. The list is store state computed from
-the same fetched events as the scan, no second fetch. The browse UI itself
-(how the list opens from the bar) is visual-verify; the list's contents are
-the measurable clause.
-
-## [CALSYNC-28] Picking a browsed event yields a proposal for that event
-
-The escape hatch that makes the heuristic safe to keep small: any browsed
-event can become a proposal on demand — with candidates when matching finds
-tracked Applications ([CALSYNC-6] semantics), as a possible-interview
-proposal when it does not, heuristic verdict ignored. From there the normal
-confirmation flow runs: [CALSYNC-8]/[CALSYNC-9] on candidates, [CALSYNC-26]
-without.
+The escape hatch that makes the heuristic safe to keep small: any of a
+check's other events can become a proposal on demand — with candidates when
+matching finds tracked Applications ([CALSYNC-6] semantics), as a
+possible-interview proposal when it does not, heuristic verdict ignored.
+From there the normal confirmation flow runs: [CALSYNC-8]/[CALSYNC-9] on
+candidates, [CALSYNC-26] without. (Reworded from "browsed event" when
+decisions/0008 replaced the browse list with the check's other events — the
+promise, pick → proposal, is unchanged.)
 
 ## [CALSYNC-29] A look-back scan requests events from ninety days back to the scan instant
 
@@ -284,3 +283,41 @@ was invoked on — with the same matching policy (decisions/0002) and the same
 linked/dismissed suppression. Every proposal it emits carries that
 application as the sole candidate, so confirmation lands on it: [CALSYNC-8]
 to create a Stage there, [CALSYNC-9] to link an existing one.
+
+## [CALSYNC-31] A check lists every fetched event without a proposal as an other event
+
+The fallback surface after decisions/0008 retired the standing browse list
+([CALSYNC-27]): a check — the user-initiated scan — keeps the events that
+produced no proposal as its other events, in start order. Linked
+([CALSYNC-10]), dismissed ([CALSYNC-11]), and proposed events are all
+excluded — a proposal already surfaces above, never twice. Store state
+computed from the same fetched events as the scan, no second fetch, never
+persisted to disk. Presentation is the check-results sheet (decisions/0008):
+proposals prominent on top, other events beneath in a collapsed "Other
+events (N)" disclosure — the sheet layout and the removal of the bar's
+standing "Browse events" button are visual-verify; the list's contents and
+population are the measurable clause.
+
+## [CALSYNC-32] An automatic re-scan leaves the other-events list empty
+
+The user-check-only half of decisions/0008: the calendar-change signal
+([CALSYNC-14]) and an already-granted launch scan refresh proposals as ever
+but populate no other events — after such a scan the store's other events
+are empty even when unproposed events sit in the window. Only a check
+([CALSYNC-31]) fills the list, so it never reappears unless the user chooses
+to check again.
+
+## [CALSYNC-33] Closing the check-results sheet discards the other events
+
+The ephemerality gesture (decisions/0008): ending the review empties the
+store's other events — the bar afterwards shows proposals only, and the
+list only comes back with the next check. The measurable clause is the
+store's discard; the sheet's close wiring is visual-verify.
+
+## [CALSYNC-34] The other-events filter narrows the list to events whose title contains the typed text
+
+The known-interview escape (decisions/0008): the expanded disclosure carries
+a filter field; "hooli" keeps "Interview with Hooli" and drops "Team
+standup". Containment ignores case; an empty filter shows the whole list.
+Pure filtering over the other events, testable with no UI — the field
+itself is visual-verify.

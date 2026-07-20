@@ -6,7 +6,6 @@ struct LadderApp: App {
     private let store: ProfileStore
     private let pipelineStore: PipelineStore
     private let calendarStore: CalendarSyncStore
-    private let recorderStore: RecorderStore
 
     init() {
         do {
@@ -18,7 +17,6 @@ struct LadderApp: App {
         } catch {
             fatalError("Failed to open the Ladder store: \(error)")
         }
-        recorderStore = RecorderStore(service: AVAudioEngineCaptureService())
         let service = EventKitCalendarSyncService()
         calendarStore = CalendarSyncStore(pipeline: pipelineStore, service: service)
         calendarStore.startObservingChanges()
@@ -40,11 +38,5 @@ struct LadderApp: App {
         Settings {
             SettingsView()
         }
-        MenuBarExtra {
-            RecorderPopoverView(store: recorderStore)
-        } label: {
-            Image(systemName: recorderStore.menuBarSymbolName)
-        }
-        .menuBarExtraStyle(.window)
     }
 }

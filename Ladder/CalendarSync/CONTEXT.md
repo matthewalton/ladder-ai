@@ -72,7 +72,7 @@ _Avoid_: classifier, detection, smart scan
 
 **Possible-interview proposal**:
 A proposal for an event matching no tracked Application, flagged by the
-interview heuristic or picked from the browse list. Carries no candidates;
+interview heuristic or picked from the other events. Carries no candidates;
 its confirmation creates ([CALSYNC-26]) instead of attaching.
 _Avoid_: unmatched proposal, orphan event, suggestion
 
@@ -82,11 +82,27 @@ email domain first, event title stripped of interview vocabulary as the
 fallback (decisions/0007). Like the kind guess, it only ever pre-fills.
 _Avoid_: auto-fill, company detection, inference
 
-**Browse list**:
-Every event in the scan window except linked and dismissed ones — the
-fallback surface when the interview heuristic misses a real interview.
-Picking an event turns it into a proposal on demand ([CALSYNC-28]).
-_Avoid_: event picker, calendar view, all events
+**Check**:
+The user-initiated scan — pressing "Check calendar". The only scan that
+populates other events (decisions/0008); automatic re-scans refresh
+proposals alone.
+_Avoid_: browse, manual refresh, sync
+
+**Other events**:
+A check's fetched events that produced no proposal — linked, dismissed, and
+proposed events excluded. The fallback surface when the interview heuristic
+misses a real interview; picking one turns it into a proposal on demand
+([CALSYNC-28]). Ephemeral: never persisted, emptied by automatic re-scans
+and by closing the check-results sheet.
+_Avoid_: browse list (the pre-0008 standing surface), event picker,
+calendar view, all events
+
+**Check-results sheet**:
+The sheet a check presents when its scan completes: proposals prominent on
+top, other events beneath in a collapsed disclosure with a title filter.
+Closing it discards the other events.
+_Avoid_: browse events sheet, results dialog, review sheet (the confirmation
+sheet already owns "review")
 
 **Look-back scan**:
 The on-demand per-application scan reaching ninety days back

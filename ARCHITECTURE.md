@@ -160,6 +160,9 @@ Key invariants:
 *Accept:* a calendar invite from a tracked company surfaces as a proposed Stage with zero typing.
 
 ### Phase 3 — Capture Engine
+
+> **Deferred in the interim (ADR 0002):** the engine below is paused; transcripts arrive by importing Granola output onto a Stage (the transcript-import slice, which owns `Transcript`/`Segment`). The privacy posture's on-device capture requirements bind the deferred slices, not the import path. This section stays as the definition of what returns.
+
 1. Menu bar extra with record control + level meters + elapsed time.
 2. Pre-call notification via EventKit ("Interview with {company} at 14:00 — record?").
 3. Dual-stream capture: mic (AVAudioEngine) + system audio (ScreenCaptureKit audio / process tap). Streams kept separate → free speaker attribution (mic = me, system = them).
