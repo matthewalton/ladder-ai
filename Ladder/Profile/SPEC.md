@@ -6,17 +6,22 @@ key: PROFILE
 
 The single, canonical career history (see root `CONTEXT.md`: exactly one Profile
 exists) and its editor. This slice owns the SwiftData schema for `Profile`, `Role`,
-`Achievement`, `SkillTag`, and `ContactInfo`, the store that enforces the
+`Achievement`, `SkillTag`, `Education`, `Project`, and `ContactInfo` (plus the
+Profile's ordered `interests` strings), the store that enforces the
 single-profile invariant, and the CRUD editor.
 
-The editor composes as a standard macOS three-pane: sidebar (roles), content
-(the selected role's achievements), inspector (details of the selected item).
-Layout and visual treatment follow DESIGN.md and are verified by a human — the
-criteria below promise observable behaviour, which lives in the store and the
+The editor is a single scrollable CV-style page — identity header (name,
+headline, contact), then Experience, Education, Projects, and Interests sections
+— beside a slim persistent detail rail that edits the focused item's depth
+(point wording, Tags, impact metric, tech, strength notes; role, education, and
+project fields). Achievements are written as brief talking points; tailoring
+expands them into finished CV prose per application (Tailor slice). Layout and
+visual treatment follow DESIGN.md and are verified by a human — the criteria
+below promise observable behaviour, which lives in the store and the
 persistence layer.
 
-Out of scope: CV import, tailoring, PDF export, `Education`/`Project` models
-(decisions/0003), and any live LLM access.
+Out of scope: CV import, tailoring, PDF export, explicit JD-tag extraction, and
+any live LLM access.
 
 ## [PROFILE-1] A role added to the Profile is still present after the app relaunches
 
@@ -55,13 +60,16 @@ invariant regardless of caller.
 "Fully populated" means every field of every model in this slice's schema holds a
 non-default value:
 
-- `Profile`: name, headline, contact, `updatedAt`
+- `Profile`: name, headline, contact, `updatedAt`, ordered `interests`
 - `ContactInfo`: email, phone, location, link (one URL string)
 - one `Role` with company, title, start, and a nil end (a current role) plus a
   second `Role` with a non-nil end
 - two `Achievement`s under one role, each with text, `impactMetric`, `tech`
-  (two entries), `strengthNotes`, and at least one skill
+  (two entries), `strengthNotes`, and at least one Tag
 - two `SkillTag`s with distinct names
+- two `Education` entries — one completed (non-nil end, non-empty detail), one
+  in progress (nil end, empty detail)
+- one `Project` with name, link, summary, and at least one tagged point
 
 Every field compares equal after closing and reopening the container. Any change
 to this slice's schema must keep this criterion's test in step (CLAUDE.md:
@@ -73,36 +81,71 @@ Cascade delete: `Role` owns its `Achievement`s. `SkillTag`s referenced by the
 deleted achievements are not deleted — they are shared across the Profile, and
 orphan pruning is out of scope for this slice.
 
-## [PROFILE-7] Reordering a role's achievements persists the new order
+## [PROFILE-7] Reordering a parent's points persists the new order
 
-Drag-reorder in the editor. SwiftData to-many relationships do not guarantee
-order, so order is an explicit persisted attribute (e.g. a sort index) — the
-dropped order survives a store reopen.
+Applies to a role's achievements and to a project's points alike. SwiftData
+to-many relationships do not guarantee order, so order is an explicit persisted
+attribute (a sort index) — the dropped order survives a store reopen.
 
-Edge case: moving the first achievement to the last position — every
-intermediate index shifts by one.
+Edge case: moving the first point to the last position — every intermediate
+index shifts by one.
 
-## [PROFILE-8] Tagging two achievements with the same skill name yields one shared SkillTag
+## [PROFILE-8] Tagging two points with the same Tag name yields one shared SkillTag
 
-Skill-name deduplication:
+Tag-name deduplication:
 
 - Comparison is case-insensitive and ignores leading/trailing whitespace:
   tagging "Swift" then " swift " yields one `SkillTag`.
-- The surviving tag keeps the name as first entered ("Swift" above).
+- The surviving Tag keeps the name as first entered ("Swift" above).
 
-Skill chips in the editor render `SkillTag`s; the chip is the rendering, the
-`SkillTag` is the model (see this slice's CONTEXT.md).
+Tag chips in the editor render `SkillTag`s; the chip is the rendering, the
+`SkillTag` is the model (see this slice's CONTEXT.md). Role points and project
+points draw from the same shared pool.
 
-## [PROFILE-9] Editing an achievement's text persists the new text
+## [PROFILE-9] Editing a point's text persists the new text
 
-Achievement text is the user-owned canon (root `CONTEXT.md`): this editor is the
-only place it changes, and the edit survives a store reopen. The same store
+Achievement text is the user-owned canon (root `CONTEXT.md`): the detail rail is
+the only place it changes, and the edit survives a store reopen. The same store
 pathway carries edits to `impactMetric`, `tech`, and `strengthNotes`.
 
-## [PROFILE-10] A Profile with no roles shows the add-first-role empty state
+## [PROFILE-10] A Profile with no roles shows the empty Experience section
 
-Shown inside an existing Profile with zero roles — distinct from the
-create-profile empty state ([PROFILE-2]), which is shown when no Profile exists
-at all. Copy per DESIGN.md §6: "Every climb starts with a pack. Add your first
-role." The action adds the first role; the Import CV action arrives with the
-cv-import slice, not here.
+There is no separate screen: an existing Profile with zero roles lands in the
+editor, whose Experience section carries the empty-state copy (DESIGN.md §6):
+"Every climb starts with a pack. Add your first role." — with the inline
+add-role action. Distinct from the create-profile empty state ([PROFILE-2]),
+which is shown when no Profile exists at all.
+
+## [PROFILE-11] Deleting a Project deletes its points
+
+Cascade delete, the mirror of [PROFILE-6]: `Project` owns its points. Shared
+`SkillTag`s referenced by the deleted points survive.
+
+## [PROFILE-12] A point belongs to exactly one parent
+
+A point created under a role has a nil project; a point created under a project
+has a nil role. The store's creation pathways are the only ways a point comes to
+exist, and neither sets both parents.
+
+## [PROFILE-13] Identity and contact edits persist across a reopen
+
+Name (trimmed, non-empty — an all-whitespace name is rejected and the existing
+name stands), headline, and the whole `ContactInfo` value survive a store
+reopen.
+
+## [PROFILE-14] Interests keep their entered order and dedupe case-insensitively
+
+Interests are ordered strings on the Profile: entry order is preserved across a
+reopen, additions are trimmed, and an addition matching an existing interest
+case-insensitively is ignored (the first-entered casing survives).
+
+## [PROFILE-15] Deleting a point persists, with the surviving siblings' order intact
+
+The deleted point is gone after a reopen and the remaining siblings keep their
+relative order with a dense sort index.
+
+## [PROFILE-16] Untagging removes the link, never the Tag
+
+Removing a Tag from a point severs only that point's reference: the `SkillTag`
+record and its links to other points survive (no orphan pruning, consistent with
+[PROFILE-6]).

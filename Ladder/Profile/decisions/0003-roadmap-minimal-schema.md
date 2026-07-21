@@ -1,6 +1,7 @@
 # 0003 — Roadmap-minimal schema: no Education/Project models in this slice
 
-Status: accepted (agreed with the human at the plan stage, 2026-07-17)
+Status: superseded by 0004 (2026-07-21) — the CV-page redesign brought
+`Education`, `Project`, and interests into this slice.
 
 ## Context
 

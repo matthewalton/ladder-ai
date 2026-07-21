@@ -3,26 +3,56 @@
 Slice-local terms. `Profile`, `Role`, `Achievement`, and `Tailoring` are defined in
 the root `CONTEXT.md` and are not restated here.
 
-**SkillTag**:
-A named skill, stored once per distinct name (case-insensitive) and shared across
-the Profile — achievements reference SkillTags, they never own private copies.
-_Avoid_: chip (that is the UI rendering of a SkillTag), tag, skill label
+**Tag**:
+A named label attached to individual points (role achievements and project
+points) so they can be matched against a job description. Stored once per
+distinct name (case-insensitive) and shared across the Profile — points
+reference Tags, they never own private copies. Tags are matching metadata, not
+a CV section of their own (decisions/0006). Implemented by the legacy
+`SkillTag` model — do not rename it in code (decisions/0006).
+_Avoid_: skill, skill tag (in UI copy and docs), chip (that is the UI rendering
+of a Tag)
+
+**Point**:
+Alias to avoid — the UI shows Achievements as brief bullet "points", but the
+domain word stays **Achievement** (root `CONTEXT.md`). Views may use "point" in
+user-facing copy; code identifiers and docs say Achievement, except where a
+name distinguishes project-owned achievements (`Project.points`).
 
 **Contact info**:
 The Profile's identity-header value type — email, phone, location, link. A Codable
 struct on the Profile, not a model of its own.
 _Avoid_: contact details, ContactCard
 
+**Education**:
+One study entry — institution, qualification, start/end (nil end = in
+progress), optional detail line. Facts, not selectable content: tailoring never
+rewrites education.
+_Avoid_: school, degree (as the entity name)
+
+**Project**:
+A piece of work outside a Role — name, optional link, one-line summary, and its
+own brief points, tagged for JD matching exactly like role achievements
+(decisions/0005). Manually ordered.
+_Avoid_: side project (as the entity name), portfolio item
+
+**Interests**:
+An ordered list of short strings on the Profile — colour for the CV's final
+section, no depth, no model.
+_Avoid_: hobbies
+
 **Strength notes**:
 The user's own context or STAR expansion on an Achievement — raw material for
 later tailoring and debriefs, never shown on a rendered CV.
 _Avoid_: notes, description, comments
 
+**Detail rail**:
+The slim persistent pane beside the CV page that edits the focused item's depth
+(wording, Tags, impact metric, tech, strength notes; role/education/project
+fields). It is always present — unfocused it shows a placeholder.
+_Avoid_: inspector, sidebar
+
 **Create-profile empty state**:
 The screen shown when no Profile record exists; the only place a Profile can be
 created (decisions/0002).
 _Avoid_: onboarding, setup wizard, welcome screen
-
-**Add-first-role empty state**:
-The screen shown inside an existing Profile that has zero roles.
-_Avoid_: blank slate, zero state

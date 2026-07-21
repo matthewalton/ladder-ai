@@ -9,7 +9,7 @@ The user's single, canonical career history — identity header (name, headline,
 _Avoid_: CareerProfile, vault, CV vault
 
 **Achievement**:
-The atomic unit of the Profile — one user-owned statement of impact belonging to a Role. Its text is canon: tailoring proposes per-application rephrasings but never edits it silently.
+The atomic unit of the Profile — one brief, factual talking point of something the user moved forward, belonging to a Role or a Project. Its text is canon: the user writes it terse; tailoring expands it into polished CV prose per application but never edits it silently. (UI copy may call these "points"; the domain word stays Achievement.)
 _Avoid_: bullet, accomplishment
 
 **Role**:
