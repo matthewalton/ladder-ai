@@ -166,6 +166,7 @@ struct TailorFlowTests {
         // the same invalid result to the repair request, so the run ends failed.
         let unknownSelection = Data("""
         {
+          "summary": "…",
           "selections": [{"achievementID": "a9", "bullet": "Invented history"}],
           "gaps": [],
           "rationale": "…"
@@ -415,6 +416,7 @@ struct TailorFlowTests {
         try profileStore.addPoint(to: project, text: "Built tile caching for offline use")
         let selectingProjectPoint = Data("""
         {
+          "summary": "Engineer with production mapping experience.",
           "selections": [
             {"achievementID": "p1", "bullet": "Engineered offline tile caching for a production mapping app"}
           ],
@@ -446,6 +448,7 @@ struct TailorFlowTests {
         try profileStore.addPoint(to: project, text: "Built tile caching for offline use")
         let selectingProjectPoint = Data("""
         {
+          "summary": "Engineer whose project work fits the JD.",
           "selections": [
             {"achievementID": "p1", "bullet": "Engineered offline tile caching"}
           ],
@@ -461,6 +464,37 @@ struct TailorFlowTests {
         await store.startRun(jobDetails)
 
         #expect(store.phase == .review, "project points are selectable content, not just roles'")
+    }
+
+    @Test("[TAILOR-21] the reviewed outcome carries the result's generated CV summary verbatim")
+    func summaryTravelsIntoTheOutcomeVerbatim() async throws {
+        let store = makeTailorStore(
+            profileStore: try makeProfileStore(),
+            service: FixtureIntelligenceService.tailorFixture()
+        )
+
+        await store.startRun(jobDetails)
+
+        let review = try #require(store.review)
+        let expected = "Platform-minded senior engineer with a track record of CI performance work and cross-team incident response, matched to platform-reliability ownership."
+        #expect(review.summary == expected)
+        #expect(review.outcome.summary == expected, "verbatim — never summarised or re-derived")
+
+        // Missing from the schema means a validation failure, which feeds
+        // the repair path ([TAILOR-9]) — a summary-less repair fails the run.
+        let summaryless = Data("""
+        {
+          "selections": [],
+          "gaps": [],
+          "rationale": "…"
+        }
+        """.utf8)
+        let failing = makeTailorStore(
+            profileStore: try makeProfileStore(),
+            service: FixtureIntelligenceService(returning: [summaryless, summaryless])
+        )
+        await failing.startRun(jobDetails)
+        #expect(failing.phase == .failed(.resultInvalid))
     }
 
     @Test("[TAILOR-18] a tailor result wrapped in a markdown code fence produces a review")

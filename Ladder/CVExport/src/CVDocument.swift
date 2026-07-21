@@ -34,6 +34,9 @@ struct CVDocument: Equatable {
     var headline: String
     /// Non-empty contact fields only — no placeholders.
     var contactLines: [String]
+    /// The generated CV summary (Tailor decisions/0006) — "" renders no
+    /// summary block.
+    var summary: String = ""
     /// Newest-first, the same ordering the tailor payload uses.
     var roles: [RoleSection]
     /// Only projects with at least one selected point — projects are optional
@@ -56,6 +59,7 @@ struct CVDocument: Equatable {
             profile.contact.location,
             profile.contact.link,
         ].filter { !$0.isEmpty }
+        summary = review.summary
 
         // Reviewed text per selected achievement: the accepted expanded
         // bullet, or the canonical brief point where it was rejected. Keyed by

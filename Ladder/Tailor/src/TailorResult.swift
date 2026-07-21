@@ -6,6 +6,9 @@ struct TailorValidationFailure: Error, Equatable {
 }
 
 struct TailorResult: Equatable, Sendable, Decodable {
+    /// The generated CV summary — per application, never stored on the
+    /// Profile (decisions/0006).
+    var summary: String
     var selections: [TailorSelection]
     var gaps: [String]
     var rationale: String

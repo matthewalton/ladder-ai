@@ -6,7 +6,8 @@ key: TAILOR
 
 Paste a job description, have the intelligence service select the best-fit
 points from the Profile — role Achievements and project points alike — and
-expand each brief talking point into one polished CV bullet, flag gaps, and
+expand each brief talking point into one polished CV bullet, generate a CV
+summary tailored to the job description (decisions/0006), flag gaps, and
 state its rationale — then review each expanded bullet side by side before
 anything is used. Expansion is grounded strictly in the point's own fields
 (text, impact metric, tech, Tags, strength notes) and never invents facts;
@@ -152,7 +153,7 @@ latest Sonnet (decisions/0003; exact model ID verified against current API
 docs at implement time). The prompt travels as the system prompt, the payload
 as the user message.
 
-## [TAILOR-19] The tailor payload carries projects, education, and interests
+## [TAILOR-19] The tailor payload carries projects, education and interests
 
 Beyond roles: projects serialize with their points (stable `p…` ids, the same
 per-point fields as role achievements, with Tags under the `tags` key);
@@ -165,6 +166,18 @@ selections against the union of `a…` and `p…` ids.
 Selecting a `p…` id resolves to the project's point in the review exactly like
 a role selection — and puts that project on the tailored CV (cv-export renders
 only projects with at least one selected point).
+
+## [TAILOR-21] The reviewed outcome carries the result's generated CV summary verbatim
+
+The CV summary is generated per tailor run, tailored to the job description,
+and never stored on the Profile (decisions/0006 — settled with the human: a
+summary should read against the JD, so it has no canonical stored form). It is
+grounded strictly in payload facts — years of experience derived from role
+dates, actual roles, tech, and metrics; the no-invention stance of bullets
+applies. Required by the result schema, so a result without one feeds the
+repair path ([TAILOR-9]); the review shows it beside the rationale, and it
+travels into the reviewed outcome verbatim for cv-export to render
+([CVEXPORT-20]).
 
 ## [TAILOR-18] A tailor result wrapped in a markdown code fence produces a review
 

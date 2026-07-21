@@ -6,6 +6,9 @@ import Foundation
 @Observable
 final class TailorReview {
     let items: [ReviewedBullet]
+    /// Carried verbatim into the outcome — generated per application, never
+    /// stored (decisions/0006).
+    let summary: String
     let gaps: [String]
     let rationale: String
 
@@ -17,6 +20,7 @@ final class TailorReview {
                 ReviewedBullet(achievement: $0, bullet: selection.bullet)
             }
         }
+        summary = result.summary
         gaps = result.gaps
         rationale = result.rationale
     }
@@ -30,6 +34,7 @@ final class TailorReview {
                     text: $0.accepted ? $0.bullet : $0.achievement.text
                 )
             },
+            summary: summary,
             gaps: gaps,
             rationale: rationale
         )
@@ -45,6 +50,7 @@ struct ReviewedOutcome: Equatable, Sendable {
     }
 
     var items: [Item]
+    var summary: String = ""
     var gaps: [String]
     var rationale: String
 }

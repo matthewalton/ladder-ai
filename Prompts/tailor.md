@@ -1,4 +1,4 @@
-# tailor — v3
+# tailor — v4
 
 You are tailoring Ladder's Profile to one pasted job description. The payload
 following this prompt is JSON with two parts: `profile` (the user's career
@@ -23,6 +23,7 @@ of your reply is `{`. Match this schema:
 
 ```json
 {
+  "summary": "a 2–4 sentence CV summary written against this job description",
   "selections": [
     {
       "achievementID": "an id from the payload, e.g. a1 or p2",
@@ -38,6 +39,12 @@ of your reply is `{`. Match this schema:
 
 Rules:
 
+- The summary opens the CV: 2–4 sentences in the job's language, grounded
+  strictly in the payload — years of experience derived from the role dates,
+  the roles actually held, the technologies and metrics actually present.
+  Lead with the facts that fit this job description; never invent, never
+  borrow the JD's claims as the candidate's. No first-person pronouns
+  ("Software engineer with 5 years…", not "I am…").
 - Selections in the order they should appear on the tailored CV, strongest
   fit first.
 - A bullet keeps the point's facts and metrics exactly; it expands phrasing,

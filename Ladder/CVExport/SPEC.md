@@ -155,6 +155,14 @@ with qualification, institution, month-resolution dates (nil end as
 "Present"), and the detail line when present. Newest-first by start date,
 matching the roles convention.
 
+## [CVEXPORT-20] The rendered CV shows the reviewed outcome's summary under the identity header
+
+The generated CV summary (Tailor decisions/0006, [TAILOR-21]) opens the
+document body, between the identity header and the first role — verbatim,
+asserted via PDFKit text extraction like every content criterion. It lives
+only inside this application's rendered snapshot; the Profile stays
+summary-free. A defensive blank summary renders no empty block.
+
 ## [CVEXPORT-19] A project appears on the rendered CV only when one of its points is selected
 
 Projects are optional colour, unlike roles ([CVEXPORT-3] keeps every role for

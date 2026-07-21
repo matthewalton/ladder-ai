@@ -17,9 +17,15 @@ _Avoid_: generation, tailoring session, query
 
 **Tailor result**:
 The validated structure the service returns — selected achievements with
-their rephrasings, gaps, and the rationale — held in memory for review, never
-persisted.
+their rephrasings, the CV summary, gaps, and the rationale — held in memory
+for review, never persisted.
 _Avoid_: proposal (CV Import's term), output, response
+
+**CV summary**:
+The short opening paragraph generated per tailor run — tailored to the job
+description, grounded strictly in payload facts, never stored on the Profile
+(decisions/0006). Rendered by cv-export under the identity header.
+_Avoid_: profile summary, personal statement, objective
 
 **Rephrasing**:
 The service's proposed per-application wording for one selected Achievement.

@@ -192,6 +192,14 @@ struct TailorReviewView: View {
     var body: some View {
         VStack(spacing: 0) {
             List {
+                if !review.summary.isEmpty {
+                    Section("CV summary") {
+                        Text(review.summary)
+                            .font(.callout)
+                            .foregroundStyle(Color.ink)
+                            .padding(.vertical, 2)
+                    }
+                }
                 Section("Why these were selected") {
                     Text(review.rationale)
                         .font(.callout)
@@ -312,6 +320,7 @@ private struct ReviewedBulletRow: View {
     let result = try! TailorResult(
         json: Data("""
         {
+          "summary": "Senior engineer focused on CI performance at platform scale.",
           "selections": [
             {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
           ],

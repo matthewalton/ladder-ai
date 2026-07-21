@@ -47,6 +47,7 @@ struct CVRenderTests {
         let result = try TailorResult(
             json: Data("""
             {
+              "summary": "Senior engineer with platform-scale CI performance and analytics delivery behind them.",
               "selections": [
                 {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"},
                 {"achievementID": "a3", "bullet": "Built the analytics reporting stack from scratch"}
@@ -66,6 +67,26 @@ struct CVRenderTests {
         let pdfData = CVRenderer.pdfData(for: document)
         let pdf = try #require(PDFDocument(data: pdfData), "the render produces a readable PDF")
         return try #require(pdf.string, "the PDF carries an extractable text layer")
+    }
+
+    @Test("[CVEXPORT-20] the rendered CV shows the reviewed outcome's summary under the identity header")
+    func renderedCVShowsTheTailoredSummary() throws {
+        let profileStore = try makeProfileStore()
+        let review = try makeReview(profileStore: profileStore)
+
+        // PDF extraction breaks wrapped lines with newlines, so compare on
+        // whitespace-normalised text.
+        let raw = try extractedText(profileStore: profileStore, review: review)
+        let text = raw.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+
+        let summary = "Senior engineer with platform-scale CI performance and analytics delivery behind them."
+        #expect(text.contains(summary), "the summary renders verbatim")
+        // Under the identity header, before the first role.
+        let summaryIndex = try #require(text.range(of: summary)?.lowerBound)
+        let nameIndex = try #require(text.range(of: "Alex Climber")?.lowerBound)
+        let firstRoleIndex = try #require(text.range(of: "Senior Engineer, Acme")?.lowerBound)
+        #expect(nameIndex < summaryIndex)
+        #expect(summaryIndex < firstRoleIndex)
     }
 
     @Test("[CVEXPORT-2] the rendered CV contains the Profile's name, headline and contact details")
@@ -108,6 +129,7 @@ struct CVRenderTests {
         let result = try TailorResult(
             json: Data("""
             {
+              "summary": "CI-focused engineer.",
               "selections": [
                 {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
               ],
@@ -233,6 +255,7 @@ struct CVRenderTests {
         let result = try TailorResult(
             json: Data("""
             {
+              "summary": "Platform and mapping engineer.",
               "selections": [
                 {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"},
                 {"achievementID": "p1", "bullet": "Engineered offline tile caching for a production mapping app"}
@@ -300,6 +323,7 @@ struct CVRenderTests {
         let result = try TailorResult(
             json: Data("""
             {
+              "summary": "Everything-fits engineer.",
               "selections": [\(selections.joined(separator: ","))],
               "gaps": [],
               "rationale": "Everything fits."

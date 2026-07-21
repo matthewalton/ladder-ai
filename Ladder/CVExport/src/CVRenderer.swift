@@ -59,6 +59,12 @@ struct CVPageView: View {
                     .foregroundStyle(Color.inkSoft)
             }
 
+            if !document.summary.isEmpty {
+                Divider()
+                Text(document.summary)
+                    .font(.body)
+            }
+
             Divider()
 
             ForEach(Array(document.roles.enumerated()), id: \.offset) { _, role in
