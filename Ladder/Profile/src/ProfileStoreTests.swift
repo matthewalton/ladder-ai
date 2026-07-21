@@ -88,11 +88,13 @@ struct ProfileStoreTests {
         #expect(try ModelContext(container).fetchCount(FetchDescriptor<SkillTag>()) == 1)
     }
 
-    @Test("[PROFILE-10] a Profile with no roles shows the add-first-role empty state")
-    func profileWithoutRolesPresentsAddFirstRole() throws {
+    @Test("[PROFILE-10] a Profile with no roles goes straight to the editor")
+    func profileWithoutRolesPresentsEditor() throws {
+        // The empty Experience section carries the add-first-role copy; there
+        // is no separate presentation state for it.
         let store = try makeStore()
         try store.createProfile(name: "Alex Climber", headline: "Staff Engineer")
-        #expect(store.presentation == .addFirstRole)
+        #expect(store.presentation == .editor)
 
         try store.addRole(company: "Acme", title: "Engineer", start: .now, end: nil)
         #expect(store.presentation == .editor)

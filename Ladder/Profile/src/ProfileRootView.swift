@@ -8,10 +8,8 @@ struct ProfileRootView: View {
         switch store.presentation {
         case .createProfile:
             CreateProfileView(store: store)
-        case .addFirstRole:
-            AddFirstRoleView(store: store)
         case .editor:
-            ProfileEditorView(store: store)
+            ProfilePageView(store: store)
         }
     }
 }

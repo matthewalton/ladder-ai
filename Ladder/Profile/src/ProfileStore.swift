@@ -10,7 +10,6 @@ enum ProfileStoreError: Error, Equatable {
 
 enum ProfilePresentation: Equatable {
     case createProfile
-    case addFirstRole
     case editor
 }
 
@@ -55,8 +54,7 @@ final class ProfileStore {
     }
 
     var presentation: ProfilePresentation {
-        guard let profile else { return .createProfile }
-        return profile.roles.isEmpty ? .addFirstRole : .editor
+        profile == nil ? .createProfile : .editor
     }
 
     // MARK: - Profile
