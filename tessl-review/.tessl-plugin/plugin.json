@@ -1,0 +1,6 @@
+{
+  "name": "malton/ladder-review",
+  "version": "0.1.0",
+  "description": "Ladder-specific code-review lenses enforcing CLAUDE.md conventions.",
+  "private": true
+}

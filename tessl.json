@@ -1,6 +1,10 @@
 {
   "name": "ladder-ai",
   "mode": "vendored",
-  "agents": ["claude-code"],
-  "dependencies": {}
+  "dependencies": {
+    "tessl/code-review": {
+      "version": "0.0.1"
+    }
+  },
+  "agents": ["claude-code"]
 }
