@@ -78,6 +78,53 @@ struct CVPageView: View {
                 }
             }
 
+            if !document.projects.isEmpty {
+                Divider()
+                Text("Projects")
+                    .font(.headline)
+                ForEach(Array(document.projects.enumerated()), id: \.offset) { _, project in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(project.name)
+                                .font(.headline)
+                            if !project.link.isEmpty {
+                                Text(project.link)
+                                    .font(.caption)
+                                    .foregroundStyle(Color.inkSoft)
+                            }
+                        }
+                        ForEach(Array(project.bullets.enumerated()), id: \.offset) { _, bullet in
+                            Text("•  \(bullet)")
+                                .font(.body)
+                        }
+                    }
+                }
+            }
+
+            if !document.education.isEmpty {
+                Divider()
+                Text("Education")
+                    .font(.headline)
+                ForEach(Array(document.education.enumerated()), id: \.offset) { _, entry in
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("\(entry.qualification), \(entry.institution)")
+                                .font(.body)
+                                .bold()
+                            Spacer()
+                            Text(CVDocument.dateRange(start: entry.start, end: entry.end))
+                                .font(.caption)
+                                .foregroundStyle(Color.inkSoft)
+                        }
+                        if !entry.detail.isEmpty {
+                            Text(entry.detail)
+                                .font(.caption)
+                                .foregroundStyle(Color.inkSoft)
+                        }
+                    }
+                }
+            }
+
             if !document.skills.isEmpty {
                 Divider()
                 Text("Skills")
@@ -112,6 +159,20 @@ extension CVDocument {
                 bullets: ["Drove CI build times down across every product target"]
             )
         ]
+        document.projects = [
+            ProjectSection(
+                name: "Trail Mapper", link: "github.com/alex/trail-mapper",
+                bullets: ["Engineered offline tile caching for a production mapping app"]
+            )
+        ]
+        document.education = [
+            EducationSection(
+                institution: "University of Example", qualification: "BSc Computer Science",
+                start: Date(timeIntervalSince1970: 1_100_000_000),
+                end: Date(timeIntervalSince1970: 1_200_000_000),
+                detail: "First-class honours"
+            )
+        ]
         document.skills = ["CI/CD", "Swift"]
         return document
     }
@@ -121,6 +182,8 @@ extension CVDocument {
         headline = ""
         contactLines = []
         roles = []
+        projects = []
+        education = []
         skills = []
     }
 }

@@ -53,8 +53,8 @@ appear newest-first, the same ordering the tailor payload uses.
 
 ## [CVEXPORT-4] Each selected achievement appears under its Role using the reviewed text
 
-The reviewed text: the accepted rephrasing, or the canonical
-`Achievement.text` where the rephrasing was rejected ([TAILOR-13],
+The reviewed text: the accepted expanded bullet, or the canonical brief
+`Achievement.text` where the bullet was rejected ([TAILOR-13],
 [TAILOR-14]). Grouping by Role requires achievement identity to travel with
 the reviewed outcome — the tailor review already holds the `Achievement`
 models, so the export seam receives the outcome with its achievements
@@ -68,11 +68,13 @@ Tailoring's whole point: the selection is the CV. A profile achievement the
 service did not select — and whose text appears nowhere else — is absent from
 the extracted text (decisions/0002).
 
-## [CVEXPORT-6] The rendered CV lists the Profile's skills
+## [CVEXPORT-6] The rendered CV's skills line is the union of the selected points' Tags
 
-A skills section naming each of the Profile's `SkillTag`s — all of them, not
-just those attached to selected achievements: skills are Profile-level canon,
-and ATS keyword matching wants them present.
+Derived per application (decisions/0004): the sorted unique union of Tag names
+across the selected points — role and project alike. A Tag attached only to
+unselected points stays off the CV; `profile.skills` as a whole is never
+dumped. Tags exist to map points to the job description, so the skills line is
+exactly the vocabulary this application's selection earned.
 
 ## [CVEXPORT-7] Every page of the rendered CV measures A4
 
@@ -145,3 +147,18 @@ The rationale as prose — set in New York (`Font.trailNarrative`, DESIGN.md
 §3: narrative text is the story voice) — exactly as the service stated it.
 Font choice is a visual-verify concern; the measurable clause is the verbatim
 rationale text.
+
+## [CVEXPORT-18] The rendered CV lists every Education entry verbatim, newest-first
+
+Education is facts, not selectable content ([TAILOR-19]): every entry renders
+with qualification, institution, month-resolution dates (nil end as
+"Present"), and the detail line when present. Newest-first by start date,
+matching the roles convention.
+
+## [CVEXPORT-19] A project appears on the rendered CV only when one of its points is selected
+
+Projects are optional colour, unlike roles ([CVEXPORT-3] keeps every role for
+employment continuity). A project renders — name, link when present, and its
+selected points' reviewed bullets — only when the selection includes at least
+one of its points ([TAILOR-20]); an empty Projects heading is noise, so no
+selected projects means no Projects section.

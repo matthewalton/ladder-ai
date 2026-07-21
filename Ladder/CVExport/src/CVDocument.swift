@@ -14,12 +14,36 @@ struct CVDocument: Equatable {
         var bullets: [String]
     }
 
+    struct ProjectSection: Equatable {
+        var name: String
+        /// "" = no link line.
+        var link: String
+        var bullets: [String]
+    }
+
+    struct EducationSection: Equatable {
+        var institution: String
+        var qualification: String
+        var start: Date
+        var end: Date?  // nil = in progress, rendered as "Present"
+        /// "" = no detail line.
+        var detail: String
+    }
+
     var name: String
     var headline: String
     /// Non-empty contact fields only — no placeholders.
     var contactLines: [String]
     /// Newest-first, the same ordering the tailor payload uses.
     var roles: [RoleSection]
+    /// Only projects with at least one selected point — projects are optional
+    /// colour, unlike roles, which all appear.
+    var projects: [ProjectSection]
+    /// Always rendered, newest-first — education is facts, not selectable
+    /// content.
+    var education: [EducationSection]
+    /// Derived per application: the union of Tag names across the selected
+    /// points, not the whole profile's Tag vocabulary.
     var skills: [String]
 
     @MainActor
@@ -57,7 +81,27 @@ struct CVDocument: Equatable {
             )
         }
 
-        skills = profile.skills.map(\.name).sorted()
+        projects = profile.orderedProjects.compactMap { project in
+            let bullets = project.orderedPoints.compactMap {
+                reviewedText[ObjectIdentifier($0)]
+            }
+            guard !bullets.isEmpty else { return nil }
+            return ProjectSection(name: project.name, link: project.link, bullets: bullets)
+        }
+
+        education = profile.orderedEducation.map { entry in
+            EducationSection(
+                institution: entry.institution,
+                qualification: entry.qualification,
+                start: entry.start,
+                end: entry.end,
+                detail: entry.detail
+            )
+        }
+
+        skills = Array(
+            Set(review.items.flatMap { $0.achievement.skills.map(\.name) })
+        ).sorted()
     }
 
     /// Month resolution, matching the tailor payload; UTC so tests are

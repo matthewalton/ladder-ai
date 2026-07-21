@@ -170,13 +170,14 @@ struct CVRenderTests {
         #expect(!text.contains("Shipped the offline sync engine"))
     }
 
-    @Test("[CVEXPORT-6] the rendered CV lists the Profile's skills")
-    func renderedCVListsProfileSkills() throws {
+    @Test("[CVEXPORT-6] the rendered CV's skills line is the union of the selected points' Tags")
+    func renderedCVDerivesSkillsFromSelectedTags() throws {
         let profileStore = try makeProfileStore()
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
-        // Kubernetes tags an achievement outside the selection; skills are
-        // Profile-level canon, so it appears anyway.
+        // CI/CD tags a selected point (a1); Kubernetes tags a2, which stays
+        // outside the selection — the skills line is per-application, so it
+        // must not appear.
         try profileStore.tag(acme.orderedAchievements[0], skillNamed: "CI/CD")
         try profileStore.tag(acme.orderedAchievements[1], skillNamed: "Kubernetes")
         let review = try makeReview(profileStore: profileStore)
@@ -185,7 +186,76 @@ struct CVRenderTests {
 
         #expect(text.contains("Skills"))
         #expect(text.contains("CI/CD"))
-        #expect(text.contains("Kubernetes"))
+        #expect(!text.contains("Kubernetes"), "unselected points' Tags stay off the CV")
+    }
+
+    @Test("[CVEXPORT-18] the rendered CV lists every Education entry verbatim, newest-first")
+    func renderedCVListsEducation() throws {
+        let profileStore = try makeProfileStore()
+        try profileStore.addEducation(
+            institution: "University of Example", qualification: "BSc Computer Science",
+            start: Date(timeIntervalSince1970: 1_100_000_000),  // Jan 2005
+            end: Date(timeIntervalSince1970: 1_200_000_000),  // Jan 2008
+            detail: "First-class honours"
+        )
+        try profileStore.addEducation(
+            institution: "Open Courseware", qualification: "ML Specialisation",
+            start: Date(timeIntervalSince1970: 1_450_000_000), end: nil  // Dec 2015 – Present
+        )
+        let review = try makeReview(profileStore: profileStore)
+
+        let text = try extractedText(profileStore: profileStore, review: review)
+
+        #expect(text.contains("Education"))
+        #expect(text.contains("BSc Computer Science, University of Example"))
+        #expect(text.contains("First-class honours"))
+        #expect(text.contains("ML Specialisation, Open Courseware"))
+        // Newest-first: the in-progress specialisation precedes the degree.
+        let course = try #require(text.range(of: "ML Specialisation, Open Courseware"))
+        let degree = try #require(text.range(of: "BSc Computer Science, University of Example"))
+        #expect(course.lowerBound < degree.lowerBound)
+    }
+
+    @Test("[CVEXPORT-19] a project appears on the rendered CV only when one of its points is selected")
+    func projectsRenderOnlyWhenSelected() throws {
+        let profileStore = try makeProfileStore()
+        let selectedProject = try profileStore.addProject(
+            name: "Trail Mapper", link: "github.com/alex/trail-mapper"
+        )
+        let selectedPoint = try profileStore.addPoint(
+            to: selectedProject, text: "Built tile caching for offline use"
+        )
+        let unselectedProject = try profileStore.addProject(name: "Weather Widget")
+        try profileStore.addPoint(to: unselectedProject, text: "Rendered live forecasts")
+
+        let profile = try #require(profileStore.profile)
+        let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
+        let result = try TailorResult(
+            json: Data("""
+            {
+              "selections": [
+                {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"},
+                {"achievementID": "p1", "bullet": "Engineered offline tile caching for a production mapping app"}
+              ],
+              "gaps": [],
+              "rationale": "Platform and mapping work both fit."
+            }
+            """.utf8),
+            validAchievementIDs: ["a1", "a2", "a3", "p1", "p2"]
+        )
+        let review = TailorReview(
+            result: result,
+            achievementsByID: ["a1": acme.orderedAchievements[0], "p1": selectedPoint]
+        )
+
+        let text = try extractedText(profileStore: profileStore, review: review)
+
+        #expect(text.contains("Projects"))
+        #expect(text.contains("Trail Mapper"))
+        #expect(text.contains("github.com/alex/trail-mapper"))
+        #expect(text.contains("Engineered offline tile caching for a production mapping app"))
+        #expect(!text.contains("Weather Widget"), "a project with no selected points is absent")
+        #expect(!text.contains("Rendered live forecasts"))
     }
 
     @Test("[CVEXPORT-7] every page of the rendered CV measures A4")
