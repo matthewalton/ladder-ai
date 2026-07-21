@@ -1,6 +1,6 @@
 # 0001 — Import requires an existing Profile
 
-Status: accepted (agreed with the human at the plan stage, 2026-07-17)
+Status: superseded by 0007 (2026-07-21) — import may now create the Profile
 
 ## Context
 

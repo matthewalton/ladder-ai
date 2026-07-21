@@ -74,17 +74,45 @@ struct CVImportFlowTests {
         #expect(review.roles.map(\.proposed.company) == ["Acme", "Initech"])
     }
 
-    @Test("[CVIMPORT-3] starting an import when no Profile exists is refused")
-    func importWithoutProfileIsRefused() async throws {
+    @Test("[CVIMPORT-21] confirming a review with no Profile on file creates the single Profile")
+    func confirmWithNoProfileCreatesIt() async throws {
         let profileStore = try makeProfileStore(createProfile: false)
-        let service = FixtureIntelligenceService.importFixture()
-        let store = makeImportStore(profileStore: profileStore, service: service)
+        let store = makeImportStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService.importFixture()
+        )
+        #expect(!store.needsReplaceConfirmation, "nothing to lose — no replace confirmation on this branch")
 
         await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+        #expect(store.phase == .review)
+        store.confirmReview()
 
-        #expect(store.phase == .failed(.profileRequired))
-        #expect(store.review == nil)
-        // Refused before any extraction or service call.
+        #expect(store.phase == .replaced)
+        let profile = try #require(profileStore.profile)
+        #expect(profile.name == "Alex Climber")
+        #expect(profile.headline == "Staff Engineer")
+        #expect(profile.roles.count == 2)
+        let count = try ModelContext(profileStore.container).fetchCount(FetchDescriptor<Profile>())
+        #expect(count == 1, "the single-profile invariant holds through the create branch")
+    }
+
+    @Test("[CVIMPORT-22] starting an import onto an existing Profile requires confirmation before the run begins")
+    func importOntoExistingProfileNeedsConfirmation() async throws {
+        // The needs-confirmation decision is a pure helper — the dialog
+        // chrome gates on it; declining never calls startImport.
+        let service = FixtureIntelligenceService.importFixture()
+        let withProfile = makeImportStore(profileStore: try makeProfileStore(), service: service)
+        #expect(withProfile.needsReplaceConfirmation)
+
+        let withoutProfile = makeImportStore(
+            profileStore: try makeProfileStore(createProfile: false),
+            service: FixtureIntelligenceService.importFixture()
+        )
+        #expect(!withoutProfile.needsReplaceConfirmation)
+
+        // Declining aborts before extraction and before any service call:
+        // the store was never started, so nothing ran and nothing changed.
+        #expect(withProfile.phase == .idle)
         #expect(await service.recordedRequests.isEmpty)
     }
 
@@ -107,11 +135,34 @@ struct CVImportFlowTests {
                 }
             }
         }
+        for education in review.education {
+            #expect(education.included)
+        }
+        for project in review.projects {
+            #expect(project.included)
+            for point in project.points {
+                #expect(point.included)
+            }
+        }
+        for interest in review.interests {
+            #expect(interest.included)
+        }
     }
 
-    @Test("[CVIMPORT-5] confirming the review adds each included proposed role with its achievements to the Profile")
-    func confirmMergesIncludedRolesAndAchievements() async throws {
+    @Test("[CVIMPORT-20] confirming the review replaces the Profile's content with the included items")
+    func confirmReplacesProfileContent() async throws {
         let profileStore = try makeProfileStore()
+        // Curated content that must be gone after the hard refresh.
+        let oldRole = try profileStore.addRole(
+            company: "OldCo", title: "Old Engineer", start: .now, end: nil
+        )
+        let oldAchievement = try profileStore.addAchievement(to: oldRole, text: "Old achievement")
+        try profileStore.tag(oldAchievement, skillNamed: "OldSkill")
+        try profileStore.addEducation(
+            institution: "Old University", qualification: "Old BSc", start: .now, end: nil
+        )
+        try profileStore.addInterest("Old interest")
+
         let store = makeImportStore(
             profileStore: profileStore,
             service: FixtureIntelligenceService.importFixture()
@@ -120,10 +171,13 @@ struct CVImportFlowTests {
 
         store.confirmReview()
 
-        #expect(store.phase == .merged)
+        #expect(store.phase == .replaced)
         #expect(store.review == nil)
         let profile = try #require(profileStore.profile)
-        #expect(profile.roles.count == 2)
+        #expect(Set(profile.roles.map(\.company)) == ["Acme", "Initech"], "old roles are gone — never a merged hybrid")
+        #expect(profile.education.map(\.institution) == ["University of Leeds"])
+        #expect(profile.projects.map(\.name) == ["Trail Mapper"])
+        #expect(profile.interests == ["Climbing", "Trail running"])
 
         let acme = try #require(profile.roles.first { $0.company == "Acme" })
         #expect(acme.title == "Senior Engineer")
@@ -141,6 +195,13 @@ struct CVImportFlowTests {
         let initech = try #require(profile.roles.first { $0.company == "Initech" })
         #expect(initech.start == monthDate(2018, 9))
         #expect(initech.end == monthDate(2021, 3))
+
+        // The Tag pool is rebuilt from the replacement alone; "Swift" is
+        // named by a role achievement and a project point yet lands once.
+        #expect(Set(profile.skills.map(\.name)) == ["Swift", "CI", "SwiftData", "Python"])
+        let swift = try #require(profile.skills.first { $0.name == "Swift" })
+        let projectPoint = try #require(profile.projects.first?.orderedPoints.first)
+        #expect(projectPoint.skills.first === swift, "the same skill name shares one Tag across the replacement")
     }
 
     @Test("[CVIMPORT-6] a proposed item excluded in review does not land in the Profile")
@@ -189,7 +250,7 @@ struct CVImportFlowTests {
             )
             await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
             store.confirmReview()
-            #expect(store.phase == .merged)
+            #expect(store.phase == .replaced)
         }
 
         let reopened = try ProfileStore(container: ProfileStore.container(at: url))
@@ -203,56 +264,125 @@ struct CVImportFlowTests {
         ])
     }
 
-    @Test("[CVIMPORT-8] merging a proposed skill whose name matches an existing SkillTag reuses the shared tag")
-    func mergedSkillsReuseExistingTags() async throws {
-        let profileStore = try makeProfileStore()
-        let existingRole = try profileStore.addRole(
-            company: "Existing Co", title: "Engineer", start: .now, end: nil
+    @Test("[CVIMPORT-23] the proposal carries the CV's identity and contact details")
+    func proposalCarriesIdentityAndContact() async throws {
+        let profileStore = try makeProfileStore(createProfile: false)
+        let store = makeImportStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService.importFixture()
         )
-        let existingAchievement = try profileStore.addAchievement(
-            to: existingRole, text: "Kept the lights on"
-        )
-        let existingTag = try profileStore.tag(existingAchievement, skillNamed: "Swift")
 
-        // The proposal names " swift " where the Profile already has "Swift".
-        let proposalJSON = Data("""
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        let review = try #require(store.review)
+        #expect(review.identity.name == "Alex Climber")
+        #expect(review.identity.headline == "Staff Engineer")
+        #expect(review.identity.contact.email == "alex@example.com")
+        #expect(review.identity.contact.phone == "+44 7700 900123")
+        #expect(review.identity.contact.location == "Leeds, UK")
+        #expect(review.identity.contact.link == "https://alex.dev")
+
+        store.confirmReview()
+        let profile = try #require(profileStore.profile)
+        #expect(profile.contact == ContactInfo(
+            email: "alex@example.com", phone: "+44 7700 900123",
+            location: "Leeds, UK", link: "https://alex.dev"
+        ))
+
+        // A proposal whose identity has no name fails validation with its
+        // reason — a fresh Profile needs a name.
+        let nameless = Data("""
         {
-          "roles": [
-            {
-              "company": "Acme",
-              "title": "Senior Engineer",
-              "start": "2021-04",
-              "end": null,
-              "achievements": [
-                {
-                  "text": "Cut CI build times across every product target",
-                  "impactMetric": null,
-                  "tech": [],
-                  "skills": [" swift "]
-                }
-              ]
-            }
-          ],
+          "identity": {
+            "name": "  ",
+            "headline": null,
+            "contact": { "email": null, "phone": null, "location": null, "link": null }
+          },
+          "roles": [], "education": [], "projects": [], "interests": [],
           "notImportedSections": []
         }
         """.utf8)
+        let namelessStore = makeImportStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService(returning: nameless)
+        )
+        await namelessStore.startImport(of: try fixtureURL("sample-cv", "pdf"))
+        guard case .failed(.proposalInvalid(let reason)) = namelessStore.phase else {
+            Issue.record("expected .failed(.proposalInvalid), got \(namelessStore.phase)")
+            return
+        }
+        #expect(reason.contains("identity.name"), "the reason names the empty identity, got: \(reason)")
+    }
+
+    @Test("[CVIMPORT-24] the proposal lists the CV's education entries for review")
+    func proposalListsEducationForReview() async throws {
+        let profileStore = try makeProfileStore()
         let store = makeImportStore(
             profileStore: profileStore,
-            service: FixtureIntelligenceService(returning: proposalJSON)
+            service: FixtureIntelligenceService.importFixture()
         )
         await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
 
-        store.confirmReview()
+        let review = try #require(store.review)
+        let education = try #require(review.education.first)
+        #expect(review.education.count == 1)
+        #expect(education.proposed.institution == "University of Leeds")
+        #expect(education.proposed.qualification == "BSc Computer Science")
+        #expect(education.proposed.start == monthDate(2014, 9))
+        #expect(education.proposed.end == monthDate(2017, 6))
+        #expect(education.proposed.detail == "First-class honours")
 
-        let profile = try #require(profileStore.profile)
-        #expect(profile.skills.count == 1, "no new SkillTag for a matching name")
-        let acme = try #require(profile.roles.first { $0.company == "Acme" })
-        let merged = try #require(acme.orderedAchievements.first)
-        #expect(merged.skills.first === existingTag)
-        #expect(merged.skills.map(\.name) == ["Swift"], "the surviving tag keeps the name as first entered")
+        // An excluded education entry is simply absent from the replacement.
+        education.included = false
+        store.confirmReview()
+        #expect(profileStore.profile?.education.isEmpty == true)
     }
 
-    @Test("[CVIMPORT-9] education and project sections of the CV are listed as not-imported in the review")
+    @Test("[CVIMPORT-25] the proposal lists the CV's projects with their points for review")
+    func proposalListsProjectsWithPointsForReview() async throws {
+        let profileStore = try makeProfileStore()
+        let store = makeImportStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService.importFixture()
+        )
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        let review = try #require(store.review)
+        let project = try #require(review.projects.first)
+        #expect(project.proposed.name == "Trail Mapper")
+        #expect(project.proposed.link == "https://github.com/alex/trail-mapper")
+        #expect(project.proposed.summary == "Offline-first hiking maps")
+        #expect(project.points.map(\.proposed.text) == ["Built tile caching for offline use"])
+        #expect(project.points.first?.skills.map(\.name) == ["Swift"])
+
+        // Excluding the project excludes its points with it.
+        project.included = false
+        store.confirmReview()
+        let profile = try #require(profileStore.profile)
+        #expect(profile.projects.isEmpty)
+        #expect(Set(profile.roles.map(\.company)) == ["Acme", "Initech"], "the rest of the review still lands")
+    }
+
+    @Test("[CVIMPORT-26] the proposal lists the CV's interests for review")
+    func proposalListsInterestsForReview() async throws {
+        let profileStore = try makeProfileStore()
+        let store = makeImportStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService.importFixture()
+        )
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        let review = try #require(store.review)
+        #expect(review.interests.map(\.name) == ["Climbing", "Trail running"], "the CV's own order")
+
+        // An excluded interest is simply absent from the replacement.
+        try #require(review.interests.count == 2)
+        review.interests[1].included = false
+        store.confirmReview()
+        #expect(profileStore.profile?.interests == ["Climbing"])
+    }
+
+    @Test("[CVIMPORT-27] a CV section outside the import scope is listed as not-imported in the review")
     func outOfScopeSectionsAreListedNotImported() async throws {
         let profileStore = try makeProfileStore()
         let store = makeImportStore(
@@ -263,13 +393,15 @@ struct CVImportFlowTests {
         await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
 
         let review = try #require(store.review)
-        #expect(review.notImportedSections.map(\.name) == ["Education", "Projects"])
-        #expect(review.notImportedSections.first?.content.contains("University of Leeds") == true)
+        #expect(review.notImportedSections.map(\.name) == ["Profile"])
+        #expect(review.notImportedSections.first?.content.contains("decade of platform") == true)
 
-        // Not-imported sections never merge.
+        // Not-imported sections are never written anywhere: the fresh
+        // Profile holds exactly the schema'd sections.
         store.confirmReview()
         let profile = try #require(profileStore.profile)
         #expect(Set(profile.roles.map(\.company)) == ["Acme", "Initech"])
+        #expect(profile.headline == "Staff Engineer", "the summary paragraph lands nowhere — headline is the CV's own title line")
     }
 
     @Test("[CVIMPORT-10] a proposal failing schema validation fails the import")
@@ -397,9 +529,19 @@ struct CVImportFlowTests {
         let profileStore = try makeProfileStore()
 
         // A missing required part…
+        let missingRolesJSON = Data("""
+        {
+          "identity": {
+            "name": "Alex Climber",
+            "headline": null,
+            "contact": { "email": null, "phone": null, "location": null, "link": null }
+          },
+          "notImportedSections": []
+        }
+        """.utf8)
         let missingRoles = makeImportStore(
             profileStore: profileStore,
-            service: FixtureIntelligenceService(returning: Data(#"{"notImportedSections": []}"#.utf8))
+            service: FixtureIntelligenceService(returning: missingRolesJSON)
         )
         await missingRoles.startImport(of: try fixtureURL("sample-cv", "pdf"))
         guard case .failed(.proposalInvalid(let reason)) = missingRoles.phase else {

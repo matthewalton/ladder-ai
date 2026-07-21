@@ -1,9 +1,15 @@
 import Foundation
 
 /// The structure the intelligence service returns for an extracted CV —
-/// held in memory for review, never persisted.
+/// held in memory for review, never persisted. Covers the whole CV
+/// (decisions/0008): identity, roles, education, projects, interests, plus
+/// not-imported sections.
 struct ImportProposal: Equatable, Sendable, Decodable {
+    var identity: ProposedIdentity
     var roles: [ProposedRole]
+    var education: [ProposedEducation]
+    var projects: [ProposedProject]
+    var interests: [String]
     var notImportedSections: [NotImportedSection]
 
     init(json: Data) throws {
@@ -25,6 +31,11 @@ struct ImportProposal: Equatable, Sendable, Decodable {
             throw ImportError.proposalInvalid(reason: Self.reason(for: error))
         } catch {
             throw ImportError.proposalInvalid(reason: "the response did not match the proposal schema")
+        }
+        // A fresh Profile needs a name ([CVIMPORT-23], [PROFILE-3]) — reject
+        // here so the failure carries its reason, not at replace time.
+        if identity.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw ImportError.proposalInvalid(reason: "'identity.name' is empty — a CV always names its owner")
         }
     }
 
@@ -68,6 +79,22 @@ struct ImportProposal: Equatable, Sendable, Decodable {
     }
 }
 
+/// Identity always travels with the confirmation — it is not a per-item
+/// reviewable ([CVIMPORT-23]).
+struct ProposedIdentity: Equatable, Sendable, Decodable {
+    var name: String
+    var headline: String?
+    var contact: ProposedContact
+}
+
+/// Fields the CV lacks arrive as null and land as empty strings.
+struct ProposedContact: Equatable, Sendable, Decodable {
+    var email: String?
+    var phone: String?
+    var location: String?
+    var link: String?
+}
+
 struct ProposedRole: Equatable, Sendable, Decodable {
     var company: String
     var title: String
@@ -83,7 +110,23 @@ struct ProposedAchievement: Equatable, Sendable, Decodable {
     var skills: [String]
 }
 
-/// CV content outside the import scope — listed in review, never merged.
+struct ProposedEducation: Equatable, Sendable, Decodable {
+    var institution: String
+    var qualification: String
+    var start: Date
+    var end: Date?  // nil = in progress
+    var detail: String?
+}
+
+struct ProposedProject: Equatable, Sendable, Decodable {
+    var name: String
+    var link: String?
+    var summary: String?
+    var points: [ProposedAchievement]
+}
+
+/// CV content outside the import scope — the summary paragraph,
+/// certifications — listed in review, never merged ([CVIMPORT-27]).
 struct NotImportedSection: Equatable, Sendable, Decodable {
     var name: String
     var content: String

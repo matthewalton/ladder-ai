@@ -1,4 +1,14 @@
 {
+  "identity": {
+    "name": "Alex Climber",
+    "headline": "Staff Engineer",
+    "contact": {
+      "email": "alex@example.com",
+      "phone": "+44 7700 900123",
+      "location": "Leeds, UK",
+      "link": "https://alex.dev"
+    }
+  },
   "roles": [
     {
       "company": "Acme",
@@ -35,14 +45,35 @@
       ]
     }
   ],
+  "education": [
+    {
+      "institution": "University of Leeds",
+      "qualification": "BSc Computer Science",
+      "start": "2014-09",
+      "end": "2017-06",
+      "detail": "First-class honours"
+    }
+  ],
+  "projects": [
+    {
+      "name": "Trail Mapper",
+      "link": "https://github.com/alex/trail-mapper",
+      "summary": "Offline-first hiking maps",
+      "points": [
+        {
+          "text": "Built tile caching for offline use",
+          "impactMetric": null,
+          "tech": ["Swift"],
+          "skills": ["Swift"]
+        }
+      ]
+    }
+  ],
+  "interests": ["Climbing", "Trail running"],
   "notImportedSections": [
     {
-      "name": "Education",
-      "content": "BSc Computer Science, University of Leeds, 2014-2017"
-    },
-    {
-      "name": "Projects",
-      "content": "Ladder — macOS interview companion (side project)"
+      "name": "Profile",
+      "content": "Engineer with a decade of platform and tooling experience."
     }
   ]
 }

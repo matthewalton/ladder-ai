@@ -1,8 +1,6 @@
 import Foundation
 
 enum ImportError: Error, Equatable {
-    /// Import merges into the Profile and never creates it.
-    case profileRequired
     case unsupportedFileType
     case extractionFailed
     case apiKeyRequired

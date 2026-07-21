@@ -5,27 +5,37 @@ in the root `CONTEXT.md`; `SkillTag` in the Profile slice's `CONTEXT.md`.
 Neither is restated here.
 
 **Proposal**:
-The structure the intelligence service returns for an extracted CV — proposed
-roles, achievements, and skills, plus any not-imported sections — held in memory
+The structure the intelligence service returns for an extracted CV — identity
+and contact, proposed roles, achievements, and skills, education, projects,
+interests (decisions/0008), plus any not-imported sections — held in memory
 for review, never persisted.
 _Avoid_: draft profile, parsed CV, suggestions, import result
 
 **Proposed item**:
-One reviewable unit inside a proposal — a proposed role, achievement, or skill —
-carrying its included/excluded state.
+One reviewable unit inside a proposal — a proposed role, achievement, skill,
+education entry, project, project point, or interest — carrying its
+included/excluded state. Identity and contact are not proposed items: they
+always travel with the confirmation.
 _Avoid_: candidate, entry, line item
 
 **Review**:
-The mandatory per-item confirmation step between proposal and merge; the only
-route by which proposed items reach the Profile, and the place duplicates are
-rejected (decisions/0003).
+The mandatory per-item confirmation step between proposal and replace; the only
+route by which proposed items reach the Profile, and the place unwanted items
+are excluded (decisions/0007).
 _Avoid_: approval screen, confirmation dialog, preview
 
-**Merge**:
-Writing the review's included items into the existing Profile through the
-`ProfileStore` pathway. A merge never creates the Profile and never edits
-existing Profile content.
-_Avoid_: save, apply, commit, sync
+**Replace**:
+Writing the review's included items as the Profile's entire new content
+through the Profile slice's replace pathway (decisions/0007; Profile
+decisions/0008). Creates the Profile when none exists; never leaves a merged
+hybrid.
+_Avoid_: merge (the pre-hard-refresh term), save, apply, commit, sync
+
+**Replace confirmation**:
+The explicit confirm required before a run starts when a Profile already
+exists — before extraction and any service call. Absent when no Profile is on
+file.
+_Avoid_: overwrite warning, destructive prompt
 
 **Extraction**:
 Turning the dropped file into plain text on-device — PDFKit for PDF,
@@ -40,6 +50,8 @@ surfaced as its own failure (decisions/0006), never as invalid JSON.
 _Avoid_: cut-off response, length-limit error, incomplete response, overflow
 
 **Not-imported section**:
-CV content the proposal assigns outside the import scope (education, projects) —
-listed in the review so nothing is silently dropped, and never merged.
+CV content the proposal assigns outside the import scope — the
+summary/profile paragraph (deliberately: the CV summary is generated per
+application at tailor time), certifications, references — listed in the
+review so nothing is silently dropped, and never written anywhere.
 _Avoid_: skipped section, dropped content, unsupported content

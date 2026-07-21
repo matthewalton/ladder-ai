@@ -1,15 +1,24 @@
 import Foundation
 
-/// The mandatory per-item confirmation step between proposal and merge;
-/// every proposed item enters as included.
+/// The mandatory per-item confirmation step between proposal and replace;
+/// every proposed item enters as included. Identity is carried, not
+/// reviewed ([CVIMPORT-23]).
 @MainActor
 @Observable
 final class ImportReview {
+    let identity: ProposedIdentity
     let roles: [ReviewedRole]
+    let education: [ReviewedEducation]
+    let projects: [ReviewedProject]
+    let interests: [ReviewedInterest]
     let notImportedSections: [NotImportedSection]
 
     init(proposal: ImportProposal) {
+        identity = proposal.identity
         roles = proposal.roles.map(ReviewedRole.init)
+        education = proposal.education.map(ReviewedEducation.init)
+        projects = proposal.projects.map(ReviewedProject.init)
+        interests = proposal.interests.map(ReviewedInterest.init)
         notImportedSections = proposal.notImportedSections
     }
 }
@@ -43,6 +52,43 @@ final class ReviewedAchievement: Identifiable {
 @MainActor
 @Observable
 final class ReviewedSkill: Identifiable {
+    let name: String
+    var included = true
+
+    init(name: String) {
+        self.name = name
+    }
+}
+
+@MainActor
+@Observable
+final class ReviewedEducation: Identifiable {
+    let proposed: ProposedEducation
+    var included = true
+
+    init(proposed: ProposedEducation) {
+        self.proposed = proposed
+    }
+}
+
+/// A project reviews like a role: excluding it excludes its points, and its
+/// points are `ReviewedAchievement`s ([CVIMPORT-25]).
+@MainActor
+@Observable
+final class ReviewedProject: Identifiable {
+    let proposed: ProposedProject
+    let points: [ReviewedAchievement]
+    var included = true
+
+    init(proposed: ProposedProject) {
+        self.proposed = proposed
+        self.points = proposed.points.map(ReviewedAchievement.init)
+    }
+}
+
+@MainActor
+@Observable
+final class ReviewedInterest: Identifiable {
     let name: String
     var included = true
 

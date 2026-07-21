@@ -1,6 +1,6 @@
 # 0002 — The proposal covers roles, achievements, and skills only
 
-Status: accepted (agreed with the human at the plan stage, 2026-07-17)
+Status: superseded by 0008 (2026-07-21) — the proposal now covers the whole CV
 
 ## Context
 

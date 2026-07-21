@@ -4,11 +4,15 @@ key: CVIMPORT
 
 # CV Import
 
-Drop a PDF or docx CV, extract its text on-device, have the intelligence service
-propose Roles, Achievements, and skills, review every proposed item, and merge
-the included ones into the existing Profile. This slice owns the extraction
-step, the `IntelligenceService` protocol and its fixture implementation, the
-proposal/review model, the merge, and `Prompts/import.md`.
+Drop a PDF or docx CV, extract its text on-device, have the intelligence
+service propose the CV's full content — identity, contact, roles with their
+achievements and skills, education, projects, interests — review every
+proposed item, and confirm to make the Profile fresh: the included items
+become the Profile's entire content through the Profile slice's replace
+pathway, creating the Profile when none exists (decisions/0007). This slice
+owns the extraction step, the `IntelligenceService` protocol and its fixture
+implementation, the proposal/review model, the replace, and
+`Prompts/import.md`.
 
 Live in production: the import run reads the Anthropic API key from the
 Keychain and calls the shared live `IntelligenceService` — pinned model per
@@ -17,13 +21,15 @@ Tailor decisions/0003, key store shared via `Ladder/Shared/Services/`
 production never falls back to fixtures (Tailor decisions/0002). Failures are
 fail-fast with the reason surfaced — no repair request (decisions/0004). Tests
 and previews stay on `FixtureIntelligenceService`'s canned JSON from
-`LadderTests/Fixtures/`. Import requires an existing Profile (decisions/0001);
-the proposal covers roles, achievements, and skills only (decisions/0002); the
-review screen is the dedup (decisions/0003).
+`LadderTests/Fixtures/`. Import is a hard refresh (decisions/0007, superseding
+0001 and 0003): a run onto an existing Profile is confirmed before it starts,
+and the review remains mandatory. The proposal covers the whole CV
+(decisions/0008, superseding 0002); a CV's summary/profile paragraph stays
+not-imported — the CV summary is generated per application at tailor time
+(Tailor slice).
 
-Out of scope: tailoring, PDF export, Profile creation via import, automatic
-duplicate matching, `Education`/`Project` models, retry-with-repair
-(decisions/0004), streaming, cancellation UX.
+Out of scope: tailoring, PDF export, automatic duplicate matching,
+retry-with-repair (decisions/0004), streaming, cancellation UX.
 
 ## [CVIMPORT-1] Importing a PDF CV produces a proposal of roles for review
 
@@ -42,61 +48,32 @@ The docx extraction path: `AttributedString`'s Office Open XML reading, no
 third-party dependency. Same downstream flow as [CVIMPORT-1]; exercised with a
 fixture docx.
 
-## [CVIMPORT-3] Starting an import when no Profile exists is refused
-
-Import merges into the Profile and never creates it — the create-profile empty
-state remains the only creation path (Profile decisions/0002, this slice's
-decisions/0001). The flow refuses at start, before any extraction: the error is
-`ImportError.profileRequired`. The UI only offers import entry points inside an
-existing Profile, but the flow enforces the rule regardless of caller.
-
 ## [CVIMPORT-4] Every proposed item enters review as included
 
-Review is the dedup (decisions/0003): there is no automatic duplicate
-detection, so nothing is pre-excluded on the user's behalf. The user excludes
-items they don't want — including duplicates of what's already on file.
-
-## [CVIMPORT-5] Confirming the review adds each included proposed role with its achievements to the Profile
-
-The merge. Included roles land as `Role`s owning their included `Achievement`s,
-written through the existing `ProfileStore` pathway, alongside any roles
-already on the Profile. Achievements keep their proposed order via the
-persisted sort index ([PROFILE-7]); roles carry their proposed dates, and role
-ordering in the editor follows dates, not insertion (SwiftData to-many
-relationships are unordered).
-
-Nothing lands before confirmation — the review is mandatory, there is no
-import-without-review path.
+Nothing is pre-excluded on the user's behalf. The review is where the user
+excludes items they don't want on the fresh Profile (decisions/0007 superseded
+0003's dedup framing — with replace semantics there is nothing on file to
+duplicate).
 
 ## [CVIMPORT-6] A proposed item excluded in review does not land in the Profile
 
 Per-item exclusion:
 
 - Excluding a role excludes all of its achievements with it.
-- Excluding one achievement keeps the role and its other achievements mergeable.
+- Excluding one achievement keeps the role and its other achievements
+  confirmable.
 - Excluding a proposed skill keeps the achievement; the skill is simply not
   attached.
+- The same rule covers education entries, projects, project points, and
+  interests ([CVIMPORT-24]–[CVIMPORT-26]): an excluded item is simply absent
+  from the replacement.
 
 ## [CVIMPORT-7] Merged roles and achievements are still present after the app relaunches
 
-The merge writes through the same persistence pathway the Profile editor uses.
-Relaunch is exercised by closing and reopening the `ModelContainer` against the
-same store URL, as in the Profile slice's tests.
-
-## [CVIMPORT-8] Merging a proposed skill whose name matches an existing SkillTag reuses the shared tag
-
-Skill-name deduplication is the store's, per [PROFILE-8]: comparison is
-case-insensitive and ignores leading/trailing whitespace, and the surviving tag
-keeps the name as first entered. A proposal naming " swift " where the Profile
-already has "Swift" attaches the existing "Swift" tag; the Profile's SkillTag
-count does not grow.
-
-## [CVIMPORT-9] Education and project sections of the CV are listed as not-imported in the review
-
-`Education` and `Project` models are deferred (Profile decisions/0003, this
-slice's decisions/0002). Content the proposal assigns to those sections is
-never silently dropped: the review lists it as not-imported, and confirming the
-review does not write it anywhere.
+The confirmation writes through the Profile slice's replace pathway — the same
+persistence layer the Profile editor uses. Relaunch is exercised by closing and
+reopening the `ModelContainer` against the same store URL, as in the Profile
+slice's tests.
 
 ## [CVIMPORT-10] A proposal failing schema validation fails the import
 
@@ -184,3 +161,73 @@ failed-state message names the length problem — the CV may be too long to
 import whole — because "check your connection and try again" is wrong advice
 when a retry would truncate again at the same 16k cap. The Profile is
 unchanged and no review is offered, as with every failed import.
+
+## [CVIMPORT-20] Confirming the review replaces the Profile's content with the included items
+
+The hard refresh (decisions/0007, superseding [CVIMPORT-5]'s add-alongside
+merge): the included items become the Profile's entire content through the
+Profile slice's replace pathway ([PROFILE-17]). Previously-curated roles,
+education, projects, interests, and Tags are gone afterwards — that is the
+point; the pre-run confirmation warned about it ([CVIMPORT-22]).
+
+- Included roles land with their included achievements in proposed order;
+  role ordering in the editor follows dates, not insertion.
+- Two included achievements naming the same skill share one Tag — the
+  [PROFILE-8] rule applied inside the replace; there is no pre-existing pool
+  to reuse (supersedes [CVIMPORT-8]).
+- Nothing lands before confirmation — the review is mandatory; there is no
+  import-without-review path.
+
+## [CVIMPORT-21] Confirming a review with no Profile on file creates the single Profile
+
+Import is now a creation path (decisions/0007, superseding decisions/0001;
+Profile decisions/0008, [PROFILE-18]): from the create-profile empty state, a
+dropped CV runs, reaches review, and confirming creates the Profile with the
+included content. The single-profile invariant holds ([PROFILE-4]); this
+branch has no replace confirmation — there is nothing to lose
+([CVIMPORT-22]).
+
+## [CVIMPORT-22] Starting an import onto an existing Profile requires confirmation before the run begins
+
+Protects the curated Profile from a mis-click, before any tokens are spent:
+when a Profile exists the flow waits for an explicit confirm that the import
+will replace it; declining aborts before extraction and before any service
+call. With no Profile on file there is no confirmation step. The
+needs-confirmation decision is a pure helper so the rule is testable without
+views (the [PIPEBOARD-25] stance); dialog chrome is visual-verify.
+
+## [CVIMPORT-23] The proposal carries the CV's identity and contact details
+
+Name, headline, and contact — email, phone, location, link — from the CV's
+header (decisions/0008). Identity is not a per-item reviewable: it always
+travels with the confirmation (a fresh Profile needs a name; the review shows
+it). The schema requires a non-empty name — the replace rejects an empty one
+([PROFILE-3]'s rule) — so a proposal without one fails validation with its
+reason ([CVIMPORT-17]). Contact fields the CV lacks land as empty strings.
+
+## [CVIMPORT-24] The proposal lists the CV's education entries for review
+
+Institution, qualification, `yyyy-MM` dates (null end = in progress), and the
+detail line (grade, honours) when the CV states one. Each entry is a proposed
+item — included by default ([CVIMPORT-4]), excludable ([CVIMPORT-6]).
+
+## [CVIMPORT-25] The proposal lists the CV's projects with their points for review
+
+Project name, link, one-line summary, and points shaped exactly like role
+achievements (text, impact metric, tech, skills). Excluding a project excludes
+its points with it; excluding one point keeps the project confirmable — the
+role/achievement rule ([CVIMPORT-6]) applied to projects.
+
+## [CVIMPORT-26] The proposal lists the CV's interests for review
+
+Short strings in the CV's own order, each excludable. Case-insensitive
+dedup happens in the replace pathway ([PROFILE-14]'s rule), not in the
+proposal.
+
+## [CVIMPORT-27] A CV section outside the import scope is listed as not-imported in the review
+
+The not-imported guarantee survives the scope growth (decisions/0008,
+superseding [CVIMPORT-9]'s education/projects framing): content the proposal
+cannot place — the summary/profile paragraph (deliberately: the CV summary is
+generated per application at tailor time), certifications, references — is
+listed in the review and never written anywhere.

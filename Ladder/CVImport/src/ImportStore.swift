@@ -9,8 +9,8 @@ final class ImportStore {
         case importing
         /// `review` is non-nil while in this phase.
         case review
-        case merging
-        case merged
+        case replacing
+        case replaced
         case failed(ImportError)
     }
 
@@ -38,12 +38,15 @@ final class ImportStore {
         self.makeIntelligence = makeIntelligence
     }
 
+    /// Import is a hard refresh (decisions/0007): onto an existing Profile
+    /// the run must be confirmed before it starts — before extraction and
+    /// before any paid service call. The view gates on this and shows the
+    /// dialog; declining simply never calls `startImport`.
+    var needsReplaceConfirmation: Bool {
+        profileStore.profile != nil
+    }
+
     func startImport(of url: URL) async {
-        // Import merges into an existing Profile — it never creates one.
-        guard profileStore.profile != nil else {
-            phase = .failed(.profileRequired)
-            return
-        }
         // No stored key means no live run — never a fixture fallback.
         guard let key = try? keyStore.readKey(), !key.isEmpty else {
             phase = .failed(.apiKeyRequired)
@@ -97,41 +100,71 @@ final class ImportStore {
         }
     }
 
-    /// Nothing lands in the Profile without this confirmation; not-imported
-    /// sections are never written anywhere.
+    /// The hard refresh ([CVIMPORT-20], [CVIMPORT-21]): the included items
+    /// become the Profile's entire content through the replace pathway —
+    /// creating the Profile when none exists. Nothing lands before this
+    /// confirmation; not-imported sections are never written anywhere.
     func confirmReview() {
         guard phase == .review, let review else { return }
-        phase = .merging
+        phase = .replacing
         do {
-            for role in review.roles where role.included {
-                let added = try profileStore.addRole(
+            try profileStore.replaceProfile(with: Self.replacement(from: review))
+            self.review = nil
+            phase = .replaced
+        } catch {
+            // Unreachable in practice: the proposal already rejected an
+            // empty name at validation ([CVIMPORT-23]).
+            self.review = nil
+            phase = .failed(.proposalInvalid(reason: "the CV's name is missing"))
+        }
+    }
+
+    private static func replacement(from review: ImportReview) -> ProfileReplacement {
+        func point(_ achievement: ReviewedAchievement) -> ReplacementPoint {
+            ReplacementPoint(
+                text: achievement.proposed.text,
+                impactMetric: achievement.proposed.impactMetric,
+                tech: achievement.proposed.tech,
+                skills: achievement.skills.filter(\.included).map(\.name)
+            )
+        }
+        return ProfileReplacement(
+            name: review.identity.name,
+            headline: review.identity.headline ?? "",
+            contact: ContactInfo(
+                email: review.identity.contact.email ?? "",
+                phone: review.identity.contact.phone ?? "",
+                location: review.identity.contact.location ?? "",
+                link: review.identity.contact.link ?? ""
+            ),
+            roles: review.roles.filter(\.included).map { role in
+                ReplacementRole(
                     company: role.proposed.company,
                     title: role.proposed.title,
                     start: role.proposed.start,
-                    end: role.proposed.end
+                    end: role.proposed.end,
+                    achievements: role.achievements.filter(\.included).map(point)
                 )
-                for achievement in role.achievements where achievement.included {
-                    let addedAchievement = try profileStore.addAchievement(
-                        to: added, text: achievement.proposed.text
-                    )
-                    try profileStore.updateAchievementDetails(
-                        addedAchievement,
-                        impactMetric: achievement.proposed.impactMetric,
-                        tech: achievement.proposed.tech,
-                        strengthNotes: nil
-                    )
-                    for skill in achievement.skills where skill.included {
-                        try profileStore.tag(addedAchievement, skillNamed: skill.name)
-                    }
-                }
-            }
-            self.review = nil
-            phase = .merged
-        } catch {
-            // The store only throws here when the Profile vanished mid-review.
-            self.review = nil
-            phase = .failed(.profileRequired)
-        }
+            },
+            education: review.education.filter(\.included).map { education in
+                ReplacementEducation(
+                    institution: education.proposed.institution,
+                    qualification: education.proposed.qualification,
+                    start: education.proposed.start,
+                    end: education.proposed.end,
+                    detail: education.proposed.detail ?? ""
+                )
+            },
+            projects: review.projects.filter(\.included).map { project in
+                ReplacementProject(
+                    name: project.proposed.name,
+                    link: project.proposed.link ?? "",
+                    summary: project.proposed.summary ?? "",
+                    points: project.points.filter(\.included).map(point)
+                )
+            },
+            interests: review.interests.filter(\.included).map(\.name)
+        )
     }
 
     func reset() {

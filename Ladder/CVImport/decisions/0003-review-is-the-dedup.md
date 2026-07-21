@@ -1,6 +1,7 @@
 # 0003 — The review screen is the dedup
 
-Status: accepted (agreed with the human at the plan stage, 2026-07-17)
+Status: superseded by 0007 (2026-07-21) — replace semantics leave nothing on
+file to duplicate; the review's role is exclusion
 
 ## Context
 
