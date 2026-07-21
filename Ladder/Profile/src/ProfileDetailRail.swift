@@ -26,6 +26,55 @@ struct ProfileDetailRail: View {
                 placeholder
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            if focus != nil {
+                deleteBar
+            }
+        }
+    }
+
+    /// The rail's visible delete affordance for whatever is focused — the
+    /// discoverable sibling of the rows' hover and context-menu deletes.
+    private var deleteBar: some View {
+        HStack {
+            Spacer()
+            Button(role: .destructive, action: deleteFocused) {
+                Label(deleteLabel, systemImage: "trash")
+                    .font(.caption)
+                    .foregroundStyle(Color.clay)
+            }
+            .buttonStyle(.borderless)
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .background(Color.paper)
+    }
+
+    private var deleteLabel: String {
+        switch focus {
+        case .point: "Delete point"
+        case .role: "Delete role"
+        case .education: "Delete education"
+        case .project: "Delete project"
+        case nil: ""
+        }
+    }
+
+    private func deleteFocused() {
+        let focused = focus
+        focus = nil
+        switch focused {
+        case .point(let achievement):
+            try? store.deleteAchievement(achievement)
+        case .role(let role):
+            try? store.deleteRole(role)
+        case .education(let education):
+            try? store.deleteEducation(education)
+        case .project(let project):
+            try? store.deleteProject(project)
+        case nil:
+            break
+        }
     }
 
     private var placeholder: some View {

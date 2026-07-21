@@ -33,9 +33,10 @@ against the same store URL — the same configuration path the app uses at launc
 ## [PROFILE-2] Launching with no Profile shows the create-profile empty state
 
 "No Profile" means zero `Profile` records in the store. The create-profile empty
-state is the only place a Profile can be created (decisions/0002); it follows the
-empty-state treatment in DESIGN.md §6 (contour background, one New York line, one
-clear action).
+state is the manual creation path (decisions/0002, amended by decisions/0008 —
+a CV import may also create the Profile via the replace pathway, [PROFILE-18]);
+it follows the empty-state treatment in DESIGN.md §6 (contour background, one
+New York line, one clear action).
 
 Downstream slices must handle Profile-absent — the Profile is optional until the
 user creates it.
@@ -149,3 +150,35 @@ relative order with a dense sort index.
 Removing a Tag from a point severs only that point's reference: the `SkillTag`
 record and its links to other points survive (no orphan pruning, consistent with
 [PROFILE-6]).
+
+## [PROFILE-17] Replacing the Profile's content leaves exactly the replacement content after a store reopen
+
+The wholesale replace pathway (decisions/0008): the store takes a replacement —
+a plain value carrying identity (name, headline), contact, roles with their
+achievements (text, impact metric, tech, skill names), education, projects with
+their points, and interests — and rebuilds the Profile from it in one mutation.
+
+- All-or-nothing: every prior role, achievement, education entry, project,
+  interest, and `SkillTag` is gone afterwards — a replace never leaves a merged
+  hybrid, and the Tag pool is rebuilt from the replacement's skill names alone
+  (wholesale removal is deliberate here, unlike the no-orphan-pruning stance of
+  single deletes, [PROFILE-6]/[PROFILE-16]).
+- Skill names within the replacement dedupe by the [PROFILE-8] rule
+  (case-insensitive, trimmed, first casing wins).
+- `updatedAt` is set at replace time.
+- Ordering: achievements and project points keep the replacement's order via
+  the persisted sort index ([PROFILE-7]); interests keep entry order
+  ([PROFILE-14]).
+
+Exercised by populating a full Profile, replacing it with different content,
+closing and reopening the container, and comparing every field against the
+replacement alone.
+
+## [PROFILE-18] A replace with no Profile on file creates the single Profile with the replacement content
+
+The second creation path (decisions/0008): the same replace pathway, starting
+from zero `Profile` records, ends with exactly one Profile holding the
+replacement content — the single-profile invariant ([PROFILE-4]) holds through
+either branch. The create-profile empty state remains the manual path
+([PROFILE-2]); nothing is auto-created without content the user chose to
+import.

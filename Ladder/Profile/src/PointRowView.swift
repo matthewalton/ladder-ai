@@ -8,6 +8,8 @@ struct PointRowView: View {
     let onFocus: () -> Void
     let onDelete: () -> Void
 
+    @State private var isHovering = false
+
     private var tagNames: [String] {
         Array(achievement.skills.map(\.name).sorted().prefix(3))
     }
@@ -31,6 +33,7 @@ struct PointRowView: View {
                     }
                 }
             }
+            RowDeleteButton(label: "Delete point", isVisible: isHovering, action: onDelete)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
@@ -42,9 +45,31 @@ struct PointRowView: View {
                 .strokeBorder(isFocused ? Color.pine : Color.clear, lineWidth: 2))
         .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .onTapGesture(perform: onFocus)
+        .onHover { isHovering = $0 }
         .contextMenu {
             Button("Delete point", role: .destructive, action: onDelete)
         }
+    }
+}
+
+/// The visible delete affordance shared by the CV page's rows — revealed on
+/// hover so the page stays quiet, with the context menu as the secondary
+/// path.
+struct RowDeleteButton: View {
+    let label: String
+    let isVisible: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(role: .destructive, action: action) {
+            Image(systemName: "trash")
+                .font(.caption)
+                .foregroundStyle(Color.clay)
+        }
+        .buttonStyle(.borderless)
+        .help(label)
+        .accessibilityLabel(label)
+        .opacity(isVisible ? 1 : 0)
     }
 }
 

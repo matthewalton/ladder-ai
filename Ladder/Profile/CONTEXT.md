@@ -53,6 +53,14 @@ fields). It is always present — unfocused it shows a placeholder.
 _Avoid_: inspector, sidebar
 
 **Create-profile empty state**:
-The screen shown when no Profile record exists; the only place a Profile can be
-created (decisions/0002).
+The screen shown when no Profile record exists; the manual creation path
+(decisions/0002). Since decisions/0008 a CV import may also create the Profile
+through the replace pathway.
 _Avoid_: onboarding, setup wizard, welcome screen
+
+**Replace pathway**:
+The store's wholesale mutation that rebuilds the Profile from a replacement
+value — creating the Profile when none exists, replacing all content when one
+does (decisions/0008). All-or-nothing; never a merged hybrid.
+_Avoid_: bulk import (that is CVImport's flow; this is the store seam it calls),
+reset

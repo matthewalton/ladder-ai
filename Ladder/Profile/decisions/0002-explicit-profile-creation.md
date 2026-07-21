@@ -1,6 +1,8 @@
 # 0002 — The Profile is created explicitly by the user, never auto-created
 
-Status: accepted (agreed with the human at the plan stage, 2026-07-17)
+Status: accepted (agreed with the human at the plan stage, 2026-07-17);
+"only creation path" amended by 0008 (2026-07-21) — CV import may also create
+the Profile
 
 ## Context
 

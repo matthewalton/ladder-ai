@@ -49,6 +49,7 @@ private struct RoleDisclosureView: View {
 
     @State private var isExpanded = true
     @State private var newPointText = ""
+    @State private var isHovering = false
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
@@ -91,9 +92,11 @@ private struct RoleDisclosureView: View {
                 Text(profileDateRange(start: role.start, end: role.end))
                     .trailMetadata()
                     .foregroundStyle(Color.inkSoft)
+                RowDeleteButton(label: "Delete role", isVisible: isHovering, action: deleteRole)
             }
             .contentShape(Rectangle())
             .onTapGesture { focus = .role(role) }
+            .onHover { isHovering = $0 }
             .contextMenu {
                 Button("Edit role") { focus = .role(role) }
                 Button("Delete role", role: .destructive, action: deleteRole)

@@ -42,6 +42,7 @@ private struct ProjectItemView: View {
     @Binding var focus: ProfileFocus?
 
     @State private var newPointText = ""
+    @State private var isHovering = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -89,9 +90,11 @@ private struct ProjectItemView: View {
                     .foregroundStyle(Color.inkSoft)
             }
             Spacer()
+            RowDeleteButton(label: "Delete project", isVisible: isHovering, action: deleteProject)
         }
         .contentShape(Rectangle())
         .onTapGesture { focus = .project(project) }
+        .onHover { isHovering = $0 }
         .contextMenu {
             Button("Edit project") { focus = .project(project) }
             Button("Delete project", role: .destructive, action: deleteProject)

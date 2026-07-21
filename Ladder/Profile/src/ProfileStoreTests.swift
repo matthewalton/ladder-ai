@@ -45,6 +45,40 @@ struct ProfileStoreTests {
         #expect(count == 1)
     }
 
+    @Test("[PROFILE-18] a replace with no Profile on file creates the single Profile with the replacement content")
+    func replaceCreatesProfileWhenNoneExists() throws {
+        let container = try ProfileStore.container(inMemory: true)
+        let store = ProfileStore(container: container)
+        try store.load()
+        #expect(store.profile == nil)
+
+        try store.replaceProfile(with: ProfileReplacement(
+            name: "  Matthew Alton  ",
+            headline: "Software Engineer",
+            contact: ContactInfo(email: "matt@example.com", phone: "", location: "London", link: ""),
+            roles: [ReplacementRole(
+                company: "Travelex", title: "Engineer", start: .now, end: nil,
+                achievements: [ReplacementPoint(text: "Shipped the Rate Sale feature", skills: ["React"])]
+            )],
+            interests: ["Cycling"]
+        ))
+
+        let profile = try #require(store.profile)
+        #expect(profile.name == "Matthew Alton", "name is trimmed, as in [PROFILE-3]")
+        #expect(profile.headline == "Software Engineer")
+        #expect(store.presentation == .editor)
+        #expect(profile.roles.first?.company == "Travelex")
+        #expect(profile.roles.first?.orderedAchievements.map(\.text) == ["Shipped the Rate Sale feature"])
+        #expect(profile.interests == ["Cycling"])
+        #expect(try ModelContext(container).fetchCount(FetchDescriptor<Profile>()) == 1)
+
+        // The invariant holds through the replace branch too: a second
+        // explicit create is still rejected ([PROFILE-4]).
+        #expect(throws: ProfileStoreError.profileAlreadyExists) {
+            try store.createProfile(name: "Somebody Else", headline: "")
+        }
+    }
+
     @Test("[PROFILE-6] deleting a role also deletes its achievements")
     func deleteRoleCascadesToAchievements() throws {
         let container = try ProfileStore.container(inMemory: true)

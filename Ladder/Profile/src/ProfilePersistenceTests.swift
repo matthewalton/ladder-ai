@@ -247,6 +247,120 @@ struct ProfilePersistenceTests {
         #expect(profile.contact == contact)
     }
 
+    @Test("[PROFILE-17] replacing the Profile's content leaves exactly the replacement content after a store reopen")
+    func replaceLeavesOnlyReplacementContent() throws {
+        let url = temporaryStoreURL()
+        defer { removeStore(at: url) }
+
+        let beforeReplace = Date.now
+
+        do {
+            let store = try ProfileStore(container: ProfileStore.container(at: url))
+            try store.load()
+            try store.createProfile(name: "Old Name", headline: "Old headline")
+            try store.updateContact(ContactInfo(
+                email: "old@example.com", phone: "000", location: "Old Town", link: "https://old.example"
+            ))
+            let role = try store.addRole(
+                company: "OldCo", title: "Old Engineer",
+                start: Date(timeIntervalSince1970: 1_000_000_000), end: nil
+            )
+            let achievement = try store.addAchievement(to: role, text: "Old achievement")
+            try store.tag(achievement, skillNamed: "OldSkill")
+            try store.addEducation(
+                institution: "Old University", qualification: "Old BSc",
+                start: Date(timeIntervalSince1970: 900_000_000), end: nil
+            )
+            let project = try store.addProject(name: "Old Project")
+            try store.addPoint(to: project, text: "Old point")
+            try store.addInterest("Old interest")
+
+            let replacement = ProfileReplacement(
+                name: "Matthew Alton",
+                headline: "Software Engineer",
+                contact: ContactInfo(
+                    email: "matt@example.com", phone: "07541 000000",
+                    location: "London, UK", link: "https://matt.dev"
+                ),
+                roles: [ReplacementRole(
+                    company: "Travelex", title: "Software Engineer",
+                    start: Date(timeIntervalSince1970: 1_700_000_000), end: nil,
+                    achievements: [
+                        ReplacementPoint(
+                            text: "Shipped the Rate Sale feature",
+                            impactMetric: "5 minutes, down from 2 hours",
+                            tech: ["React", "TypeScript"],
+                            // Dedupes to one Tag by the [PROFILE-8] rule.
+                            skills: ["React", " react "]
+                        ),
+                        ReplacementPoint(text: "Won the AI Olympiad", skills: ["Agentic workflows"]),
+                    ]
+                )],
+                education: [ReplacementEducation(
+                    institution: "University of Newcastle",
+                    qualification: "BSc Computer Science",
+                    start: Date(timeIntervalSince1970: 1_150_000_000),
+                    end: Date(timeIntervalSince1970: 1_300_000_000),
+                    detail: "1st Class Honours"
+                )],
+                projects: [ReplacementProject(
+                    name: "Baton",
+                    link: "https://github.com/matthewalton/baton",
+                    summary: "Native macOS kanban board",
+                    points: [ReplacementPoint(text: "Embedded MCP server", skills: ["Swift"])]
+                )],
+                interests: ["Cycling", "Running", " cycling "]
+            )
+            try store.replaceProfile(with: replacement)
+        }
+
+        let reopened = try ProfileStore(container: ProfileStore.container(at: url))
+        try reopened.load()
+        let profile = try #require(reopened.profile)
+
+        #expect(profile.name == "Matthew Alton")
+        #expect(profile.headline == "Software Engineer")
+        #expect(profile.contact.email == "matt@example.com")
+        #expect(profile.contact.phone == "07541 000000")
+        #expect(profile.contact.location == "London, UK")
+        #expect(profile.contact.link == "https://matt.dev")
+        #expect(profile.updatedAt >= beforeReplace, "updatedAt is set at replace time")
+
+        let role = try #require(profile.roles.first)
+        #expect(profile.roles.count == 1)
+        #expect(role.company == "Travelex")
+        #expect(role.orderedAchievements.map(\.text) == [
+            "Shipped the Rate Sale feature", "Won the AI Olympiad",
+        ])
+        let first = try #require(role.orderedAchievements.first)
+        #expect(first.impactMetric == "5 minutes, down from 2 hours")
+        #expect(first.tech == ["React", "TypeScript"])
+        #expect(first.skills.map(\.name) == ["React"], "skill names dedupe per [PROFILE-8]")
+
+        let education = try #require(profile.education.first)
+        #expect(profile.education.count == 1)
+        #expect(education.institution == "University of Newcastle")
+        #expect(education.detail == "1st Class Honours")
+
+        let project = try #require(profile.projects.first)
+        #expect(profile.projects.count == 1)
+        #expect(project.name == "Baton")
+        #expect(project.orderedPoints.map(\.text) == ["Embedded MCP server"])
+
+        #expect(profile.interests == ["Cycling", "Running"], "interests dedupe per [PROFILE-14]")
+
+        // All-or-nothing: nothing of the old content survives anywhere in the
+        // store — the Tag pool is rebuilt from the replacement alone.
+        let context = ModelContext(reopened.container)
+        #expect(try context.fetchCount(FetchDescriptor<Profile>()) == 1)
+        #expect(try context.fetchCount(FetchDescriptor<Role>()) == 1)
+        #expect(try context.fetchCount(FetchDescriptor<Achievement>()) == 3)
+        #expect(try context.fetchCount(FetchDescriptor<Education>()) == 1)
+        #expect(try context.fetchCount(FetchDescriptor<Project>()) == 1)
+        let tags = try context.fetch(FetchDescriptor<SkillTag>())
+        #expect(Set(tags.map(\.name)) == ["React", "Agentic workflows", "Swift"])
+    }
+
     @Test("[PROFILE-15] deleting a point persists, with the surviving siblings' order intact")
     func deletedPointStaysGoneAfterReopen() throws {
         let url = temporaryStoreURL()

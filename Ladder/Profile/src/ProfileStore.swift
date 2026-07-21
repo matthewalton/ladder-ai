@@ -93,6 +93,102 @@ final class ProfileStore {
         try context.save()
     }
 
+    // MARK: - Replace
+
+    /// The wholesale replace pathway (decisions/0008): creates the single
+    /// Profile from the replacement when none exists, rebuilds all content
+    /// when one does. All-or-nothing — never a merged hybrid; the Tag pool
+    /// is rebuilt from the replacement's skill names alone.
+    func replaceProfile(with replacement: ProfileReplacement) throws {
+        let name = replacement.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { throw ProfileStoreError.nameRequired }
+
+        let target: Profile
+        if let existing = try context.fetch(FetchDescriptor<Profile>()).first {
+            for role in existing.roles { context.delete(role) }
+            for education in existing.education { context.delete(education) }
+            for project in existing.projects { context.delete(project) }
+            for tag in existing.skills { context.delete(tag) }
+            existing.interests = []
+            existing.name = name
+            existing.headline = replacement.headline
+            existing.contact = replacement.contact
+            target = existing
+        } else {
+            target = Profile(name: name, headline: replacement.headline, contact: replacement.contact)
+            context.insert(target)
+        }
+
+        var tagPool: [SkillTag] = []
+        func resolveTag(named rawName: String) -> SkillTag? {
+            let tagName = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !tagName.isEmpty else { return nil }
+            if let existing = tagPool.first(where: {
+                $0.name.caseInsensitiveCompare(tagName) == .orderedSame
+            }) {
+                return existing
+            }
+            let tag = SkillTag(name: tagName)
+            tagPool.append(tag)
+            target.skills.append(tag)
+            return tag
+        }
+        func makePoint(_ point: ReplacementPoint, sortIndex: Int) -> Achievement {
+            let achievement = Achievement(
+                text: point.text,
+                impactMetric: point.impactMetric,
+                tech: point.tech,
+                sortIndex: sortIndex
+            )
+            for skillName in point.skills {
+                guard let tag = resolveTag(named: skillName),
+                      !achievement.skills.contains(where: { $0 === tag })
+                else { continue }
+                achievement.skills.append(tag)
+            }
+            return achievement
+        }
+
+        for role in replacement.roles {
+            let created = Role(company: role.company, title: role.title, start: role.start, end: role.end)
+            target.roles.append(created)
+            for (index, point) in role.achievements.enumerated() {
+                created.achievements.append(makePoint(point, sortIndex: index))
+            }
+        }
+        for education in replacement.education {
+            target.education.append(Education(
+                institution: education.institution,
+                qualification: education.qualification,
+                start: education.start,
+                end: education.end,
+                detail: education.detail
+            ))
+        }
+        for (index, project) in replacement.projects.enumerated() {
+            let created = Project(
+                name: project.name, link: project.link, summary: project.summary, sortIndex: index
+            )
+            target.projects.append(created)
+            for (pointIndex, point) in project.points.enumerated() {
+                created.points.append(makePoint(point, sortIndex: pointIndex))
+            }
+        }
+        for rawInterest in replacement.interests {
+            let interest = rawInterest.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !interest.isEmpty,
+                  !target.interests.contains(where: {
+                      $0.caseInsensitiveCompare(interest) == .orderedSame
+                  })
+            else { continue }
+            target.interests.append(interest)
+        }
+
+        touch(target)
+        try context.save()
+        profile = target
+    }
+
     // MARK: - Roles
 
     @discardableResult

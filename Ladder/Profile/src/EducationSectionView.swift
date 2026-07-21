@@ -23,15 +23,41 @@ struct EducationSectionView: View {
                     .foregroundStyle(Color.inkSoft)
             } else {
                 ForEach(profile.orderedEducation, id: \.persistentModelID) { education in
-                    row(education)
+                    EducationRowView(
+                        education: education,
+                        isFocused: focus == .education(education),
+                        onFocus: { focus = .education(education) },
+                        onDelete: { delete(education) }
+                    )
                 }
             }
         }
     }
 
-    private func row(_ education: Education) -> some View {
-        let isFocused = focus == .education(education)
-        return HStack(alignment: .firstTextBaseline) {
+    private func addEducation() {
+        guard
+            let education = try? store.addEducation(
+                institution: "", qualification: "", start: .now, end: nil)
+        else { return }
+        focus = .education(education)
+    }
+
+    private func delete(_ education: Education) {
+        if focus == .education(education) { focus = nil }
+        try? store.deleteEducation(education)
+    }
+}
+
+private struct EducationRowView: View {
+    let education: Education
+    let isFocused: Bool
+    let onFocus: () -> Void
+    let onDelete: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(education.institution.isEmpty ? "New institution" : education.institution)
                     .font(.headline)
@@ -51,6 +77,7 @@ struct EducationSectionView: View {
             Text(profileDateRange(start: education.start, end: education.end))
                 .trailMetadata()
                 .foregroundStyle(Color.inkSoft)
+            RowDeleteButton(label: "Delete education", isVisible: isHovering, action: onDelete)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
@@ -61,23 +88,11 @@ struct EducationSectionView: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .strokeBorder(isFocused ? Color.pine : Color.clear, lineWidth: 2))
         .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .onTapGesture { focus = .education(education) }
+        .onTapGesture(perform: onFocus)
+        .onHover { isHovering = $0 }
         .contextMenu {
-            Button("Delete education", role: .destructive) { delete(education) }
+            Button("Delete education", role: .destructive, action: onDelete)
         }
-    }
-
-    private func addEducation() {
-        guard
-            let education = try? store.addEducation(
-                institution: "", qualification: "", start: .now, end: nil)
-        else { return }
-        focus = .education(education)
-    }
-
-    private func delete(_ education: Education) {
-        if focus == .education(education) { focus = nil }
-        try? store.deleteEducation(education)
     }
 }
 

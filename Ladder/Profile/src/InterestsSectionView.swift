@@ -17,17 +17,9 @@ struct InterestsSectionView: View {
                     alignment: .leading, spacing: 4
                 ) {
                     ForEach(Array(profile.interests.enumerated()), id: \.element) { index, interest in
-                        Text(interest)
-                            .font(.caption)
-                            .foregroundStyle(Color.ink)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.pineTint, in: RoundedRectangle(cornerRadius: 6))
-                            .contextMenu {
-                                Button("Remove", role: .destructive) {
-                                    try? store.removeInterest(at: index)
-                                }
-                            }
+                        InterestChipView(name: interest) {
+                            try? store.removeInterest(at: index)
+                        }
                     }
                 }
             }
@@ -50,6 +42,39 @@ struct InterestsSectionView: View {
     private func addInterest() {
         try? store.addInterest(newInterest)
         newInterest = ""
+    }
+}
+
+/// One interest chip; hovering reveals its remove control.
+private struct InterestChipView: View {
+    let name: String
+    let onRemove: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(name)
+                .font(.caption)
+                .foregroundStyle(Color.ink)
+            if isHovering {
+                Button(role: .destructive, action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.caption2)
+                        .foregroundStyle(Color.clay)
+                }
+                .buttonStyle(.borderless)
+                .help("Remove interest")
+                .accessibilityLabel("Remove \(name)")
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.pineTint, in: RoundedRectangle(cornerRadius: 6))
+        .onHover { isHovering = $0 }
+        .contextMenu {
+            Button("Remove", role: .destructive, action: onRemove)
+        }
     }
 }
 
