@@ -1,9 +1,6 @@
 import Foundation
 import SwiftData
 
-// Roadmap-minimal schema: Education/Project arrive with the slice that
-// needs them.
-
 struct ContactInfo: Codable, Hashable {
     var email: String = ""
     var phone: String = ""
@@ -24,6 +21,15 @@ final class Profile {
     @Relationship(deleteRule: .cascade, inverse: \SkillTag.profile)
     var skills: [SkillTag]
 
+    @Relationship(deleteRule: .cascade, inverse: \Education.profile)
+    var education: [Education] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \Project.profile)
+    var projects: [Project] = []
+
+    /// Ordered; arrays persist order so no model is needed.
+    var interests: [String] = []
+
     init(name: String, headline: String, contact: ContactInfo = ContactInfo(), updatedAt: Date = .now) {
         self.name = name
         self.headline = headline
@@ -31,6 +37,9 @@ final class Profile {
         self.updatedAt = updatedAt
         self.roles = []
         self.skills = []
+        self.education = []
+        self.projects = []
+        self.interests = []
     }
 }
 
@@ -61,13 +70,56 @@ final class Role {
 }
 
 @Model
+final class Education {
+    var institution: String
+    var qualification: String
+    var start: Date
+    var end: Date?  // nil = in progress
+    var detail: String  // "" = none
+    var profile: Profile?
+
+    init(institution: String, qualification: String, start: Date, end: Date? = nil, detail: String = "") {
+        self.institution = institution
+        self.qualification = qualification
+        self.start = start
+        self.end = end
+        self.detail = detail
+    }
+}
+
+@Model
+final class Project {
+    var name: String
+    var link: String  // "" = none
+    var summary: String  // "" = none
+    var sortIndex: Int
+    var profile: Profile?
+
+    @Relationship(deleteRule: .cascade, inverse: \Achievement.project)
+    var points: [Achievement]
+
+    init(name: String, link: String = "", summary: String = "", sortIndex: Int = 0) {
+        self.name = name
+        self.link = link
+        self.summary = summary
+        self.sortIndex = sortIndex
+        self.points = []
+    }
+
+    var orderedPoints: [Achievement] {
+        points.sorted { $0.sortIndex < $1.sortIndex }
+    }
+}
+
+@Model
 final class Achievement {
     var text: String  // canonical, user-owned wording — never edited by the LLM
     var impactMetric: String?
     var tech: [String]
     var strengthNotes: String?
     var sortIndex: Int
-    var role: Role?
+    var role: Role?  // exactly one of role/project is set — the store enforces it
+    var project: Project?
 
     @Relationship
     var skills: [SkillTag]

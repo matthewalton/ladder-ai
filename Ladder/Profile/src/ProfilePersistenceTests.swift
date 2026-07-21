@@ -131,6 +131,35 @@ struct ProfilePersistenceTests {
             first.skills = [swift]
             second.skills = [swiftData]
 
+            let degree = Education(
+                institution: "University of Example",
+                qualification: "BSc Computer Science",
+                start: Date(timeIntervalSince1970: 1_100_000_000),
+                end: Date(timeIntervalSince1970: 1_200_000_000),
+                detail: "First-class honours"
+            )
+            let course = Education(
+                institution: "Open Courseware",
+                qualification: "ML Specialisation",
+                start: Date(timeIntervalSince1970: 1_450_000_000),
+                end: nil,
+                detail: ""
+            )
+            profile.education = [degree, course]
+
+            let project = Project(
+                name: "Trail Mapper",
+                link: "https://github.com/alex/trail-mapper",
+                summary: "Offline-first hiking maps",
+                sortIndex: 0
+            )
+            profile.projects = [project]
+            let point = Achievement(text: "Built tile caching for offline use", sortIndex: 0)
+            project.points = [point]
+            point.skills = [swift]
+
+            profile.interests = ["climbing", "trail running", "coffee"]
+
             try context.save()
         }
 
@@ -171,6 +200,27 @@ struct ProfilePersistenceTests {
         #expect(second.tech == ["SwiftData", "CloudKit"])
         #expect(second.strengthNotes == "Good conflict-resolution war story")
         #expect(second.skills.map(\.name) == ["SwiftData"])
+
+        #expect(profile.education.count == 2)
+        let degree = try #require(profile.education.first { $0.institution == "University of Example" })
+        #expect(degree.qualification == "BSc Computer Science")
+        #expect(degree.start == Date(timeIntervalSince1970: 1_100_000_000))
+        #expect(degree.end == Date(timeIntervalSince1970: 1_200_000_000))
+        #expect(degree.detail == "First-class honours")
+        let course = try #require(profile.education.first { $0.institution == "Open Courseware" })
+        #expect(course.end == nil, "in-progress education has a nil end")
+        #expect(course.detail == "")
+
+        let project = try #require(profile.projects.first)
+        #expect(project.name == "Trail Mapper")
+        #expect(project.link == "https://github.com/alex/trail-mapper")
+        #expect(project.summary == "Offline-first hiking maps")
+        let point = try #require(project.orderedPoints.first)
+        #expect(point.text == "Built tile caching for offline use")
+        #expect(point.role == nil, "a project point has no role")
+        #expect(point.skills.map(\.name) == ["Swift"], "project points share the profile's Tags")
+
+        #expect(profile.interests == ["climbing", "trail running", "coffee"], "interests keep entered order")
     }
 }
 

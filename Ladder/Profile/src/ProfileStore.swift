@@ -32,7 +32,8 @@ final class ProfileStore {
     /// The app's schema, one place. `url` nil means the app's default store.
     static func container(at url: URL? = nil, inMemory: Bool = false) throws -> ModelContainer {
         let schema = Schema([
-            Profile.self, Role.self, Achievement.self, SkillTag.self, Application.self,
+            Profile.self, Role.self, Achievement.self, SkillTag.self,
+            Education.self, Project.self, Application.self,
             Stage.self, DismissedEvent.self, Transcript.self, Debrief.self,
             DebriefQuestion.self, PrepPack.self, PrepTalkingPoint.self,
             JourneyNarrative.self,
