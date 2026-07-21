@@ -208,6 +208,10 @@ struct ApplicationDetailView: View {
             }
             .listRowBackground(Color.paperRaised)
 
+            // Renders only at offer or once a narrative exists — the
+            // journey-synthesis slice owns the section ([JOURNEY-14/15]).
+            JourneySection(container: store.container, application: application)
+
             if saveFailed {
                 Text("Saving the application failed.")
                     .font(.callout)

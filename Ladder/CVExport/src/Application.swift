@@ -30,6 +30,12 @@ final class Application {
     @Relationship(deleteRule: .cascade, inverse: \Stage.application)
     var stages: [Stage]
 
+    /// One journey narrative per Application; deleting the Application
+    /// deletes it too (owned by the journey-synthesis slice — see
+    /// Ladder/JourneySynthesis/).
+    @Relationship(deleteRule: .cascade, inverse: \JourneyNarrative.application)
+    var journeyNarrative: JourneyNarrative?
+
     /// To-many relationships are unordered; `sortIndex` carries the chain
     /// order.
     var orderedStages: [Stage] {

@@ -35,6 +35,7 @@ final class ProfileStore {
             Profile.self, Role.self, Achievement.self, SkillTag.self, Application.self,
             Stage.self, DismissedEvent.self, Transcript.self, Debrief.self,
             DebriefQuestion.self, PrepPack.self, PrepTalkingPoint.self,
+            JourneyNarrative.self,
         ])
         let configuration: ModelConfiguration
         if inMemory {
