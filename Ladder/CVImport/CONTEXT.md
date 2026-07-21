@@ -13,10 +13,17 @@ _Avoid_: draft profile, parsed CV, suggestions, import result
 
 **Proposed item**:
 One reviewable unit inside a proposal — a proposed role, achievement, skill,
-education entry, project, project point, or interest — carrying its
+education entry, project, project skill, or interest — carrying its
 included/excluded state. Identity and contact are not proposed items: they
 always travel with the confirmation.
 _Avoid_: candidate, entry, line item
+
+**Contact detection**:
+The on-device pass between extraction and review that finds email, phone,
+and URL in the CV — `NSDataDetector` over the extracted text plus the PDF's
+link annotations — and overrides the proposal's matching contact fields
+(decisions/0009). Detection fills, never blanks; location is never detected.
+_Avoid_: contact parsing, scraping, autofill
 
 **Review**:
 The mandatory per-item confirmation step between proposal and replace; the only

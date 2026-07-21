@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// PROJECTS — each project carries its own brief points, tagged for JD
-/// matching exactly like experience points.
+/// PROJECTS — each project is told as one description with Tags for JD
+/// matching (decisions/0009), not a bullet list.
 struct ProjectsSectionView: View {
     @Bindable var store: ProfileStore
     let profile: Profile
@@ -41,37 +41,30 @@ private struct ProjectItemView: View {
     let project: Project
     @Binding var focus: ProfileFocus?
 
-    @State private var newPointText = ""
     @State private var isHovering = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             header
-            PointListView(
-                store: store,
-                points: project.orderedPoints,
-                parentToken: "project-\(String(describing: project.persistentModelID))",
-                focus: $focus,
-                onMove: { source, destination in
-                    try? store.movePoints(in: project, from: source, to: destination)
-                }
-            )
-            .padding(.leading, 4)
-
-            HStack {
-                TextField("Add a point — a brief key talking point", text: $newPointText)
-                    .textFieldStyle(.plain)
+            if project.details.isEmpty {
+                Text("Add a description — how you'd tell this project on a CV.")
                     .font(.callout)
                     .foregroundStyle(Color.inkSoft)
-                    .onSubmit(addPoint)
-                if !newPointText.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Button("Add", action: addPoint)
-                        .buttonStyle(.borderless)
-                        .font(.caption)
-                }
+                    .padding(.leading, 4)
+            } else {
+                Text(project.details)
+                    .font(.callout)
+                    .foregroundStyle(Color.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 4)
             }
-            .padding(.leading, 20)
+            if !project.skills.isEmpty {
+                TagChipsView(names: project.skills.map(\.name).sorted())
+                    .padding(.leading, 4)
+            }
         }
+        .contentShape(Rectangle())
+        .onTapGesture { focus = .project(project) }
     }
 
     private var header: some View {
@@ -92,8 +85,6 @@ private struct ProjectItemView: View {
             Spacer()
             RowDeleteButton(label: "Delete project", isVisible: isHovering, action: deleteProject)
         }
-        .contentShape(Rectangle())
-        .onTapGesture { focus = .project(project) }
         .onHover { isHovering = $0 }
         .contextMenu {
             Button("Edit project") { focus = .project(project) }
@@ -101,21 +92,9 @@ private struct ProjectItemView: View {
         }
     }
 
-    private func addPoint() {
-        let text = newPointText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
-        try? store.addPoint(to: project, text: text)
-        newPointText = ""
-    }
-
     private func deleteProject() {
-        switch focus {
-        case .project(let focused) where focused == project:
+        if case .project(let focused) = focus, focused == project {
             focus = nil
-        case .point(let point) where point.project == project:
-            focus = nil
-        default:
-            break
         }
         try? store.deleteProject(project)
     }
@@ -125,10 +104,11 @@ private struct ProjectItemView: View {
     let store = try! ProfileStore(container: ProfileStore.container(inMemory: true))
     let profile = try! store.createProfile(name: "Alex Climber", headline: "Staff Engineer")
     let project = try! store.addProject(
-        name: "Trail Mapper", link: "https://example.com", summary: "Offline-first hiking maps"
+        name: "Trail Mapper", link: "https://example.com", summary: "Offline-first hiking maps",
+        details: "An offline-first hiking map app with tile caching, route planning, and elevation profiles. Built to survive a week in the Cairngorms without signal."
     )
-    let point = try! store.addPoint(to: project, text: "Built tile caching for offline use")
-    try! store.tag(point, skillNamed: "Swift")
+    try! store.tag(project, skillNamed: "Swift")
+    try! store.tag(project, skillNamed: "MapKit")
     return ProjectsSectionView(store: store, profile: profile, focus: .constant(nil))
         .padding()
         .background(Color.paper)

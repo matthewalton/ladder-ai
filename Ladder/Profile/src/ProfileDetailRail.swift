@@ -331,6 +331,8 @@ private struct ProjectDetailPane: View {
     @State private var name: String
     @State private var link: String
     @State private var summary: String
+    @State private var details: String
+    @State private var newTag = ""
 
     init(store: ProfileStore, project: Project) {
         self.store = store
@@ -338,11 +340,12 @@ private struct ProjectDetailPane: View {
         _name = State(initialValue: project.name)
         _link = State(initialValue: project.link)
         _summary = State(initialValue: project.summary)
+        _details = State(initialValue: project.details)
     }
 
-    /// Read-only rollup — tags live on the project's points.
-    private var pointTagNames: [String] {
-        Array(Set(project.points.flatMap { $0.skills.map(\.name) })).sorted()
+    private var dirty: Bool {
+        name != project.name || link != project.link
+            || summary != project.summary || details != project.details
     }
 
     var body: some View {
@@ -355,18 +358,25 @@ private struct ProjectDetailPane: View {
                 TextField("Summary — one line", text: $summary, axis: .vertical)
                     .lineLimit(2...4)
                     .onSubmit(commit)
-                if name != project.name || link != project.link || summary != project.summary {
+                TextField("Description — how you'd tell it on a CV",
+                          text: $details, axis: .vertical)
+                    .lineLimit(4...12)
+                if dirty {
                     Button("Save project", action: commit)
                 }
             }
             .listRowBackground(Color.paperRaised)
 
-            if !pointTagNames.isEmpty {
-                Section("Tags across its points") {
-                    TagChipsView(names: pointTagNames)
+            Section("Tags") {
+                if !project.skills.isEmpty {
+                    TagChipsView(names: project.skills.map(\.name).sorted()) { name in
+                        removeTag(named: name)
+                    }
                 }
-                .listRowBackground(Color.paperRaised)
+                TextField("Add a tag", text: $newTag)
+                    .onSubmit(addTag)
             }
+            .listRowBackground(Color.paperRaised)
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -378,8 +388,21 @@ private struct ProjectDetailPane: View {
             project,
             name: name.trimmingCharacters(in: .whitespaces),
             link: link.trimmingCharacters(in: .whitespaces),
-            summary: summary.trimmingCharacters(in: .whitespaces)
+            summary: summary.trimmingCharacters(in: .whitespaces),
+            details: details.trimmingCharacters(in: .whitespacesAndNewlines)
         )
+    }
+
+    private func addTag() {
+        let name = newTag.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        try? store.tag(project, skillNamed: name)
+        newTag = ""
+    }
+
+    private func removeTag(named name: String) {
+        guard let tag = project.skills.first(where: { $0.name == name }) else { return }
+        try? store.untag(project, tag: tag)
     }
 }
 

@@ -232,50 +232,47 @@ struct ProfileStoreTests {
         #expect(try ModelContext(container).fetchCount(FetchDescriptor<Education>()) == 0)
     }
 
-    @Test("[PROFILE-11] deleting a Project deletes its points; shared Tags survive")
-    func deleteProjectCascadesToPoints() throws {
+    @Test("[PROFILE-19] deleting a Project leaves the shared Tags it referenced intact")
+    func deleteProjectLeavesSharedTags() throws {
         let container = try ProfileStore.container(inMemory: true)
         let store = ProfileStore(container: container)
         try store.load()
         try store.createProfile(name: "Alex Climber", headline: "")
+        let role = try store.addRole(company: "Acme", title: "Engineer", start: .now, end: nil)
+        let achievement = try store.addAchievement(to: role, text: "Cut build times")
+        try store.tag(achievement, skillNamed: "Swift")
         let project = try store.addProject(name: "Trail Mapper")
-        let point = try store.addPoint(to: project, text: "Built tile caching")
-        try store.tag(point, skillNamed: "Swift")
+        try store.tag(project, skillNamed: "Swift")
+        try store.tag(project, skillNamed: "MapKit")
 
         try store.deleteProject(project)
 
         #expect(try ModelContext(container).fetchCount(FetchDescriptor<Project>()) == 0)
-        #expect(try ModelContext(container).fetchCount(FetchDescriptor<Achievement>()) == 0)
-        #expect(try ModelContext(container).fetchCount(FetchDescriptor<SkillTag>()) == 1)
+        let tags = try ModelContext(container).fetch(FetchDescriptor<SkillTag>())
+        #expect(Set(tags.map(\.name)) == ["Swift", "MapKit"], "no orphan pruning")
+        #expect(achievement.skills.map(\.name) == ["Swift"], "the achievement's link survives")
     }
 
-    @Test("[PROFILE-12] a point belongs to exactly one parent")
-    func pointsHaveExactlyOneParent() throws {
-        let store = try makeStore()
+    @Test("[PROFILE-21] tagging a Project with an existing Tag name links the one shared SkillTag")
+    func projectTagsShareThePool() throws {
+        let container = try ProfileStore.container(inMemory: true)
+        let store = ProfileStore(container: container)
+        try store.load()
         try store.createProfile(name: "Alex Climber", headline: "")
         let role = try store.addRole(company: "Acme", title: "Engineer", start: .now, end: nil)
+        let achievement = try store.addAchievement(to: role, text: "Cut build times")
+        let achievementTag = try store.tag(achievement, skillNamed: "Swift")
         let project = try store.addProject(name: "Trail Mapper")
 
-        let rolePoint = try store.addAchievement(to: role, text: "Cut build times")
-        let projectPoint = try store.addPoint(to: project, text: "Built tile caching")
+        let projectTag = try store.tag(project, skillNamed: " swift ")
 
-        #expect(rolePoint.role === role)
-        #expect(rolePoint.project == nil)
-        #expect(projectPoint.project === project)
-        #expect(projectPoint.role == nil)
-    }
+        #expect(projectTag === achievementTag, "one shared Tag, never a private copy")
+        #expect(projectTag.name == "Swift", "the first-entered casing survives")
+        #expect(try ModelContext(container).fetchCount(FetchDescriptor<SkillTag>()) == 1)
 
-    @Test("[PROFILE-7] reordering a project's points persists the new order")
-    func movePointsReordersWithinProject() throws {
-        let store = try makeStore()
-        try store.createProfile(name: "Alex Climber", headline: "")
-        let project = try store.addProject(name: "Trail Mapper")
-        try store.addPoint(to: project, text: "First")
-        try store.addPoint(to: project, text: "Second")
-        try store.addPoint(to: project, text: "Third")
-
-        try store.movePoints(in: project, from: IndexSet(integer: 0), to: 3)
-        #expect(project.orderedPoints.map(\.text) == ["Second", "Third", "First"])
+        try store.untag(project, tag: projectTag)
+        #expect(project.skills.isEmpty)
+        #expect(achievement.skills.map(\.name) == ["Swift"], "[PROFILE-16] untagging severs one link only")
     }
 
     @Test("projects keep a dense manual order through add, move, and delete")

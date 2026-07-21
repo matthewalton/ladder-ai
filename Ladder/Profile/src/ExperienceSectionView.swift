@@ -125,7 +125,7 @@ private struct RoleDisclosureView: View {
     }
 }
 
-/// The reorderable point list shared by roles and projects. Drags carry a
+/// The reorderable point list for a role's achievements. Drags carry a
 /// parent-scoped token so a drop from another list is rejected.
 struct PointListView: View {
     @Bindable var store: ProfileStore

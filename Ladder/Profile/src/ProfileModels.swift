@@ -100,23 +100,23 @@ final class Education {
 final class Project {
     var name: String
     var link: String  // "" = none
-    var summary: String  // "" = none
+    var summary: String  // "" = none, the one-line shown beside the name
+    /// "" = none, the multi-line description (decisions/0009). The stored
+    /// default lets an existing store migrate in place.
+    var details: String = ""
     var sortIndex: Int
     var profile: Profile?
 
-    @Relationship(deleteRule: .cascade, inverse: \Achievement.project)
-    var points: [Achievement]
+    @Relationship
+    var skills: [SkillTag]
 
-    init(name: String, link: String = "", summary: String = "", sortIndex: Int = 0) {
+    init(name: String, link: String = "", summary: String = "", details: String = "", sortIndex: Int = 0) {
         self.name = name
         self.link = link
         self.summary = summary
+        self.details = details
         self.sortIndex = sortIndex
-        self.points = []
-    }
-
-    var orderedPoints: [Achievement] {
-        points.sorted { $0.sortIndex < $1.sortIndex }
+        self.skills = []
     }
 }
 
@@ -127,8 +127,7 @@ final class Achievement {
     var tech: [String]
     var strengthNotes: String?
     var sortIndex: Int
-    var role: Role?  // exactly one of role/project is set — the store enforces it
-    var project: Project?
+    var role: Role?
 
     @Relationship
     var skills: [SkillTag]
@@ -149,8 +148,8 @@ final class Achievement {
     }
 }
 
-/// Shared across the Profile — achievements reference SkillTags, they never
-/// own private copies.
+/// Shared across the Profile — achievements and projects reference SkillTags,
+/// they never own private copies.
 @Model
 final class SkillTag {
     var name: String
@@ -159,8 +158,12 @@ final class SkillTag {
     @Relationship(inverse: \Achievement.skills)
     var achievements: [Achievement]
 
+    @Relationship(inverse: \Project.skills)
+    var projects: [Project]
+
     init(name: String) {
         self.name = name
         self.achievements = []
+        self.projects = []
     }
 }

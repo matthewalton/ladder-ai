@@ -68,13 +68,14 @@ Tailoring's whole point: the selection is the CV. A profile achievement the
 service did not select — and whose text appears nowhere else — is absent from
 the extracted text (decisions/0002).
 
-## [CVEXPORT-6] The rendered CV's skills line is the union of the selected points' Tags
+## [CVEXPORT-6] The rendered CV's skills line is the union of the selected content's Tags
 
 Derived per application (decisions/0004): the sorted unique union of Tag names
-across the selected points — role and project alike. A Tag attached only to
-unselected points stays off the CV; `profile.skills` as a whole is never
-dumped. Tags exist to map points to the job description, so the skills line is
-exactly the vocabulary this application's selection earned.
+across the selected achievements and the selected projects (decisions/0005).
+A Tag attached only to unselected content stays off the CV; `profile.skills`
+as a whole is never dumped. Tags exist to map content to the job description,
+so the skills line is exactly the vocabulary this application's selection
+earned.
 
 ## [CVEXPORT-7] Every page of the rendered CV measures A4
 
@@ -163,10 +164,11 @@ asserted via PDFKit text extraction like every content criterion. It lives
 only inside this application's rendered snapshot; the Profile stays
 summary-free. A defensive blank summary renders no empty block.
 
-## [CVEXPORT-19] A project appears on the rendered CV only when one of its points is selected
+## [CVEXPORT-21] A project appears on the rendered CV only when the selection includes it
 
-Projects are optional colour, unlike roles ([CVEXPORT-3] keeps every role for
-employment continuity). A project renders — name, link when present, and its
-selected points' reviewed bullets — only when the selection includes at least
-one of its points ([TAILOR-20]); an empty Projects heading is noise, so no
+Replaces [CVEXPORT-19]'s per-point rule (decisions/0005; Tailor
+decisions/0007). Projects are optional colour, unlike roles ([CVEXPORT-3]
+keeps every role for employment continuity). A selected project renders —
+name, link when present, and its description as one prose block, verbatim
+from the Profile ([TAILOR-22]); an empty Projects heading is noise, so no
 selected projects means no Projects section.

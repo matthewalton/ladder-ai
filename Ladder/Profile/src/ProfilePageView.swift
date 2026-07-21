@@ -89,9 +89,10 @@ func profileDateRange(start: Date, end: Date?) -> String {
         end: Date(timeIntervalSince1970: 1_200_000_000)
     )
     let project = try! store.addProject(
-        name: "Trail Mapper", link: "https://example.com", summary: "Offline-first hiking maps"
+        name: "Trail Mapper", link: "https://example.com", summary: "Offline-first hiking maps",
+        details: "Built tile caching so a week's maps survive without signal."
     )
-    try! store.addPoint(to: project, text: "Built tile caching for offline use")
+    try! store.tag(project, skillNamed: "Swift")
     try! store.addInterest("climbing")
     return ProfilePageView(store: store)
         .frame(width: 1100, height: 700)

@@ -5,11 +5,11 @@ key: TAILOR
 # Tailor
 
 Paste a job description, have the intelligence service select the best-fit
-points from the Profile — role Achievements and project points alike — and
-expand each brief talking point into one polished CV bullet, generate a CV
-summary tailored to the job description (decisions/0006), flag gaps, and
-state its rationale — then review each expanded bullet side by side before
-anything is used. Expansion is grounded strictly in the point's own fields
+content from the Profile — role Achievements point by point, Projects whole
+(decisions/0007) — and expand each brief talking point into one polished CV
+bullet, generate a CV summary tailored to the job description
+(decisions/0006), flag gaps, and state its rationale — then review each
+expanded bullet side by side before anything is used. Expansion is grounded strictly in the point's own fields
 (text, impact metric, tech, Tags, strength notes) and never invents facts;
 education and interests travel in the payload as context only. This slice owns
 the tailor sheet, the tailor run and its validation, the review,
@@ -46,13 +46,14 @@ Refused at start, before any service call. Whitespace-only counts as empty.
 Company and role title are free-text labels carried into the payload; only the
 job description is required for a run.
 
-## [TAILOR-3] Starting a tailor run when the Profile has no points is refused
+## [TAILOR-3] Starting a tailor run when the Profile has neither achievements nor projects is refused
 
-Tailoring selects from points and never free-writes career history (root
+Tailoring selects from the Profile and never free-writes career history (root
 CONTEXT.md) — with nothing to select from, a run is meaningless. A Profile
-whose only points live on a project is enough: project points are selectable
-content exactly like role Achievements. Refused before any service call; the
-refusal points at adding achievements or importing a CV.
+whose only selectable content is a project is enough: projects are selected
+whole (decisions/0007) exactly as role Achievements are selected point by
+point. Refused before any service call; the refusal points at adding
+achievements or importing a CV.
 
 ## [TAILOR-4] Starting a tailor run with no API key stored is refused
 
@@ -84,8 +85,9 @@ slice only holds and shows it.
 
 ## [TAILOR-8] A tailor result selecting an achievement not on the Profile fails validation
 
-Selection references existing Achievements by identifier; an identifier
-matching nothing on the Profile means the service invented or garbled history.
+Selection references existing content by identifier — `a…` for Achievements,
+`p…` for Projects; an identifier matching nothing on the Profile means the
+service invented or garbled history.
 Referential failure is handled exactly like a schema mismatch: it feeds the
 repair path ([TAILOR-9], [TAILOR-10]).
 
@@ -109,7 +111,8 @@ and the Profile is unchanged (decisions/0004).
 The side-by-side: for every selected point, the canonical brief
 `Achievement.text` and the expanded bullet appear together, so the user judges
 the expansion against the talking point it grew from. The review groups items
-under the role or project the point belongs to.
+under the role the point belongs to; selected projects list as whole units
+beneath ([TAILOR-22]) — nothing per-project to accept or reject.
 
 ## [TAILOR-12] Every expanded bullet enters review as accepted
 
@@ -155,17 +158,19 @@ as the user message.
 
 ## [TAILOR-19] The tailor payload carries projects, education and interests
 
-Beyond roles: projects serialize with their points (stable `p…` ids, the same
-per-point fields as role achievements, with Tags under the `tags` key);
+Beyond roles: each project serializes as one unit — stable `p…` id, name,
+summary, description, and Tags under the `tags` key (decisions/0007) —
 education and interests serialize as context the model may lean on but never
 select from. Ids stay stable within one payload; validation resolves
 selections against the union of `a…` and `p…` ids.
 
-## [TAILOR-20] A selection may reference a project point
+## [TAILOR-22] A selection may include a whole project
 
-Selecting a `p…` id resolves to the project's point in the review exactly like
-a role selection — and puts that project on the tailored CV (cv-export renders
-only projects with at least one selected point).
+Replaces [TAILOR-20]'s per-point framing (decisions/0007): selecting a `p…`
+id puts that project — description and Tags as they stand on the Profile,
+never expanded or reworded — into the reviewed outcome and onto the tailored
+CV (cv-export renders only selected projects, [CVEXPORT-21]). An omitted
+project simply stays off the CV.
 
 ## [TAILOR-21] The reviewed outcome carries the result's generated CV summary verbatim
 

@@ -118,11 +118,14 @@ struct ProposedEducation: Equatable, Sendable, Decodable {
     var detail: String?
 }
 
+/// Projects propose a description and skills, not points (decisions/0010;
+/// Profile decisions/0009).
 struct ProposedProject: Equatable, Sendable, Decodable {
     var name: String
     var link: String?
     var summary: String?
-    var points: [ProposedAchievement]
+    var description: String?
+    var skills: [String]
 }
 
 /// CV content outside the import scope — the summary paragraph,

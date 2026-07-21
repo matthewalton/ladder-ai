@@ -26,7 +26,10 @@ and previews stay on `FixtureIntelligenceService`'s canned JSON from
 and the review remains mandatory. The proposal covers the whole CV
 (decisions/0008, superseding 0002); a CV's summary/profile paragraph stays
 not-imported — the CV summary is generated per application at tailor time
-(Tailor slice).
+(Tailor slice). Contact is belt-and-braces: on-device detection overrides the
+model's proposal for email, phone, and link (decisions/0009). Projects
+propose a description and skills, not points (decisions/0010; Profile
+decisions/0009).
 
 Out of scope: tailoring, PDF export, automatic duplicate matching,
 retry-with-repair (decisions/0004), streaming, cancellation UX.
@@ -63,10 +66,10 @@ Per-item exclusion:
 - Excluding one achievement keeps the role and its other achievements
   confirmable.
 - Excluding a proposed skill keeps the achievement; the skill is simply not
-  attached.
-- The same rule covers education entries, projects, project points, and
-  interests ([CVIMPORT-24]–[CVIMPORT-26]): an excluded item is simply absent
-  from the replacement.
+  attached. The same holds for a project's proposed skills (decisions/0010).
+- The same rule covers education entries, projects, and interests
+  ([CVIMPORT-24], [CVIMPORT-26], [CVIMPORT-28]): an excluded item is simply
+  absent from the replacement.
 
 ## [CVIMPORT-7] Merged roles and achievements are still present after the app relaunches
 
@@ -174,7 +177,8 @@ point; the pre-run confirmation warned about it ([CVIMPORT-22]).
   role ordering in the editor follows dates, not insertion.
 - Two included achievements naming the same skill share one Tag — the
   [PROFILE-8] rule applied inside the replace; there is no pre-existing pool
-  to reuse (supersedes [CVIMPORT-8]).
+  to reuse (supersedes [CVIMPORT-8]). Project skills join the same pool
+  ([PROFILE-21]).
 - Nothing lands before confirmation — the review is mandatory; there is no
   import-without-review path.
 
@@ -204,6 +208,8 @@ travels with the confirmation (a fresh Profile needs a name; the review shows
 it). The schema requires a non-empty name — the replace rejects an empty one
 ([PROFILE-3]'s rule) — so a proposal without one fails validation with its
 reason ([CVIMPORT-17]). Contact fields the CV lacks land as empty strings.
+The model's contact is only half the story: detected values override it
+([CVIMPORT-29], decisions/0009).
 
 ## [CVIMPORT-24] The proposal lists the CV's education entries for review
 
@@ -211,12 +217,14 @@ Institution, qualification, `yyyy-MM` dates (null end = in progress), and the
 detail line (grade, honours) when the CV states one. Each entry is a proposed
 item — included by default ([CVIMPORT-4]), excludable ([CVIMPORT-6]).
 
-## [CVIMPORT-25] The proposal lists the CV's projects with their points for review
+## [CVIMPORT-28] The proposal lists the CV's projects with description and skills for review
 
-Project name, link, one-line summary, and points shaped exactly like role
-achievements (text, impact metric, tech, skills). Excluding a project excludes
-its points with it; excluding one point keeps the project confirmable — the
-role/achievement rule ([CVIMPORT-6]) applied to projects.
+Replaces [CVIMPORT-25]'s points shape (decisions/0010; Profile
+decisions/0009): each project proposes name, link, one-line summary, a
+multi-line description — prose in the CV's own wording, the project's
+bullets/sentences joined, never invented — and skill names for the project as
+a whole. Excluding a project excludes it wholesale; excluding one proposed
+skill keeps the project confirmable ([CVIMPORT-6]).
 
 ## [CVIMPORT-26] The proposal lists the CV's interests for review
 
@@ -231,3 +239,26 @@ superseding [CVIMPORT-9]'s education/projects framing): content the proposal
 cannot place — the summary/profile paragraph (deliberately: the CV summary is
 generated per application at tailor time), certifications, references — is
 listed in the review and never written anywhere.
+
+## [CVIMPORT-29] A contact value detected in the CV overrides the service's proposal for that field
+
+Contact detection (decisions/0009) runs on-device between extraction and
+review: `NSDataDetector` over the extracted text for email, phone, and URL,
+plus the PDF's link annotations for URLs the text layer never shows. A
+detected value replaces the model's proposal for that field before the review
+is shown — contact import must not depend on the model obeying the prompt.
+
+- First match per field wins: a CV header leads with the owner's details; a
+  referee's email later in the document never displaces one detected earlier.
+- Location is not detected — no deterministic detector is reliable for
+  free-form location lines; it stays with the model ([CVIMPORT-23]).
+- Worked example (the real CV that motivated this): header text
+  `London, UK · 07541 964763 · mattalton97@gmail.com` with a null-contact
+  model response still reaches review with that phone and email filled.
+
+## [CVIMPORT-30] A contact field with no detected value keeps the service's proposed value
+
+The complement of [CVIMPORT-29]: detection only ever fills, never blanks. A
+CV with no URL anywhere — no text-layer link, no link annotation — leaves the
+link field exactly as the model proposed it (empty string when the model
+returned null, [CVIMPORT-23]); location always passes through untouched.

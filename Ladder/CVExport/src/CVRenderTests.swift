@@ -238,17 +238,17 @@ struct CVRenderTests {
         #expect(course.lowerBound < degree.lowerBound)
     }
 
-    @Test("[CVEXPORT-19] a project appears on the rendered CV only when one of its points is selected")
+    @Test("[CVEXPORT-21] a project appears on the rendered CV only when the selection includes it")
     func projectsRenderOnlyWhenSelected() throws {
         let profileStore = try makeProfileStore()
         let selectedProject = try profileStore.addProject(
-            name: "Trail Mapper", link: "github.com/alex/trail-mapper"
+            name: "Trail Mapper", link: "github.com/alex/trail-mapper",
+            details: "Engineered offline tile caching for a production mapping app."
         )
-        let selectedPoint = try profileStore.addPoint(
-            to: selectedProject, text: "Built tile caching for offline use"
+        let unselectedProject = try profileStore.addProject(
+            name: "Weather Widget", details: "Rendered live forecasts."
         )
-        let unselectedProject = try profileStore.addProject(name: "Weather Widget")
-        try profileStore.addPoint(to: unselectedProject, text: "Rendered live forecasts")
+        _ = unselectedProject
 
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
@@ -257,18 +257,20 @@ struct CVRenderTests {
             {
               "summary": "Platform and mapping engineer.",
               "selections": [
-                {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"},
-                {"achievementID": "p1", "bullet": "Engineered offline tile caching for a production mapping app"}
+                {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
               ],
+              "projects": ["p1"],
               "gaps": [],
               "rationale": "Platform and mapping work both fit."
             }
             """.utf8),
-            validAchievementIDs: ["a1", "a2", "a3", "p1", "p2"]
+            validAchievementIDs: ["a1", "a2", "a3"],
+            validProjectIDs: ["p1", "p2"]
         )
         let review = TailorReview(
             result: result,
-            achievementsByID: ["a1": acme.orderedAchievements[0], "p1": selectedPoint]
+            achievementsByID: ["a1": acme.orderedAchievements[0]],
+            projectsByID: ["p1": selectedProject]
         )
 
         let text = try extractedText(profileStore: profileStore, review: review)
@@ -276,9 +278,10 @@ struct CVRenderTests {
         #expect(text.contains("Projects"))
         #expect(text.contains("Trail Mapper"))
         #expect(text.contains("github.com/alex/trail-mapper"))
-        #expect(text.contains("Engineered offline tile caching for a production mapping app"))
-        #expect(!text.contains("Weather Widget"), "a project with no selected points is absent")
-        #expect(!text.contains("Rendered live forecasts"))
+        #expect(text.contains("Engineered offline tile caching for a production mapping app."),
+                "the selected project's description renders verbatim")
+        #expect(!text.contains("Weather Widget"), "an unselected project is absent")
+        #expect(!text.contains("Rendered live forecasts."))
     }
 
     @Test("[CVEXPORT-7] every page of the rendered CV measures A4")

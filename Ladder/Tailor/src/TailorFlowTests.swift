@@ -383,10 +383,10 @@ struct TailorFlowTests {
         let profileStore = try makeProfileStore()
         let project = try profileStore.addProject(
             name: "Trail Mapper", link: "https://example.com/trail-mapper",
-            summary: "Offline-first hiking maps"
+            summary: "Offline-first hiking maps",
+            details: "Built tile caching so a week's maps survive without signal."
         )
-        let point = try profileStore.addPoint(to: project, text: "Built tile caching for offline use")
-        try profileStore.tag(point, skillNamed: "Swift")
+        try profileStore.tag(project, skillNamed: "Swift")
         try profileStore.addEducation(
             institution: "University of Example", qualification: "BSc Computer Science",
             start: Date(timeIntervalSince1970: 1_100_000_000),
@@ -401,69 +401,98 @@ struct TailorFlowTests {
 
         let payload = try #require(await service.recordedRequests.first?.payload)
         #expect(payload.contains("Trail Mapper"))
-        #expect(payload.contains("Built tile caching for offline use"))
-        #expect(payload.contains(#""p1""#), "project points carry p-prefixed ids")
-        #expect(payload.contains(#""tags""#), "point tags travel under the tags key")
+        #expect(payload.contains("Built tile caching so a week's maps survive without signal."))
+        #expect(payload.contains(#""p1""#), "whole projects carry p-prefixed ids")
+        #expect(payload.contains(#""tags""#), "project Tags travel under the tags key")
         #expect(payload.contains("University of Example"))
         #expect(payload.contains("First-class honours"))
         #expect(payload.contains("climbing"))
     }
 
-    @Test("[TAILOR-20] a selection may reference a project point")
-    func projectPointSelectionsResolve() async throws {
+    @Test("[TAILOR-22] a selection may include a whole project")
+    func wholeProjectSelectionsResolve() async throws {
         let profileStore = try makeProfileStore()
-        let project = try profileStore.addProject(name: "Trail Mapper")
-        try profileStore.addPoint(to: project, text: "Built tile caching for offline use")
-        let selectingProjectPoint = Data("""
+        let project = try profileStore.addProject(
+            name: "Trail Mapper",
+            details: "Built tile caching so a week's maps survive without signal."
+        )
+        try profileStore.tag(project, skillNamed: "Swift")
+        let selectingProject = Data("""
         {
           "summary": "Engineer with production mapping experience.",
-          "selections": [
-            {"achievementID": "p1", "bullet": "Engineered offline tile caching for a production mapping app"}
-          ],
+          "selections": [],
+          "projects": ["p1"],
           "gaps": [],
           "rationale": "The project work fits the JD directly."
         }
         """.utf8)
         let store = makeTailorStore(
             profileStore: profileStore,
-            service: FixtureIntelligenceService(returning: selectingProjectPoint)
+            service: FixtureIntelligenceService(returning: selectingProject)
         )
 
         await store.startRun(jobDetails)
 
         #expect(store.phase == .review)
         let review = try #require(store.review)
-        let item = try #require(review.items.first)
-        #expect(item.achievement.text == "Built tile caching for offline use")
-        #expect(item.achievement.project?.name == "Trail Mapper")
-        #expect(item.bullet == "Engineered offline tile caching for a production mapping app")
+        let selected = try #require(review.selectedProjects.first)
+        #expect(selected.name == "Trail Mapper")
+        let outcomeProject = try #require(review.outcome.projects.first)
+        #expect(
+            outcomeProject.details == "Built tile caching so a week's maps survive without signal.",
+            "the description travels verbatim — never expanded or reworded"
+        )
+        #expect(outcomeProject.tags == ["Swift"])
     }
 
-    @Test("[TAILOR-3] a Profile whose only points live on a project is not refused")
+    @Test("[TAILOR-22] a result selecting a project id not in the payload feeds the repair path")
+    func unknownProjectIDFailsValidation() async throws {
+        let profileStore = try makeProfileStore()
+        let selectingUnknownProject = Data("""
+        {
+          "summary": "Summary.",
+          "selections": [],
+          "projects": ["p9"],
+          "gaps": [],
+          "rationale": "Rationale."
+        }
+        """.utf8)
+        let store = makeTailorStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService(returning: selectingUnknownProject)
+        )
+
+        await store.startRun(jobDetails)
+
+        #expect(store.phase == .failed(.resultInvalid), "an invalid-then-invalid sequence fails the run")
+    }
+
+    @Test("[TAILOR-3] a Profile whose only selectable content is a project is not refused")
     func projectOnlyProfilePassesTheGuard() async throws {
         let profileStore = try ProfileStore(container: ProfileStore.container(inMemory: true))
         try profileStore.load()
         try profileStore.createProfile(name: "Alex Climber", headline: "Staff Engineer")
-        let project = try profileStore.addProject(name: "Trail Mapper")
-        try profileStore.addPoint(to: project, text: "Built tile caching for offline use")
-        let selectingProjectPoint = Data("""
+        try profileStore.addProject(
+            name: "Trail Mapper",
+            details: "Built tile caching so a week's maps survive without signal."
+        )
+        let selectingProject = Data("""
         {
           "summary": "Engineer whose project work fits the JD.",
-          "selections": [
-            {"achievementID": "p1", "bullet": "Engineered offline tile caching"}
-          ],
+          "selections": [],
+          "projects": ["p1"],
           "gaps": [],
           "rationale": "Project work only."
         }
         """.utf8)
         let store = makeTailorStore(
             profileStore: profileStore,
-            service: FixtureIntelligenceService(returning: selectingProjectPoint)
+            service: FixtureIntelligenceService(returning: selectingProject)
         )
 
         await store.startRun(jobDetails)
 
-        #expect(store.phase == .review, "project points are selectable content, not just roles'")
+        #expect(store.phase == .review, "projects are selectable content, not just role achievements")
     }
 
     @Test("[TAILOR-21] the reviewed outcome carries the result's generated CV summary verbatim")

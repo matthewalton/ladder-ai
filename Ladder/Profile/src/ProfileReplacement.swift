@@ -21,8 +21,8 @@ struct ReplacementRole: Equatable, Sendable {
     var achievements: [ReplacementPoint] = []
 }
 
-/// One brief point — a role achievement or a project point; skills are Tag
-/// names, resolved against the rebuilt pool by the [PROFILE-8] rule.
+/// One brief role achievement; skills are Tag names, resolved against the
+/// rebuilt pool by the [PROFILE-8] rule.
 struct ReplacementPoint: Equatable, Sendable {
     var text: String
     var impactMetric: String? = nil
@@ -38,9 +38,12 @@ struct ReplacementEducation: Equatable, Sendable {
     var detail: String = ""
 }
 
+/// Skills are Tag names, joining the same rebuilt pool as achievement skills
+/// (decisions/0009, [PROFILE-21]).
 struct ReplacementProject: Equatable, Sendable {
     var name: String
     var link: String = ""
     var summary: String = ""
-    var points: [ReplacementPoint] = []
+    var details: String = ""
+    var skills: [String] = []
 }

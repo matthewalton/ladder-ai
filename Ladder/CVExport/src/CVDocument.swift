@@ -18,7 +18,9 @@ struct CVDocument: Equatable {
         var name: String
         /// "" = no link line.
         var link: String
-        var bullets: [String]
+        /// The project's description, one prose block — verbatim from the
+        /// Profile (Tailor decisions/0007). "" renders no body.
+        var details: String
     }
 
     struct EducationSection: Equatable {
@@ -39,7 +41,7 @@ struct CVDocument: Equatable {
     var summary: String = ""
     /// Newest-first, the same ordering the tailor payload uses.
     var roles: [RoleSection]
-    /// Only projects with at least one selected point — projects are optional
+    /// Only selected projects (decisions/0005) — projects are optional
     /// colour, unlike roles, which all appear.
     var projects: [ProjectSection]
     /// Always rendered, newest-first — education is facts, not selectable
@@ -85,12 +87,8 @@ struct CVDocument: Equatable {
             )
         }
 
-        projects = profile.orderedProjects.compactMap { project in
-            let bullets = project.orderedPoints.compactMap {
-                reviewedText[ObjectIdentifier($0)]
-            }
-            guard !bullets.isEmpty else { return nil }
-            return ProjectSection(name: project.name, link: project.link, bullets: bullets)
+        projects = review.selectedProjects.map { project in
+            ProjectSection(name: project.name, link: project.link, details: project.details)
         }
 
         education = profile.orderedEducation.map { entry in
@@ -103,8 +101,11 @@ struct CVDocument: Equatable {
             )
         }
 
+        // The union of selected content's Tags — achievements and whole
+        // projects alike ([CVEXPORT-6]).
         skills = Array(
             Set(review.items.flatMap { $0.achievement.skills.map(\.name) })
+                .union(review.selectedProjects.flatMap { $0.skills.map(\.name) })
         ).sorted()
     }
 

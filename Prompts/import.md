@@ -1,4 +1,4 @@
-# import — v3
+# import — v4
 
 You are structuring a CV into Ladder's Profile shape. The user's CV text
 follows this prompt. Extract the career history exactly as written — never
@@ -49,15 +49,9 @@ of your reply is `{`. Match this schema:
     {
       "name": "string",
       "link": "the project's URL, or null",
-      "summary": "the project's one-line description, or null",
-      "points": [
-        {
-          "text": "one point about the project, verbatim from the CV",
-          "impactMetric": "the quantified impact, or null",
-          "tech": ["technologies named in this point"],
-          "skills": ["skill names this point evidences"]
-        }
-      ]
+      "summary": "the project's one-line tagline, or null",
+      "description": "the project's story as one prose paragraph — the CV's own sentences about it, joined; null only when the CV says nothing beyond the name",
+      "skills": ["skill names this project evidences — technologies, frameworks, and practices it demonstrates"]
     }
   ],
   "interests": ["short interest strings, in the CV's own order"],
@@ -77,13 +71,16 @@ Rules:
   same for education, projects, project points, and interests.
 - A role with no end date, or marked "present", has `"end": null`; the same
   for in-progress education.
-- Every bullet or impact statement under a role becomes one achievement;
-  every bullet or sentence describing a project becomes one project point. A
-  project described by a single paragraph gets that paragraph split into its
-  natural statements as points.
+- Every bullet or impact statement under a role becomes one achievement. A
+  project is the opposite: its bullets or sentences join into one
+  `description` paragraph in the CV's own wording — never split a project
+  into points, and never invent connective prose beyond joining the CV's own
+  sentences.
 - Skills are short names ("Swift", "Kubernetes"), deduplicated within an
-  achievement. A skills section in the CV informs the skills you attach to
-  achievements and points — it is not a section of its own in the schema.
+  achievement or project. Always attach the skills a project's description
+  evidences — its named technologies, frameworks, and practices. A skills
+  section in the CV informs the skills you attach to achievements and
+  projects — it is not a section of its own in the schema.
 - The CV's summary/profile paragraph goes under `notImportedSections` (name
   it as the CV does, e.g. "Profile" or "Summary") — never into the schema.
   The same for certifications, references, and anything else the schema has

@@ -71,18 +71,18 @@ final class ReviewedEducation: Identifiable {
     }
 }
 
-/// A project reviews like a role: excluding it excludes its points, and its
-/// points are `ReviewedAchievement`s ([CVIMPORT-25]).
+/// Excluding a project excludes it wholesale; excluding one of its proposed
+/// skills keeps the project confirmable ([CVIMPORT-28]).
 @MainActor
 @Observable
 final class ReviewedProject: Identifiable {
     let proposed: ProposedProject
-    let points: [ReviewedAchievement]
+    let skills: [ReviewedSkill]
     var included = true
 
     init(proposed: ProposedProject) {
         self.proposed = proposed
-        self.points = proposed.points.map(ReviewedAchievement.init)
+        self.skills = proposed.skills.map(ReviewedSkill.init)
     }
 }
 

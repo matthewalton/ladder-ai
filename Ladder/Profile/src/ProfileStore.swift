@@ -109,6 +109,12 @@ final class ProfileStore {
             for education in existing.education { context.delete(education) }
             for project in existing.projects { context.delete(project) }
             for tag in existing.skills { context.delete(tag) }
+            // Belt and braces for the all-or-nothing promise: an achievement
+            // with no surviving role (e.g. an ex-project point left behind by
+            // the decisions/0009 migration) has no cascade to catch it.
+            for orphan in try context.fetch(FetchDescriptor<Achievement>()) where orphan.role == nil {
+                context.delete(orphan)
+            }
             existing.interests = []
             existing.name = name
             existing.headline = replacement.headline
@@ -167,11 +173,15 @@ final class ProfileStore {
         }
         for (index, project) in replacement.projects.enumerated() {
             let created = Project(
-                name: project.name, link: project.link, summary: project.summary, sortIndex: index
+                name: project.name, link: project.link, summary: project.summary,
+                details: project.details, sortIndex: index
             )
             target.projects.append(created)
-            for (pointIndex, point) in project.points.enumerated() {
-                created.points.append(makePoint(point, sortIndex: pointIndex))
+            for skillName in project.skills {
+                guard let tag = resolveTag(named: skillName),
+                      !created.skills.contains(where: { $0 === tag })
+                else { continue }
+                created.skills.append(tag)
             }
         }
         for rawInterest in replacement.interests {
@@ -265,11 +275,10 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// Works for role points and project points; resequences the surviving
-    /// siblings so sortIndex stays dense.
+    /// Resequences the surviving siblings so sortIndex stays dense.
     func deleteAchievement(_ achievement: Achievement) throws {
         let profile = try requireProfile()
-        let siblings = achievement.role?.orderedAchievements ?? achievement.project?.orderedPoints ?? []
+        let siblings = achievement.role?.orderedAchievements ?? []
         context.delete(achievement)
         for (index, sibling) in siblings.filter({ $0 !== achievement }).enumerated() {
             sibling.sortIndex = index
@@ -283,21 +292,25 @@ final class ProfileStore {
     @discardableResult
     func tag(_ achievement: Achievement, skillNamed rawName: String) throws -> SkillTag {
         let profile = try requireProfile()
-        let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let tag: SkillTag
-        if let existing = profile.skills.first(where: {
-            $0.name.caseInsensitiveCompare(name) == .orderedSame
-        }) {
-            tag = existing
-        } else {
-            tag = SkillTag(name: name)
-            profile.skills.append(tag)
-        }
+        let tag = resolvePoolTag(named: rawName, in: profile)
         if !achievement.skills.contains(where: { $0 === tag }) {
             achievement.skills.append(tag)
         }
         touch(profile)
         try context.save()
+        return tag
+    }
+
+    /// The [PROFILE-8] rule: case-insensitive, trimmed, first casing wins.
+    private func resolvePoolTag(named rawName: String, in profile: Profile) -> SkillTag {
+        let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let existing = profile.skills.first(where: {
+            $0.name.caseInsensitiveCompare(name) == .orderedSame
+        }) {
+            return existing
+        }
+        let tag = SkillTag(name: name)
+        profile.skills.append(tag)
         return tag
     }
 
@@ -351,21 +364,28 @@ final class ProfileStore {
     // MARK: - Projects
 
     @discardableResult
-    func addProject(name: String, link: String = "", summary: String = "") throws -> Project {
+    func addProject(
+        name: String, link: String = "", summary: String = "", details: String = ""
+    ) throws -> Project {
         let profile = try requireProfile()
         let nextIndex = (profile.projects.map(\.sortIndex).max() ?? -1) + 1
-        let project = Project(name: name, link: link, summary: summary, sortIndex: nextIndex)
+        let project = Project(
+            name: name, link: link, summary: summary, details: details, sortIndex: nextIndex
+        )
         profile.projects.append(project)
         touch(profile)
         try context.save()
         return project
     }
 
-    func updateProject(_ project: Project, name: String, link: String, summary: String) throws {
+    func updateProject(
+        _ project: Project, name: String, link: String, summary: String, details: String
+    ) throws {
         let profile = try requireProfile()
         project.name = name
         project.link = link
         project.summary = summary
+        project.details = details
         touch(profile)
         try context.save()
     }
@@ -391,26 +411,23 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// A point belongs to exactly one parent: project points never get a
-    /// role, and `addAchievement(to:)` never sets a project.
+    /// Project tags draw from the same shared pool as achievement skills
+    /// ([PROFILE-21], decisions/0009).
     @discardableResult
-    func addPoint(to project: Project, text: String) throws -> Achievement {
+    func tag(_ project: Project, skillNamed rawName: String) throws -> SkillTag {
         let profile = try requireProfile()
-        let nextIndex = (project.points.map(\.sortIndex).max() ?? -1) + 1
-        let point = Achievement(text: text, sortIndex: nextIndex)
-        project.points.append(point)
+        let tag = resolvePoolTag(named: rawName, in: profile)
+        if !project.skills.contains(where: { $0 === tag }) {
+            project.skills.append(tag)
+        }
         touch(profile)
         try context.save()
-        return point
+        return tag
     }
 
-    func movePoints(in project: Project, from source: IndexSet, to destination: Int) throws {
+    func untag(_ project: Project, tag: SkillTag) throws {
         let profile = try requireProfile()
-        var ordered = project.orderedPoints
-        ordered.move(fromOffsets: source, toOffset: destination)
-        for (index, point) in ordered.enumerated() {
-            point.sortIndex = index
-        }
+        project.skills.removeAll { $0 === tag }
         touch(profile)
         try context.save()
     }

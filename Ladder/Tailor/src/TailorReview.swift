@@ -12,14 +12,23 @@ final class TailorReview {
     let gaps: [String]
     let rationale: String
 
-    init(result: TailorResult, achievementsByID: [String: Achievement]) {
-        // Ids were validated against the payload map before construction,
+    /// Whole projects the result selected, in selection order — carried
+    /// as-is, never expanded (decisions/0007).
+    let selectedProjects: [Project]
+
+    init(
+        result: TailorResult,
+        achievementsByID: [String: Achievement],
+        projectsByID: [String: Project] = [:]
+    ) {
+        // Ids were validated against the payload maps before construction,
         // so every selection resolves.
         items = result.selections.compactMap { selection in
             achievementsByID[selection.achievementID].map {
                 ReviewedBullet(achievement: $0, bullet: selection.bullet)
             }
         }
+        selectedProjects = result.projects.compactMap { projectsByID[$0] }
         summary = result.summary
         gaps = result.gaps
         rationale = result.rationale
@@ -32,6 +41,14 @@ final class TailorReview {
                 ReviewedOutcome.Item(
                     canonicalText: $0.achievement.text,
                     text: $0.accepted ? $0.bullet : $0.achievement.text
+                )
+            },
+            projects: selectedProjects.map {
+                ReviewedOutcome.Project(
+                    name: $0.name,
+                    link: $0.link,
+                    details: $0.details,
+                    tags: $0.skills.map(\.name).sorted()
                 )
             },
             summary: summary,
@@ -49,7 +66,17 @@ struct ReviewedOutcome: Equatable, Sendable {
         var text: String
     }
 
+    /// A selected whole project — description and Tags verbatim from the
+    /// Profile (decisions/0007).
+    struct Project: Equatable, Sendable {
+        var name: String
+        var link: String = ""
+        var details: String = ""
+        var tags: [String] = []
+    }
+
     var items: [Item]
+    var projects: [Project] = []
     var summary: String = ""
     var gaps: [String]
     var rationale: String

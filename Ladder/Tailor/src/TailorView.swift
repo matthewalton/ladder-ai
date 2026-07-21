@@ -228,6 +228,25 @@ struct TailorReviewView: View {
                         }
                     }
                 }
+                if !review.selectedProjects.isEmpty {
+                    // Whole units, as they stand on the Profile — nothing to
+                    // accept or reject per project (decisions/0007).
+                    Section("Projects on this CV") {
+                        ForEach(review.selectedProjects, id: \.persistentModelID) { project in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(project.name.isEmpty ? "Project" : project.name)
+                                    .font(.body)
+                                    .foregroundStyle(Color.ink)
+                                if !project.details.isEmpty {
+                                    Text(project.details)
+                                        .font(.caption)
+                                        .foregroundStyle(Color.inkSoft)
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
             }
             .scrollContentBackground(.hidden)
 
@@ -248,8 +267,8 @@ struct TailorReviewView: View {
         }
     }
 
-    /// Review items grouped under the role or project the point belongs to,
-    /// in selection order.
+    /// Review items grouped under the role the point belongs to, in
+    /// selection order; selected projects list as whole units beneath.
     private var groupedItems: [(label: String, items: [ReviewedBullet])] {
         var order: [String] = []
         var groups: [String: [ReviewedBullet]] = [:]
@@ -262,13 +281,8 @@ struct TailorReviewView: View {
     }
 
     private func parentLabel(for achievement: Achievement) -> String {
-        if let role = achievement.role {
-            return "\(role.title) — \(role.company)"
-        }
-        if let project = achievement.project {
-            return project.name.isEmpty ? "Project" : project.name
-        }
-        return "Profile"
+        guard let role = achievement.role else { return "Profile" }
+        return "\(role.title) — \(role.company)"
     }
 }
 

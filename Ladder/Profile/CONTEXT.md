@@ -4,10 +4,10 @@ Slice-local terms. `Profile`, `Role`, `Achievement`, and `Tailoring` are defined
 the root `CONTEXT.md` and are not restated here.
 
 **Tag**:
-A named label attached to individual points (role achievements and project
-points) so they can be matched against a job description. Stored once per
-distinct name (case-insensitive) and shared across the Profile — points
-reference Tags, they never own private copies. Tags are matching metadata, not
+A named label attached to Achievements and to Projects so they can be matched
+against a job description. Stored once per distinct name (case-insensitive)
+and shared across the Profile — Achievements and Projects reference Tags, they
+never own private copies. Tags are matching metadata, not
 a CV section of their own (decisions/0006). Implemented by the legacy
 `SkillTag` model — do not rename it in code (decisions/0006).
 _Avoid_: skill, skill tag (in UI copy and docs), chip (that is the UI rendering
@@ -16,8 +16,8 @@ of a Tag)
 **Point**:
 Alias to avoid — the UI shows Achievements as brief bullet "points", but the
 domain word stays **Achievement** (root `CONTEXT.md`). Views may use "point" in
-user-facing copy; code identifiers and docs say Achievement, except where a
-name distinguishes project-owned achievements (`Project.points`).
+user-facing copy; code identifiers and docs say Achievement. Since
+decisions/0009 only Roles own Achievements — Projects have no points.
 
 **Contact info**:
 The Profile's identity-header value type — email, phone, location, link. A Codable
@@ -31,10 +31,17 @@ rewrites education.
 _Avoid_: school, degree (as the entity name)
 
 **Project**:
-A piece of work outside a Role — name, optional link, one-line summary, and its
-own brief points, tagged for JD matching exactly like role achievements
-(decisions/0005). Manually ordered.
+A piece of work outside a Role — name, optional link, one-line summary shown
+inline next to the name, a multi-line description, and its own Tags for JD
+matching, drawn from the shared pool (decisions/0009). Manually ordered.
 _Avoid_: side project (as the entity name), portfolio item
+
+**Description** (of a Project):
+The Project's multi-line prose body — how the project is told on the profile
+page and on a rendered CV. Distinct from the one-line summary, and from an
+Achievement's strength notes.
+_Avoid_: details (in UI copy and docs; the persisted attribute may keep the
+name the schema needs), body, blurb
 
 **Interests**:
 An ordered list of short strings on the Profile — colour for the CV's final

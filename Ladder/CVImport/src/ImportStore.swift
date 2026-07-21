@@ -76,7 +76,11 @@ final class ImportStore {
             } catch {
                 throw ImportError.requestFailed(detail: Self.requestFailureDetail(for: error))
             }
-            let proposal = try ImportProposal(json: response)
+            var proposal = try ImportProposal(json: response)
+            // Contact detection (decisions/0009): detected email/phone/link
+            // override the model's proposal before the review is shown.
+            let detected = DetectedContact.detect(in: text, fileURL: url)
+            proposal.identity.contact = detected.overriding(proposal.identity.contact)
             review = ImportReview(proposal: proposal)
             phase = .review
         } catch {
@@ -160,7 +164,8 @@ final class ImportStore {
                     name: project.proposed.name,
                     link: project.proposed.link ?? "",
                     summary: project.proposed.summary ?? "",
-                    points: project.points.filter(\.included).map(point)
+                    details: project.proposed.description ?? "",
+                    skills: project.skills.filter(\.included).map(\.name)
                 )
             },
             interests: review.interests.filter(\.included).map(\.name)

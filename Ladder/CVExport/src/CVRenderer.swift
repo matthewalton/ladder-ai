@@ -99,8 +99,8 @@ struct CVPageView: View {
                                     .foregroundStyle(Color.inkSoft)
                             }
                         }
-                        ForEach(Array(project.bullets.enumerated()), id: \.offset) { _, bullet in
-                            Text("•  \(bullet)")
+                        if !project.details.isEmpty {
+                            Text(project.details)
                                 .font(.body)
                         }
                     }
@@ -168,7 +168,7 @@ extension CVDocument {
         document.projects = [
             ProjectSection(
                 name: "Trail Mapper", link: "github.com/alex/trail-mapper",
-                bullets: ["Engineered offline tile caching for a production mapping app"]
+                details: "Engineered offline tile caching for a production mapping app."
             )
         ]
         document.education = [

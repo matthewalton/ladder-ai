@@ -140,8 +140,8 @@ struct CVImportFlowTests {
         }
         for project in review.projects {
             #expect(project.included)
-            for point in project.points {
-                #expect(point.included)
+            for skill in project.skills {
+                #expect(skill.included)
             }
         }
         for interest in review.interests {
@@ -197,11 +197,12 @@ struct CVImportFlowTests {
         #expect(initech.end == monthDate(2021, 3))
 
         // The Tag pool is rebuilt from the replacement alone; "Swift" is
-        // named by a role achievement and a project point yet lands once.
-        #expect(Set(profile.skills.map(\.name)) == ["Swift", "CI", "SwiftData", "Python"])
+        // named by a role achievement and a project yet lands once.
+        #expect(Set(profile.skills.map(\.name)) == ["Swift", "CI", "SwiftData", "Python", "MapKit"])
         let swift = try #require(profile.skills.first { $0.name == "Swift" })
-        let projectPoint = try #require(profile.projects.first?.orderedPoints.first)
-        #expect(projectPoint.skills.first === swift, "the same skill name shares one Tag across the replacement")
+        let project = try #require(profile.projects.first)
+        #expect(project.details == "An offline-first hiking map app with tile caching and route planning, built to survive a week without signal.")
+        #expect(project.skills.contains { $0 === swift }, "the same skill name shares one Tag across the replacement")
     }
 
     @Test("[CVIMPORT-6] a proposed item excluded in review does not land in the Profile")
@@ -338,8 +339,8 @@ struct CVImportFlowTests {
         #expect(profileStore.profile?.education.isEmpty == true)
     }
 
-    @Test("[CVIMPORT-25] the proposal lists the CV's projects with their points for review")
-    func proposalListsProjectsWithPointsForReview() async throws {
+    @Test("[CVIMPORT-28] the proposal lists the CV's projects with description and skills for review")
+    func proposalListsProjectsWithDescriptionAndSkillsForReview() async throws {
         let profileStore = try makeProfileStore()
         let store = makeImportStore(
             profileStore: profileStore,
@@ -352,15 +353,124 @@ struct CVImportFlowTests {
         #expect(project.proposed.name == "Trail Mapper")
         #expect(project.proposed.link == "https://github.com/alex/trail-mapper")
         #expect(project.proposed.summary == "Offline-first hiking maps")
-        #expect(project.points.map(\.proposed.text) == ["Built tile caching for offline use"])
-        #expect(project.points.first?.skills.map(\.name) == ["Swift"])
+        #expect(project.proposed.description == "An offline-first hiking map app with tile caching and route planning, built to survive a week without signal.")
+        #expect(project.skills.map(\.name) == ["Swift", "MapKit"])
 
-        // Excluding the project excludes its points with it.
+        // Excluding one proposed skill keeps the project confirmable.
+        project.skills[1].included = false
+        store.confirmReview()
+        let landed = try #require(profileStore.profile?.projects.first)
+        #expect(landed.skills.map(\.name) == ["Swift"])
+    }
+
+    @Test("[CVIMPORT-28] an excluded project is absent from the replacement wholesale")
+    func excludedProjectDoesNotLand() async throws {
+        let profileStore = try makeProfileStore()
+        let store = makeImportStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService.importFixture()
+        )
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        let review = try #require(store.review)
+        let project = try #require(review.projects.first)
         project.included = false
         store.confirmReview()
         let profile = try #require(profileStore.profile)
         #expect(profile.projects.isEmpty)
         #expect(Set(profile.roles.map(\.company)) == ["Acme", "Initech"], "the rest of the review still lands")
+    }
+
+    @Test("[CVIMPORT-29] a contact value detected in the CV overrides the service's proposal for that field")
+    func detectedContactOverridesProposal() throws {
+        // The worked example from the criterion: the real CV header whose
+        // contact the live model returned as null.
+        let text = """
+        MATTHEW ALTON
+        Software Engineer · Agentic Workflows · React / TypeScript
+        London, UK · 07541 964763 · mattalton97@gmail.com
+        PROFILE
+        Software engineer with 5 years building React/TypeScript apps.
+        Baton — Native macOS kanban board github.com/matthewalton/baton
+        """
+
+        let detected = DetectedContact.detect(in: text)
+
+        #expect(detected.email == "mattalton97@gmail.com")
+        #expect(detected.phone == "07541 964763")
+        #expect(detected.link == nil, "a URL outside the header region is a project link, not the personal one")
+
+        let overridden = detected.overriding(ProposedContact(
+            email: nil, phone: "999", location: "Leeds", link: nil
+        ))
+        #expect(overridden.email == "mattalton97@gmail.com", "detection fills what the model omitted")
+        #expect(overridden.phone == "07541 964763", "a detected value wins over the model's")
+        #expect(overridden.location == "Leeds", "location stays with the model")
+        #expect(overridden.link == nil)
+    }
+
+    @Test("[CVIMPORT-29] first match per field wins")
+    func firstDetectedMatchWinsPerField() throws {
+        let text = """
+        Alex Climber
+        alex@example.com · github.com/alexclimber
+        Experience
+        References available from referee@oldco.com
+        """
+
+        let detected = DetectedContact.detect(in: text)
+
+        #expect(detected.email == "alex@example.com", "a referee's email never displaces the owner's")
+        #expect(detected.link?.contains("github.com/alexclimber") == true, "a header URL is the personal link")
+    }
+
+    @Test("[CVIMPORT-29] a detected value reaches the review over a null-contact proposal")
+    func detectionFlowsIntoTheReview() async throws {
+        let profileStore = try makeProfileStore()
+        // The model returns identity with null contact; the fixture PDF's
+        // header text carries alex@example.com.
+        let nullContact = Data("""
+        {
+          "identity": {
+            "name": "Alex Climber",
+            "headline": "Staff Engineer",
+            "contact": { "email": null, "phone": null, "location": null, "link": null }
+          },
+          "roles": [], "education": [], "projects": [], "interests": [],
+          "notImportedSections": []
+        }
+        """.utf8)
+        let store = makeImportStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService(returning: nullContact)
+        )
+
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        let review = try #require(store.review)
+        #expect(review.identity.contact.email == "alex@example.com",
+                "detection runs between extraction and review")
+    }
+
+    @Test("[CVIMPORT-30] a contact field with no detected value keeps the service's proposed value")
+    func undetectedFieldsKeepTheProposal() throws {
+        let text = """
+        Alex Climber
+        Staff Engineer
+        Leeds
+        Experience
+        Acme — Senior Engineer
+        """
+
+        let detected = DetectedContact.detect(in: text)
+        #expect(detected.email == nil)
+        #expect(detected.link == nil)
+
+        let contact = ProposedContact(
+            email: "alex@example.com", phone: nil, location: "Leeds, UK", link: "https://alex.dev"
+        )
+        let overridden = detected.overriding(contact)
+        #expect(overridden == contact, "detection fills, never blanks")
     }
 
     @Test("[CVIMPORT-26] the proposal lists the CV's interests for review")

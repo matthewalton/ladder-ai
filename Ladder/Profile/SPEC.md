@@ -70,7 +70,8 @@ non-default value:
 - two `SkillTag`s with distinct names
 - two `Education` entries — one completed (non-nil end, non-empty detail), one
   in progress (nil end, empty detail)
-- one `Project` with name, link, summary, and at least one tagged point
+- one `Project` with name, link, summary, a multi-line description, and at
+  least one Tag (decisions/0009)
 
 Every field compares equal after closing and reopening the container. Any change
 to this slice's schema must keep this criterion's test in step (CLAUDE.md:
@@ -82,11 +83,12 @@ Cascade delete: `Role` owns its `Achievement`s. `SkillTag`s referenced by the
 deleted achievements are not deleted — they are shared across the Profile, and
 orphan pruning is out of scope for this slice.
 
-## [PROFILE-7] Reordering a parent's points persists the new order
+## [PROFILE-7] Reordering a role's achievements persists the new order
 
-Applies to a role's achievements and to a project's points alike. SwiftData
-to-many relationships do not guarantee order, so order is an explicit persisted
-attribute (a sort index) — the dropped order survives a store reopen.
+SwiftData to-many relationships do not guarantee order, so order is an
+explicit persisted attribute (a sort index) — the dropped order survives a
+store reopen. Since decisions/0009 only roles own points; projects order
+themselves by their own sort index, not their content.
 
 Edge case: moving the first point to the last position — every intermediate
 index shifts by one.
@@ -100,8 +102,8 @@ Tag-name deduplication:
 - The surviving Tag keeps the name as first entered ("Swift" above).
 
 Tag chips in the editor render `SkillTag`s; the chip is the rendering, the
-`SkillTag` is the model (see this slice's CONTEXT.md). Role points and project
-points draw from the same shared pool.
+`SkillTag` is the model (see this slice's CONTEXT.md). Achievements and
+Projects draw from the same shared pool ([PROFILE-21]).
 
 ## [PROFILE-9] Editing a point's text persists the new text
 
@@ -117,16 +119,26 @@ editor, whose Experience section carries the empty-state copy (DESIGN.md §6):
 add-role action. Distinct from the create-profile empty state ([PROFILE-2]),
 which is shown when no Profile exists at all.
 
-## [PROFILE-11] Deleting a Project deletes its points
+## [PROFILE-19] Deleting a Project leaves the shared Tags it referenced intact
 
-Cascade delete, the mirror of [PROFILE-6]: `Project` owns its points. Shared
-`SkillTag`s referenced by the deleted points survive.
+Projects no longer own points (decisions/0009, retiring [PROFILE-11] and
+[PROFILE-12]), so a Project delete removes only the Project record and its Tag
+links. The `SkillTag`s it referenced — and their links to achievements and
+other Projects — survive, the [PROFILE-6]/[PROFILE-16] no-orphan-pruning
+stance.
 
-## [PROFILE-12] A point belongs to exactly one parent
+## [PROFILE-20] Editing a Project's description persists the new text
 
-A point created under a role has a nil project; a point created under a project
-has a nil role. The store's creation pathways are the only ways a point comes to
-exist, and neither sets both parents.
+The multi-line description (decisions/0009) is edited in the detail rail like
+any other project field, and the edit survives a store reopen. The same store
+pathway carries edits to the one-line summary and link.
+
+## [PROFILE-21] Tagging a Project with an existing Tag name links the one shared SkillTag
+
+The [PROFILE-8] rule applied to Projects: comparison is case-insensitive and
+trimmed, the first-entered casing survives, and the Project references the
+shared `SkillTag` — never a private copy. Tagging a Project "swift" when an
+achievement already carries "Swift" yields one Tag linked from both.
 
 ## [PROFILE-13] Identity and contact edits persist across a reopen
 
@@ -147,28 +159,30 @@ relative order with a dense sort index.
 
 ## [PROFILE-16] Untagging removes the link, never the Tag
 
-Removing a Tag from a point severs only that point's reference: the `SkillTag`
-record and its links to other points survive (no orphan pruning, consistent with
-[PROFILE-6]).
+Removing a Tag from a point or a Project severs only that one reference: the
+`SkillTag` record and its links to other points and Projects survive (no
+orphan pruning, consistent with [PROFILE-6]).
 
 ## [PROFILE-17] Replacing the Profile's content leaves exactly the replacement content after a store reopen
 
 The wholesale replace pathway (decisions/0008): the store takes a replacement —
 a plain value carrying identity (name, headline), contact, roles with their
-achievements (text, impact metric, tech, skill names), education, projects with
-their points, and interests — and rebuilds the Profile from it in one mutation.
+achievements (text, impact metric, tech, skill names), education, projects
+(name, link, summary, description, skill names — decisions/0009), and
+interests — and rebuilds the Profile from it in one mutation.
 
 - All-or-nothing: every prior role, achievement, education entry, project,
   interest, and `SkillTag` is gone afterwards — a replace never leaves a merged
   hybrid, and the Tag pool is rebuilt from the replacement's skill names alone
   (wholesale removal is deliberate here, unlike the no-orphan-pruning stance of
   single deletes, [PROFILE-6]/[PROFILE-16]).
-- Skill names within the replacement dedupe by the [PROFILE-8] rule
-  (case-insensitive, trimmed, first casing wins).
+- Skill names within the replacement — achievement and project alike — dedupe
+  by the [PROFILE-8] rule (case-insensitive, trimmed, first casing wins) into
+  one shared pool ([PROFILE-21]).
 - `updatedAt` is set at replace time.
-- Ordering: achievements and project points keep the replacement's order via
-  the persisted sort index ([PROFILE-7]); interests keep entry order
-  ([PROFILE-14]).
+- Ordering: achievements keep the replacement's order via the persisted sort
+  index ([PROFILE-7]), projects via their own sort index; interests keep entry
+  order ([PROFILE-14]).
 
 Exercised by populating a full Profile, replacing it with different content,
 closing and reopening the container, and comparing every field against the

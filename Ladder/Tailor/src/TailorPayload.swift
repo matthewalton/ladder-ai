@@ -1,11 +1,12 @@
 import Foundation
 
-/// `achievementsByID` is the map result validation resolves selections
-/// against — role points (`a1…`) and project points (`p1…`) together.
+/// `achievementsByID` (`a1…`) and `projectsByID` (`p1…`) are the maps result
+/// validation resolves selections against (decisions/0007).
 @MainActor
 struct TailorPayload {
     let json: String
     let achievementsByID: [String: Achievement]
+    let projectsByID: [String: Project]
 
     init(profile: Profile, details: JobDetails) throws {
         // Roles newest-first — SwiftData to-many relationships are unordered,
@@ -31,18 +32,21 @@ struct TailorPayload {
             )
         }
 
-        var nextProjectPointID = 1
+        // Projects serialize as whole units (decisions/0007) — the model
+        // includes or omits each by its `p…` id.
+        var projectsByID: [String: Project] = [:]
+        var nextProjectID = 1
         let payloadProjects = profile.orderedProjects.map { project in
-            PayloadProject(
+            let id = "p\(nextProjectID)"
+            nextProjectID += 1
+            projectsByID[id] = project
+            return PayloadProject(
+                id: id,
                 name: project.name,
                 link: project.link.isEmpty ? nil : project.link,
                 summary: project.summary.isEmpty ? nil : project.summary,
-                points: project.orderedPoints.map { point in
-                    let id = "p\(nextProjectPointID)"
-                    nextProjectPointID += 1
-                    byID[id] = point
-                    return PayloadAchievement(id: id, achievement: point)
-                }
+                description: project.details.isEmpty ? nil : project.details,
+                tags: project.skills.map(\.name).sorted()
             )
         }
 
@@ -75,6 +79,7 @@ struct TailorPayload {
         encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
         json = String(decoding: try encoder.encode(body), as: UTF8.self)
         achievementsByID = byID
+        self.projectsByID = projectsByID
     }
 
     /// Month resolution matches the import prompt's convention.
@@ -110,10 +115,12 @@ private struct PayloadRole: Encodable {
 }
 
 private struct PayloadProject: Encodable {
+    var id: String
     var name: String
     var link: String?
     var summary: String?
-    var points: [PayloadAchievement]
+    var description: String?
+    var tags: [String]
 }
 
 private struct PayloadEducation: Encodable {

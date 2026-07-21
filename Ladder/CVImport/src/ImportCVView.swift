@@ -335,10 +335,21 @@ private struct ReviewedProjectSection: View {
 
     var body: some View {
         Section {
-            ForEach(project.points) { point in
-                ReviewedAchievementRow(achievement: point)
-                    .disabled(!project.included)
+            if let description = project.proposed.description, !description.isEmpty {
+                Text(description)
+                    .font(.body)
+                    .foregroundStyle(Color.ink)
                     .opacity(project.included ? 1 : 0.4)
+                    .padding(.vertical, 2)
+            }
+            if !project.skills.isEmpty {
+                HStack(spacing: 4) {
+                    ForEach(project.skills) { skill in
+                        ReviewedSkillChip(skill: skill)
+                            .disabled(!project.included)
+                    }
+                }
+                .opacity(project.included ? 1 : 0.4)
             }
         } header: {
             Toggle(isOn: $project.included) {
@@ -507,14 +518,8 @@ private struct ReviewedSkillChip: View {
           "name": "Trail Mapper",
           "link": "https://github.com/alex/trail-mapper",
           "summary": "Offline-first hiking maps",
-          "points": [
-            {
-              "text": "Built tile caching for offline use",
-              "impactMetric": null,
-              "tech": ["Swift"],
-              "skills": ["Swift"]
-            }
-          ]
+          "description": "An offline-first hiking map app with tile caching and route planning, built to survive a week without signal.",
+          "skills": ["Swift", "MapKit"]
         }
       ],
       "interests": ["Climbing", "Trail running"],

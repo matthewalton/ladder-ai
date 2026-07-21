@@ -59,14 +59,8 @@
       "name": "Trail Mapper",
       "link": "https://github.com/alex/trail-mapper",
       "summary": "Offline-first hiking maps",
-      "points": [
-        {
-          "text": "Built tile caching for offline use",
-          "impactMetric": null,
-          "tech": ["Swift"],
-          "skills": ["Swift"]
-        }
-      ]
+      "description": "An offline-first hiking map app with tile caching and route planning, built to survive a week without signal.",
+      "skills": ["Swift", "MapKit"]
     }
   ],
   "interests": ["Climbing", "Trail running"],

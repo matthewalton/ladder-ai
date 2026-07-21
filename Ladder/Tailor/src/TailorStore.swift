@@ -42,9 +42,11 @@ final class TailorStore {
             phase = .failed(.jobDescriptionRequired)
             return
         }
+        // Selectable content: role achievements point by point, projects
+        // whole (decisions/0007).
         guard let profile = profileStore.profile,
             profile.roles.contains(where: { !$0.achievements.isEmpty })
-                || profile.projects.contains(where: { !$0.points.isEmpty })
+                || !profile.projects.isEmpty
         else {
             phase = .failed(.achievementsRequired)
             return
@@ -60,11 +62,16 @@ final class TailorStore {
             let prompt = try TailorPrompt.text(from: bundle)
             let service = makeIntelligence(key)
             let validIDs = Set(payload.achievementsByID.keys)
+            let validProjectIDs = Set(payload.projectsByID.keys)
             let request = IntelligenceRequest(prompt: prompt, payload: payload.json)
             let response = try await service.complete(request)
             let result: TailorResult
             do {
-                result = try TailorResult(json: response, validAchievementIDs: validIDs)
+                result = try TailorResult(
+                    json: response,
+                    validAchievementIDs: validIDs,
+                    validProjectIDs: validProjectIDs
+                )
             } catch let failure as TailorValidationFailure {
                 // Exactly one repair attempt; a repair response failing
                 // validation fails the run.
@@ -75,9 +82,17 @@ final class TailorStore {
                     )
                 )
                 let repairResponse = try await service.complete(repair)
-                result = try TailorResult(json: repairResponse, validAchievementIDs: validIDs)
+                result = try TailorResult(
+                    json: repairResponse,
+                    validAchievementIDs: validIDs,
+                    validProjectIDs: validProjectIDs
+                )
             }
-            review = TailorReview(result: result, achievementsByID: payload.achievementsByID)
+            review = TailorReview(
+                result: result,
+                achievementsByID: payload.achievementsByID,
+                projectsByID: payload.projectsByID
+            )
             phase = .review
         } catch is TailorValidationFailure {
             phase = .failed(.resultInvalid)

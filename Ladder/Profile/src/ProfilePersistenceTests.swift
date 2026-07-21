@@ -151,12 +151,11 @@ struct ProfilePersistenceTests {
                 name: "Trail Mapper",
                 link: "https://github.com/alex/trail-mapper",
                 summary: "Offline-first hiking maps",
+                details: "Built tile caching so a week's maps survive without signal.",
                 sortIndex: 0
             )
             profile.projects = [project]
-            let point = Achievement(text: "Built tile caching for offline use", sortIndex: 0)
-            project.points = [point]
-            point.skills = [swift]
+            project.skills = [swift]
 
             profile.interests = ["climbing", "trail running", "coffee"]
 
@@ -215,10 +214,8 @@ struct ProfilePersistenceTests {
         #expect(project.name == "Trail Mapper")
         #expect(project.link == "https://github.com/alex/trail-mapper")
         #expect(project.summary == "Offline-first hiking maps")
-        let point = try #require(project.orderedPoints.first)
-        #expect(point.text == "Built tile caching for offline use")
-        #expect(point.role == nil, "a project point has no role")
-        #expect(point.skills.map(\.name) == ["Swift"], "project points share the profile's Tags")
+        #expect(project.details == "Built tile caching so a week's maps survive without signal.")
+        #expect(project.skills.map(\.name) == ["Swift"], "project Tags share the profile's pool")
 
         #expect(profile.interests == ["climbing", "trail running", "coffee"], "interests keep entered order")
     }
@@ -272,7 +269,7 @@ struct ProfilePersistenceTests {
                 start: Date(timeIntervalSince1970: 900_000_000), end: nil
             )
             let project = try store.addProject(name: "Old Project")
-            try store.addPoint(to: project, text: "Old point")
+            try store.tag(project, skillNamed: "OldProjectSkill")
             try store.addInterest("Old interest")
 
             let replacement = ProfileReplacement(
@@ -307,7 +304,10 @@ struct ProfilePersistenceTests {
                     name: "Baton",
                     link: "https://github.com/matthewalton/baton",
                     summary: "Native macOS kanban board",
-                    points: [ReplacementPoint(text: "Embedded MCP server", skills: ["Swift"])]
+                    details: "A SwiftUI kanban app with an MCP server embedded in the app itself.",
+                    // " react " joins the achievements' "React" — one shared
+                    // Tag ([PROFILE-21]); "SQLite" is project-only.
+                    skills: [" react ", "SQLite"]
                 )],
                 interests: ["Cycling", "Running", " cycling "]
             )
@@ -345,7 +345,11 @@ struct ProfilePersistenceTests {
         let project = try #require(profile.projects.first)
         #expect(profile.projects.count == 1)
         #expect(project.name == "Baton")
-        #expect(project.orderedPoints.map(\.text) == ["Embedded MCP server"])
+        #expect(project.details == "A SwiftUI kanban app with an MCP server embedded in the app itself.")
+        #expect(
+            Set(project.skills.map(\.name)) == ["React", "SQLite"],
+            "project skills join the shared pool, deduped per [PROFILE-8]"
+        )
 
         #expect(profile.interests == ["Cycling", "Running"], "interests dedupe per [PROFILE-14]")
 
@@ -354,11 +358,11 @@ struct ProfilePersistenceTests {
         let context = ModelContext(reopened.container)
         #expect(try context.fetchCount(FetchDescriptor<Profile>()) == 1)
         #expect(try context.fetchCount(FetchDescriptor<Role>()) == 1)
-        #expect(try context.fetchCount(FetchDescriptor<Achievement>()) == 3)
+        #expect(try context.fetchCount(FetchDescriptor<Achievement>()) == 2)
         #expect(try context.fetchCount(FetchDescriptor<Education>()) == 1)
         #expect(try context.fetchCount(FetchDescriptor<Project>()) == 1)
         let tags = try context.fetch(FetchDescriptor<SkillTag>())
-        #expect(Set(tags.map(\.name)) == ["React", "Agentic workflows", "Swift"])
+        #expect(Set(tags.map(\.name)) == ["React", "Agentic workflows", "SQLite"])
     }
 
     @Test("[PROFILE-15] deleting a point persists, with the surviving siblings' order intact")
@@ -381,6 +385,33 @@ struct ProfilePersistenceTests {
         try reopened.load()
         let role = try #require(reopened.profile?.roles.first)
         #expect(role.orderedAchievements.map(\.text) == ["First", "Third"])
+    }
+
+    @Test("[PROFILE-20] editing a Project's description persists the new text")
+    func projectDescriptionEditSurvivesReopen() throws {
+        let url = temporaryStoreURL()
+        defer { removeStore(at: url) }
+
+        do {
+            let store = try ProfileStore(container: ProfileStore.container(at: url))
+            try store.load()
+            try store.createProfile(name: "Alex Climber", headline: "")
+            let project = try store.addProject(name: "Trail Mapper")
+            try store.updateProject(
+                project,
+                name: "Trail Mapper",
+                link: "https://example.com",
+                summary: "Offline-first hiking maps",
+                details: "Built tile caching so a week's maps survive without signal."
+            )
+        }
+
+        let reopened = try ProfileStore(container: ProfileStore.container(at: url))
+        try reopened.load()
+        let project = try #require(reopened.profile?.projects.first)
+        #expect(project.details == "Built tile caching so a week's maps survive without signal.")
+        #expect(project.summary == "Offline-first hiking maps")
+        #expect(project.link == "https://example.com")
     }
 }
 
