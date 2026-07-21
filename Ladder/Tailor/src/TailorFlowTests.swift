@@ -60,7 +60,7 @@ struct TailorFlowTests {
             "Cut CI build times across every product target",
             "Led incident response for the payments outage",
         ])
-        #expect(review.items.first?.rephrasing.contains("feedback loop") == true)
+        #expect(review.items.first?.bullet.contains("feedback loop") == true)
     }
 
     @Test("[TAILOR-2] a tailor run with an empty job description is refused")
@@ -166,7 +166,7 @@ struct TailorFlowTests {
         // the same invalid result to the repair request, so the run ends failed.
         let unknownSelection = Data("""
         {
-          "selections": [{"achievementID": "a9", "rephrasing": "Invented history"}],
+          "selections": [{"achievementID": "a9", "bullet": "Invented history"}],
           "gaps": [],
           "rationale": "…"
         }
@@ -223,8 +223,8 @@ struct TailorFlowTests {
         #expect(await service.recordedRequests.count == 2, "no further request is sent after the repair fails")
     }
 
-    @Test("[TAILOR-11] the review shows each rephrasing beside its achievement's canonical text")
-    func reviewPairsCanonicalTextWithRephrasing() async throws {
+    @Test("[TAILOR-11] the review shows each expanded bullet beside its achievement's canonical text")
+    func reviewPairsCanonicalTextWithBullet() async throws {
         let store = makeTailorStore(
             profileStore: try makeProfileStore(),
             service: FixtureIntelligenceService.tailorFixture()
@@ -233,7 +233,7 @@ struct TailorFlowTests {
         await store.startRun(jobDetails)
 
         let review = try #require(store.review)
-        let pairs = review.items.map { ($0.achievement.text, $0.rephrasing) }
+        let pairs = review.items.map { ($0.achievement.text, $0.bullet) }
         try #require(pairs.count == 2)
         #expect(pairs[0].0 == "Cut CI build times across every product target")
         #expect(pairs[0].1 == "Drove CI build times down across every product target, tightening the platform feedback loop")
@@ -241,7 +241,7 @@ struct TailorFlowTests {
         #expect(pairs[1].1 == "Led cross-team incident response for a critical payments outage")
     }
 
-    @Test("[TAILOR-12] every rephrasing enters review as accepted")
+    @Test("[TAILOR-12] every expanded bullet enters review as accepted")
     func reviewDefaultsEverythingToAccepted() async throws {
         let store = makeTailorStore(
             profileStore: try makeProfileStore(),
@@ -257,8 +257,8 @@ struct TailorFlowTests {
         }
     }
 
-    @Test("[TAILOR-13] the reviewed outcome uses the rephrasing for an accepted achievement")
-    func acceptedRephrasingLandsInTheOutcome() async throws {
+    @Test("[TAILOR-13] the reviewed outcome uses the expanded bullet for an accepted achievement")
+    func acceptedBulletLandsInTheOutcome() async throws {
         let store = makeTailorStore(
             profileStore: try makeProfileStore(),
             service: FixtureIntelligenceService.tailorFixture()
@@ -275,8 +275,8 @@ struct TailorFlowTests {
         ])
     }
 
-    @Test("[TAILOR-14] the reviewed outcome uses the canonical text for a rejected rephrasing")
-    func rejectedRephrasingFallsBackToCanonicalText() async throws {
+    @Test("[TAILOR-14] the reviewed outcome uses the canonical text for a rejected bullet")
+    func rejectedBulletFallsBackToCanonicalText() async throws {
         let store = makeTailorStore(
             profileStore: try makeProfileStore(),
             service: FixtureIntelligenceService.tailorFixture()
@@ -330,7 +330,7 @@ struct TailorFlowTests {
             "Cut CI build times across every product target",
             "Shipped the offline sync engine",
             "Led incident response for the payments outage",
-        ], "rephrasings never mutate Achievement.text")
+        ], "expanded bullets never mutate Achievement.text")
         #expect(profile.skills.isEmpty, "nothing new is persisted")
     }
 
@@ -375,6 +375,92 @@ struct TailorFlowTests {
         #expect(messages.count == 1)
         #expect(messages.first?["role"] as? String == "user")
         #expect(messages.first?["content"] as? String == "the payload", "the payload travels as the user message")
+    }
+
+    @Test("[TAILOR-19] the tailor payload carries projects, education, and interests")
+    func payloadCarriesNewProfileSections() async throws {
+        let profileStore = try makeProfileStore()
+        let project = try profileStore.addProject(
+            name: "Trail Mapper", link: "https://example.com/trail-mapper",
+            summary: "Offline-first hiking maps"
+        )
+        let point = try profileStore.addPoint(to: project, text: "Built tile caching for offline use")
+        try profileStore.tag(point, skillNamed: "Swift")
+        try profileStore.addEducation(
+            institution: "University of Example", qualification: "BSc Computer Science",
+            start: Date(timeIntervalSince1970: 1_100_000_000),
+            end: Date(timeIntervalSince1970: 1_200_000_000),
+            detail: "First-class honours"
+        )
+        try profileStore.addInterest("climbing")
+        let service = FixtureIntelligenceService.tailorFixture()
+        let store = makeTailorStore(profileStore: profileStore, service: service)
+
+        await store.startRun(jobDetails)
+
+        let payload = try #require(await service.recordedRequests.first?.payload)
+        #expect(payload.contains("Trail Mapper"))
+        #expect(payload.contains("Built tile caching for offline use"))
+        #expect(payload.contains(#""p1""#), "project points carry p-prefixed ids")
+        #expect(payload.contains(#""tags""#), "point tags travel under the tags key")
+        #expect(payload.contains("University of Example"))
+        #expect(payload.contains("First-class honours"))
+        #expect(payload.contains("climbing"))
+    }
+
+    @Test("[TAILOR-20] a selection may reference a project point")
+    func projectPointSelectionsResolve() async throws {
+        let profileStore = try makeProfileStore()
+        let project = try profileStore.addProject(name: "Trail Mapper")
+        try profileStore.addPoint(to: project, text: "Built tile caching for offline use")
+        let selectingProjectPoint = Data("""
+        {
+          "selections": [
+            {"achievementID": "p1", "bullet": "Engineered offline tile caching for a production mapping app"}
+          ],
+          "gaps": [],
+          "rationale": "The project work fits the JD directly."
+        }
+        """.utf8)
+        let store = makeTailorStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService(returning: selectingProjectPoint)
+        )
+
+        await store.startRun(jobDetails)
+
+        #expect(store.phase == .review)
+        let review = try #require(store.review)
+        let item = try #require(review.items.first)
+        #expect(item.achievement.text == "Built tile caching for offline use")
+        #expect(item.achievement.project?.name == "Trail Mapper")
+        #expect(item.bullet == "Engineered offline tile caching for a production mapping app")
+    }
+
+    @Test("[TAILOR-3] a Profile whose only points live on a project is not refused")
+    func projectOnlyProfilePassesTheGuard() async throws {
+        let profileStore = try ProfileStore(container: ProfileStore.container(inMemory: true))
+        try profileStore.load()
+        try profileStore.createProfile(name: "Alex Climber", headline: "Staff Engineer")
+        let project = try profileStore.addProject(name: "Trail Mapper")
+        try profileStore.addPoint(to: project, text: "Built tile caching for offline use")
+        let selectingProjectPoint = Data("""
+        {
+          "selections": [
+            {"achievementID": "p1", "bullet": "Engineered offline tile caching"}
+          ],
+          "gaps": [],
+          "rationale": "Project work only."
+        }
+        """.utf8)
+        let store = makeTailorStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService(returning: selectingProjectPoint)
+        )
+
+        await store.startRun(jobDetails)
+
+        #expect(store.phase == .review, "project points are selectable content, not just roles'")
     }
 
     @Test("[TAILOR-18] a tailor result wrapped in a markdown code fence produces a review")

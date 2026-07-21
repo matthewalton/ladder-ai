@@ -48,8 +48,8 @@ struct CVRenderTests {
             json: Data("""
             {
               "selections": [
-                {"achievementID": "a1", "rephrasing": "Drove CI build times down across every product target"},
-                {"achievementID": "a3", "rephrasing": "Built the analytics reporting stack from scratch"}
+                {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"},
+                {"achievementID": "a3", "bullet": "Built the analytics reporting stack from scratch"}
               ],
               "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],
               "rationale": "CI work maps directly to the JD's platform focus."
@@ -109,7 +109,7 @@ struct CVRenderTests {
             json: Data("""
             {
               "selections": [
-                {"achievementID": "a1", "rephrasing": "Drove CI build times down across every product target"}
+                {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
               ],
               "gaps": [],
               "rationale": "CI focus."
@@ -224,7 +224,7 @@ struct CVRenderTests {
             )
             byID["a\(index)"] = achievement
             selections.append(
-                #"{"achievementID": "a\#(index)", "rephrasing": "Rephrased achievement \#(index) with sharper impact framing"}"#
+                #"{"achievementID": "a\#(index)", "bullet": "Rephrased achievement \#(index) with sharper impact framing"}"#
             )
         }
         let result = try TailorResult(

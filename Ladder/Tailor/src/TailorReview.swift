@@ -1,11 +1,11 @@
 import Foundation
 
-/// Judges rewordings only — a review never adds or removes achievements
+/// Judges expanded bullets only — a review never adds or removes achievements
 /// from the selection.
 @MainActor
 @Observable
 final class TailorReview {
-    let items: [ReviewedRephrasing]
+    let items: [ReviewedBullet]
     let gaps: [String]
     let rationale: String
 
@@ -14,7 +14,7 @@ final class TailorReview {
         // so every selection resolves.
         items = result.selections.compactMap { selection in
             achievementsByID[selection.achievementID].map {
-                ReviewedRephrasing(achievement: $0, rephrasing: selection.rephrasing)
+                ReviewedBullet(achievement: $0, bullet: selection.bullet)
             }
         }
         gaps = result.gaps
@@ -27,7 +27,7 @@ final class TailorReview {
             items: items.map {
                 ReviewedOutcome.Item(
                     canonicalText: $0.achievement.text,
-                    text: $0.accepted ? $0.rephrasing : $0.achievement.text
+                    text: $0.accepted ? $0.bullet : $0.achievement.text
                 )
             },
             gaps: gaps,
@@ -51,13 +51,15 @@ struct ReviewedOutcome: Equatable, Sendable {
 
 @MainActor
 @Observable
-final class ReviewedRephrasing: Identifiable {
+final class ReviewedBullet: Identifiable {
     let achievement: Achievement
-    let rephrasing: String
+    /// Rejecting keeps the selection; the CV falls back to the brief
+    /// canonical point — the canon stays the user's.
+    let bullet: String
     var accepted = true
 
-    init(achievement: Achievement, rephrasing: String) {
+    init(achievement: Achievement, bullet: String) {
         self.achievement = achievement
-        self.rephrasing = rephrasing
+        self.bullet = bullet
     }
 }

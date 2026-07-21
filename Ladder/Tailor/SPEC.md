@@ -5,13 +5,16 @@ key: TAILOR
 # Tailor
 
 Paste a job description, have the intelligence service select the best-fit
-Achievements from the Profile, propose a per-application rephrasing for each,
-flag gaps, and state its rationale — then review each rephrasing side by side
-before anything is used. This slice owns the tailor sheet, the tailor run and
-its validation, the review, `Prompts/tailor.md`, and the app's live-LLM firsts:
-the Settings scene with Keychain API key entry, the live Anthropic
-`IntelligenceService` implementation, and the retry-with-repair loop deferred
-here by [CVIMPORT-10].
+points from the Profile — role Achievements and project points alike — and
+expand each brief talking point into one polished CV bullet, flag gaps, and
+state its rationale — then review each expanded bullet side by side before
+anything is used. Expansion is grounded strictly in the point's own fields
+(text, impact metric, tech, Tags, strength notes) and never invents facts;
+education and interests travel in the payload as context only. This slice owns
+the tailor sheet, the tailor run and its validation, the review,
+`Prompts/tailor.md`, and the app's live-LLM firsts: the Settings scene with
+Keychain API key entry, the live Anthropic `IntelligenceService`
+implementation, and the retry-with-repair loop deferred here by [CVIMPORT-10].
 
 The whole flow is transient (decisions/0001): the tailor result and reviewed
 outcome live in memory only; the `Application` model and any persistence arrive
@@ -42,12 +45,13 @@ Refused at start, before any service call. Whitespace-only counts as empty.
 Company and role title are free-text labels carried into the payload; only the
 job description is required for a run.
 
-## [TAILOR-3] Starting a tailor run when the Profile has no achievements is refused
+## [TAILOR-3] Starting a tailor run when the Profile has no points is refused
 
-Tailoring selects from Achievements and never free-writes career history
-(root CONTEXT.md) — with nothing to select from, a run is meaningless. Refused
-before any service call; the refusal points at adding achievements or
-importing a CV.
+Tailoring selects from points and never free-writes career history (root
+CONTEXT.md) — with nothing to select from, a run is meaningless. A Profile
+whose only points live on a project is enough: project points are selectable
+content exactly like role Achievements. Refused before any service call; the
+refusal points at adding achievements or importing a CV.
 
 ## [TAILOR-4] Starting a tailor run with no API key stored is refused
 
@@ -99,28 +103,30 @@ The second failure ends the run in the failed state with
 `TailorError.resultInvalid`; no review is offered, no further request is sent,
 and the Profile is unchanged (decisions/0004).
 
-## [TAILOR-11] The review shows each rephrasing beside its achievement's canonical text
+## [TAILOR-11] The review shows each expanded bullet beside its achievement's canonical text
 
-The side-by-side: for every selected achievement, the canonical
-`Achievement.text` and the proposed rephrasing appear together, so the user
-judges the rewording against the canon it came from.
+The side-by-side: for every selected point, the canonical brief
+`Achievement.text` and the expanded bullet appear together, so the user judges
+the expansion against the talking point it grew from. The review groups items
+under the role or project the point belongs to.
 
-## [TAILOR-12] Every rephrasing enters review as accepted
+## [TAILOR-12] Every expanded bullet enters review as accepted
 
 Nothing is pre-rejected on the user's behalf — the same stance as
-[CVIMPORT-4]. The user rejects the rewordings they don't want.
+[CVIMPORT-4]. The user rejects the bullets they don't want.
 
-## [TAILOR-13] The reviewed outcome uses the rephrasing for an accepted achievement
+## [TAILOR-13] The reviewed outcome uses the expanded bullet for an accepted achievement
 
-The reviewed outcome is what cv-export will consume: per selected achievement,
-one final text. Accepted → the proposed rephrasing.
+The reviewed outcome is what cv-export will consume: per selected point, one
+final text. Accepted → the expanded bullet.
 
-## [TAILOR-14] The reviewed outcome uses the canonical text for a rejected rephrasing
+## [TAILOR-14] The reviewed outcome uses the canonical text for a rejected bullet
 
-Rejecting a rephrasing keeps the achievement in the selection with its
-canonical `Achievement.text` — the selection stood; only the rewording was
-declined. Removing an achievement from the selection entirely is out of scope
-this slice.
+Rejecting a bullet keeps the point in the selection with its canonical brief
+`Achievement.text` — the selection stood; only the expansion was declined, and
+the user's own terse wording goes on the CV (a documented consequence, not a
+surprise). Removing a point from the selection entirely is out of scope this
+slice.
 
 ## [TAILOR-15] A completed tailor run and review leave the persisted Profile unchanged
 
@@ -145,6 +151,20 @@ header with the required `anthropic-version` header, and pins the model to the
 latest Sonnet (decisions/0003; exact model ID verified against current API
 docs at implement time). The prompt travels as the system prompt, the payload
 as the user message.
+
+## [TAILOR-19] The tailor payload carries projects, education, and interests
+
+Beyond roles: projects serialize with their points (stable `p…` ids, the same
+per-point fields as role achievements, with Tags under the `tags` key);
+education and interests serialize as context the model may lean on but never
+select from. Ids stay stable within one payload; validation resolves
+selections against the union of `a…` and `p…` ids.
+
+## [TAILOR-20] A selection may reference a project point
+
+Selecting a `p…` id resolves to the project's point in the review exactly like
+a role selection — and puts that project on the tailored CV (cv-export renders
+only projects with at least one selected point).
 
 ## [TAILOR-18] A tailor result wrapped in a markdown code fence produces a review
 

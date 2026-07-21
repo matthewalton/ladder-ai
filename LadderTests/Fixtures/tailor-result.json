@@ -2,11 +2,11 @@
   "selections": [
     {
       "achievementID": "a1",
-      "rephrasing": "Drove CI build times down across every product target, tightening the platform feedback loop"
+      "bullet": "Drove CI build times down across every product target, tightening the platform feedback loop"
     },
     {
       "achievementID": "a3",
-      "rephrasing": "Led cross-team incident response for a critical payments outage"
+      "bullet": "Led cross-team incident response for a critical payments outage"
     }
   ],
   "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],

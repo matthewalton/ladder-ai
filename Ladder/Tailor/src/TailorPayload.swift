@@ -1,7 +1,7 @@
 import Foundation
 
 /// `achievementsByID` is the map result validation resolves selections
-/// against.
+/// against — role points (`a1…`) and project points (`p1…`) together.
 @MainActor
 struct TailorPayload {
     let json: String
@@ -14,7 +14,8 @@ struct TailorPayload {
             ($0.start, $1.company) > ($1.start, $0.company)
         }
         var byID: [String: Achievement] = [:]
-        var nextID = 1
+
+        var nextRolePointID = 1
         let payloadRoles = orderedRoles.map { role in
             PayloadRole(
                 company: role.company,
@@ -22,25 +23,47 @@ struct TailorPayload {
                 start: Self.month(from: role.start),
                 end: role.end.map(Self.month(from:)),
                 achievements: role.orderedAchievements.map { achievement in
-                    let id = "a\(nextID)"
-                    nextID += 1
+                    let id = "a\(nextRolePointID)"
+                    nextRolePointID += 1
                     byID[id] = achievement
-                    return PayloadAchievement(
-                        id: id,
-                        text: achievement.text,
-                        impactMetric: achievement.impactMetric,
-                        tech: achievement.tech,
-                        skills: achievement.skills.map(\.name).sorted(),
-                        strengthNotes: achievement.strengthNotes
-                    )
+                    return PayloadAchievement(id: id, achievement: achievement)
                 }
             )
         }
+
+        var nextProjectPointID = 1
+        let payloadProjects = profile.orderedProjects.map { project in
+            PayloadProject(
+                name: project.name,
+                link: project.link.isEmpty ? nil : project.link,
+                summary: project.summary.isEmpty ? nil : project.summary,
+                points: project.orderedPoints.map { point in
+                    let id = "p\(nextProjectPointID)"
+                    nextProjectPointID += 1
+                    byID[id] = point
+                    return PayloadAchievement(id: id, achievement: point)
+                }
+            )
+        }
+
+        let payloadEducation = profile.orderedEducation.map { education in
+            PayloadEducation(
+                institution: education.institution,
+                qualification: education.qualification,
+                start: Self.month(from: education.start),
+                end: education.end.map(Self.month(from:)),
+                detail: education.detail.isEmpty ? nil : education.detail
+            )
+        }
+
         let body = PayloadBody(
             profile: PayloadProfile(
                 name: profile.name,
                 headline: profile.headline,
-                roles: payloadRoles
+                roles: payloadRoles,
+                projects: payloadProjects,
+                education: payloadEducation,
+                interests: profile.interests
             ),
             job: PayloadJob(
                 company: details.company,
@@ -73,6 +96,9 @@ private struct PayloadProfile: Encodable {
     var name: String
     var headline: String
     var roles: [PayloadRole]
+    var projects: [PayloadProject]
+    var education: [PayloadEducation]
+    var interests: [String]
 }
 
 private struct PayloadRole: Encodable {
@@ -83,13 +109,38 @@ private struct PayloadRole: Encodable {
     var achievements: [PayloadAchievement]
 }
 
+private struct PayloadProject: Encodable {
+    var name: String
+    var link: String?
+    var summary: String?
+    var points: [PayloadAchievement]
+}
+
+private struct PayloadEducation: Encodable {
+    var institution: String
+    var qualification: String
+    var start: String
+    var end: String?
+    var detail: String?
+}
+
 private struct PayloadAchievement: Encodable {
     var id: String
     var text: String
     var impactMetric: String?
     var tech: [String]
-    var skills: [String]
+    var tags: [String]
     var strengthNotes: String?
+
+    @MainActor
+    init(id: String, achievement: Achievement) {
+        self.id = id
+        text = achievement.text
+        impactMetric = achievement.impactMetric
+        tech = achievement.tech
+        tags = achievement.skills.map(\.name).sorted()
+        strengthNotes = achievement.strengthNotes
+    }
 }
 
 private struct PayloadJob: Encodable {

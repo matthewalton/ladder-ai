@@ -33,13 +33,13 @@ struct CVDocument: Equatable {
             profile.contact.link,
         ].filter { !$0.isEmpty }
 
-        // Reviewed text per selected achievement: the accepted rephrasing, or
-        // the canonical text where it was rejected. Keyed by object identity,
-        // which survives to the role grouping below.
+        // Reviewed text per selected achievement: the accepted expanded
+        // bullet, or the canonical brief point where it was rejected. Keyed by
+        // object identity, which survives to the role grouping below.
         var reviewedText: [ObjectIdentifier: String] = [:]
         for item in review.items {
             reviewedText[ObjectIdentifier(item.achievement)] =
-                item.accepted ? item.rephrasing : item.achievement.text
+                item.accepted ? item.bullet : item.achievement.text
         }
 
         let orderedRoles = profile.roles.sorted {

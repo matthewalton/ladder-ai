@@ -32,5 +32,6 @@ struct TailorResult: Equatable, Sendable, Decodable {
 
 struct TailorSelection: Equatable, Sendable, Decodable {
     var achievementID: String
-    var rephrasing: String
+    /// The talking point expanded into one polished CV bullet.
+    var bullet: String
 }

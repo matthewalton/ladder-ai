@@ -35,7 +35,7 @@ struct TailorView: View {
             case .idle:
                 tailorSheet
             case .running:
-                progress("Matching your achievements to the job…")
+                progress("Matching your points to the job…")
             case .review:
                 if let export {
                     FitReportView(report: export.fitReport, onDone: { dismiss() })
@@ -93,7 +93,7 @@ struct TailorView: View {
             Text("Tailor your Profile to a job")
                 .font(.title3)
                 .foregroundStyle(Color.ink)
-            Text("Paste the job description. Ladder selects your best-fit achievements and proposes rewordings — your Profile itself is never changed.")
+            Text("Paste the job description. Ladder selects your best-fit points and expands each into a polished CV bullet — your Profile itself is never changed.")
                 .font(.callout)
                 .foregroundStyle(Color.inkSoft)
 
@@ -213,9 +213,11 @@ struct TailorReviewView: View {
                         }
                     }
                 }
-                Section("Rephrasings") {
-                    ForEach(review.items) { item in
-                        ReviewedRephrasingRow(item: item)
+                ForEach(groupedItems, id: \.label) { group in
+                    Section(group.label) {
+                        ForEach(group.items) { item in
+                            ReviewedBulletRow(item: item)
+                        }
                     }
                 }
             }
@@ -223,7 +225,7 @@ struct TailorReviewView: View {
 
             Divider()
             HStack {
-                Text("Rejected rewordings fall back to your own words — the canon stays yours.")
+                Text("Rejected bullets fall back to your own brief point — the canon stays yours.")
                     .font(.caption)
                     .foregroundStyle(Color.inkSoft)
                 Spacer()
@@ -237,22 +239,45 @@ struct TailorReviewView: View {
             .background(Color.paperRaised)
         }
     }
+
+    /// Review items grouped under the role or project the point belongs to,
+    /// in selection order.
+    private var groupedItems: [(label: String, items: [ReviewedBullet])] {
+        var order: [String] = []
+        var groups: [String: [ReviewedBullet]] = [:]
+        for item in review.items {
+            let label = parentLabel(for: item.achievement)
+            if groups[label] == nil { order.append(label) }
+            groups[label, default: []].append(item)
+        }
+        return order.map { (label: $0, items: groups[$0] ?? []) }
+    }
+
+    private func parentLabel(for achievement: Achievement) -> String {
+        if let role = achievement.role {
+            return "\(role.title) — \(role.company)"
+        }
+        if let project = achievement.project {
+            return project.name.isEmpty ? "Project" : project.name
+        }
+        return "Profile"
+    }
 }
 
-private struct ReviewedRephrasingRow: View {
-    @Bindable var item: ReviewedRephrasing
+private struct ReviewedBulletRow: View {
+    @Bindable var item: ReviewedBullet
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Toggle(isOn: $item.accepted) {
-                Text(item.rephrasing)
+                Text(item.bullet)
                     .font(.body)
                     .foregroundStyle(Color.ink)
             }
             .toggleStyle(.checkbox)
 
             HStack(alignment: .top, spacing: 4) {
-                Text("On file:")
+                Text("Your point:")
                     .font(.caption)
                     .foregroundStyle(Color.inkSoft)
                 Text(item.achievement.text)
@@ -288,7 +313,7 @@ private struct ReviewedRephrasingRow: View {
         json: Data("""
         {
           "selections": [
-            {"achievementID": "a1", "rephrasing": "Drove CI build times down across every product target"}
+            {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
           ],
           "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],
           "rationale": "CI work maps directly to the JD's platform focus."

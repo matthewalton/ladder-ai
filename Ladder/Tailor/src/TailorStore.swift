@@ -44,6 +44,7 @@ final class TailorStore {
         }
         guard let profile = profileStore.profile,
             profile.roles.contains(where: { !$0.achievements.isEmpty })
+                || profile.projects.contains(where: { !$0.points.isEmpty })
         else {
             phase = .failed(.achievementsRequired)
             return

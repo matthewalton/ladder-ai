@@ -25,7 +25,7 @@ One step in an Application's interview loop (screen, recruiter, technical, …) 
 _Avoid_ (functional contexts): round, waypoint, interview
 
 **Tailoring**:
-Selecting best-fit Achievements from the Profile for a pasted job description, proposing rephrasings, and flagging gaps. It never free-writes career history.
+Selecting best-fit points from the Profile (role Achievements and project points) for a pasted job description, expanding each brief point into one polished CV bullet grounded in the point's own fields, and flagging gaps. It never free-writes career history.
 _Avoid_: generating a CV, optimising
 
 **Indicator row**:
