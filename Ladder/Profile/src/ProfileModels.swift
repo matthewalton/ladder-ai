@@ -41,6 +41,15 @@ final class Profile {
         self.projects = []
         self.interests = []
     }
+
+    /// Newest-first, matching the role ordering convention.
+    var orderedEducation: [Education] {
+        education.sorted { ($0.start, $1.institution) > ($1.start, $0.institution) }
+    }
+
+    var orderedProjects: [Project] {
+        projects.sorted { $0.sortIndex < $1.sortIndex }
+    }
 }
 
 @Model

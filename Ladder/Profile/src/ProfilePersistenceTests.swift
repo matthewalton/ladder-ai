@@ -222,6 +222,52 @@ struct ProfilePersistenceTests {
 
         #expect(profile.interests == ["climbing", "trail running", "coffee"], "interests keep entered order")
     }
+
+    @Test("[PROFILE-13] identity and contact edits are still there after the app relaunches")
+    func identityAndContactEditsSurviveRelaunch() throws {
+        let url = temporaryStoreURL()
+        defer { removeStore(at: url) }
+
+        let contact = ContactInfo(
+            email: "alex@example.com", phone: "+44 7700 900123", location: "London", link: "https://alex.dev"
+        )
+        do {
+            let store = try ProfileStore(container: ProfileStore.container(at: url))
+            try store.load()
+            try store.createProfile(name: "Alex Climber", headline: "Engineer")
+            try store.updateIdentity(name: "Alexandra Climber", headline: "Staff Engineer")
+            try store.updateContact(contact)
+        }
+
+        let reopened = try ProfileStore(container: ProfileStore.container(at: url))
+        try reopened.load()
+        let profile = try #require(reopened.profile)
+        #expect(profile.name == "Alexandra Climber")
+        #expect(profile.headline == "Staff Engineer")
+        #expect(profile.contact == contact)
+    }
+
+    @Test("[PROFILE-15] deleting a point persists, with the surviving siblings' order intact")
+    func deletedPointStaysGoneAfterReopen() throws {
+        let url = temporaryStoreURL()
+        defer { removeStore(at: url) }
+
+        do {
+            let store = try ProfileStore(container: ProfileStore.container(at: url))
+            try store.load()
+            try store.createProfile(name: "Alex Climber", headline: "")
+            let role = try store.addRole(company: "Acme", title: "Engineer", start: .now, end: nil)
+            try store.addAchievement(to: role, text: "First")
+            let second = try store.addAchievement(to: role, text: "Second")
+            try store.addAchievement(to: role, text: "Third")
+            try store.deleteAchievement(second)
+        }
+
+        let reopened = try ProfileStore(container: ProfileStore.container(at: url))
+        try reopened.load()
+        let role = try #require(reopened.profile?.roles.first)
+        #expect(role.orderedAchievements.map(\.text) == ["First", "Third"])
+    }
 }
 
 // MARK: - Helpers shared by this slice's tests
