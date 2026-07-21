@@ -286,6 +286,18 @@ edits, autosaving through the existing store seams — `updateDetails` for the
 notes ([PIPEBOARD-12]), `updateStage` for the prep context ([PIPEBOARD-15]) —
 never a private write path. Window chrome is visual-verify.
 
+## [PIPEBOARD-34] The tailor sheet opens from the empty state and the Applications shell toolbar
+
+Tailoring starts where applying happens (decisions/0007): the Applications
+shell offers "Tailor a CV" beside the manual add — in the toolbar, and as the
+empty state's lead action — presenting the Tailor slice's sheet; the export
+lands the finished application on this board ([CVEXPORT-1], [CVEXPORT-10],
+[PIPEBOARD-4]). The Profile page's former Tailor entry is removed with this
+criterion: the Profile holds everything about you; the application is where
+it gets trimmed down. The measurable clause is that the sheet and both
+hosting roots render (the [PIPEBOARD-20] stance); button chrome and sheet
+presentation are visual-verify.
+
 ## [PIPEBOARD-33] Removing a long-text field's content requires confirmation before clearing it
 
 All three fields. Confirming clears the value to empty through the store and

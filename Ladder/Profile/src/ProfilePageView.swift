@@ -16,7 +16,6 @@ struct ProfilePageView: View {
 
     @State private var focus: ProfileFocus?
     @State private var isImportingCV = false
-    @State private var isTailoring = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -49,17 +48,11 @@ struct ProfilePageView: View {
                     isImportingCV = true
                 }
             }
-            ToolbarItem {
-                Button("Tailor", systemImage: "scissors") {
-                    isTailoring = true
-                }
-            }
+            // Tailoring lives in the Applications section (PipelineBoard
+            // decisions/0007) — the Profile is curated here, trimmed there.
         }
         .sheet(isPresented: $isImportingCV) {
             ImportCVView(profileStore: store)
-        }
-        .sheet(isPresented: $isTailoring) {
-            TailorView(profileStore: store)
         }
     }
 }

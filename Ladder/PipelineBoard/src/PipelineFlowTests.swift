@@ -119,6 +119,39 @@ struct PipelineFlowTests {
         #expect(form.nsImage != nil, "the add-application form renders")
     }
 
+    @Test("[PIPEBOARD-34] the tailor sheet opens from the empty state and the Applications shell toolbar")
+    func tailorEntryRendersFromBothHosts() throws {
+        // Render-smoke only, the [PIPEBOARD-20] stance: chrome and sheet
+        // presentation are on the visual-verify list.
+        let profileStore = try ProfileStore(container: ProfileStore.container(inMemory: true))
+        try profileStore.load()
+        try profileStore.createProfile(name: "Alex Climber", headline: "Staff Engineer")
+        let pipelineStore = PipelineStore(container: profileStore.container)
+        try pipelineStore.load()
+
+        let emptyRoot = ImageRenderer(
+            content: PipelineRootView(store: pipelineStore, profileStore: profileStore)
+                .frame(width: 800, height: 500))
+        #expect(emptyRoot.nsImage != nil, "the empty state renders with its tailor action")
+
+        let role = try profileStore.addRole(company: "Acme", title: "Engineer", start: .now, end: nil)
+        try profileStore.addAchievement(to: role, text: "Cut CI build times")
+        let populated = try makeStore()
+        try insert(populated, company: "Summit Labs", status: .applied)
+        let populatedRoot = ImageRenderer(
+            content: PipelineRootView(store: populated, profileStore: profileStore)
+                .frame(width: 800, height: 500))
+        #expect(populatedRoot.nsImage != nil, "the shell renders with its tailor toolbar button")
+
+        let sheet = ImageRenderer(
+            content: TailorView(
+                profileStore: profileStore,
+                keyStore: InMemoryAPIKeyStore(key: "test-key"),
+                makeIntelligence: { _ in FixtureIntelligenceService.tailorFixture() }
+            ).frame(width: 560, height: 480))
+        #expect(sheet.nsImage != nil, "the tailor sheet renders from this shell's hosting")
+    }
+
     @Test("[PIPEBOARD-4] the board shows each Application in the column matching its status")
     func columnsGroupByStatus() throws {
         let store = try makeStore()

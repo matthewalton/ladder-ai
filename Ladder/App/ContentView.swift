@@ -22,6 +22,7 @@ struct ContentView: View {
                     Divider()
                     PipelineRootView(
                         store: pipelineStore,
+                        profileStore: store,
                         onLookBack: { application in
                             Task { await calendarStore.lookBack(for: application) }
                         }

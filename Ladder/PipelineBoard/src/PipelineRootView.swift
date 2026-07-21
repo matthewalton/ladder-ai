@@ -3,6 +3,9 @@ import SwiftUI
 
 struct PipelineRootView<SidebarFooter: View>: View {
     @Bindable var store: PipelineStore
+    /// Tailoring starts from this shell (decisions/0007); nil renders no
+    /// tailor affordance (tests that only exercise the board).
+    var profileStore: ProfileStore?
     /// Passed through to the detail's look-back button; nil renders none.
     var onLookBack: ((Application) -> Void)?
     /// Rendered at the bottom of the sidebar list — the slot the calendar
@@ -18,6 +21,7 @@ struct PipelineRootView<SidebarFooter: View>: View {
     @State private var showInspector = true
     @State private var contentPane: ContentPane = .board
     @State private var isAddingApplication = false
+    @State private var isTailoring = false
 
     private var selectedApplication: Application? {
         selection.flatMap { store.application(for: $0) }
@@ -34,6 +38,14 @@ struct PipelineRootView<SidebarFooter: View>: View {
         // Attached here so the toolbar and empty-state affordances share it.
         .sheet(isPresented: $isAddingApplication) {
             AddApplicationSheet(store: store)
+        }
+        .sheet(isPresented: $isTailoring) {
+            if let profileStore {
+                // The export lands the application on this board; the store
+                // reloads on dismiss so it appears without a relaunch.
+                TailorView(profileStore: profileStore)
+                    .onDisappear { try? store.load() }
+            }
         }
     }
 
@@ -64,6 +76,15 @@ struct PipelineRootView<SidebarFooter: View>: View {
                     }
                 }
                 .toolbar {
+                    if profileStore != nil {
+                        ToolbarItem {
+                            Button {
+                                isTailoring = true
+                            } label: {
+                                Label("Tailor a CV", systemImage: "scissors")
+                            }
+                        }
+                    }
                     ToolbarItem {
                         Button {
                             isAddingApplication = true
@@ -118,12 +139,21 @@ struct PipelineRootView<SidebarFooter: View>: View {
             Text("No applications on the trail yet.")
                 .font(.trailNarrative(.title2))
                 .foregroundStyle(Color.inkSoft)
-            Text("Tailor a CV from your Profile, or add one by hand.")
+            Text("Tailor a CV against a job description, or add one by hand.")
                 .font(.callout)
                 .foregroundStyle(Color.inkSoft)
-            // The shell toolbar (and its add button) does not render here.
-            Button("Add application") {
-                isAddingApplication = true
+            // The shell toolbar (and its buttons) does not render here.
+            HStack {
+                if profileStore != nil {
+                    Button("Tailor a CV") {
+                        isTailoring = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.pine)
+                }
+                Button("Add application") {
+                    isAddingApplication = true
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -135,8 +165,12 @@ struct PipelineRootView<SidebarFooter: View>: View {
 }
 
 extension PipelineRootView where SidebarFooter == EmptyView {
-    init(store: PipelineStore, onLookBack: ((Application) -> Void)? = nil) {
-        self.init(store: store, onLookBack: onLookBack) { EmptyView() }
+    init(
+        store: PipelineStore,
+        profileStore: ProfileStore? = nil,
+        onLookBack: ((Application) -> Void)? = nil
+    ) {
+        self.init(store: store, profileStore: profileStore, onLookBack: onLookBack) { EmptyView() }
     }
 }
 
