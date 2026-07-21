@@ -36,17 +36,16 @@ struct ProfileDetailRail: View {
     /// The rail's visible delete affordance for whatever is focused — the
     /// discoverable sibling of the rows' hover and context-menu deletes.
     private var deleteBar: some View {
-        HStack {
-            Spacer()
+        VStack(spacing: 0) {
+            Divider()
             Button(role: .destructive, action: deleteFocused) {
                 Label(deleteLabel, systemImage: "trash")
-                    .font(.caption)
-                    .foregroundStyle(Color.clay)
+                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderless)
-            Spacer()
+            .buttonStyle(.bordered)
+            .tint(Color.clay)
+            .padding(12)
         }
-        .padding(.vertical, 8)
         .background(Color.paper)
     }
 
@@ -101,6 +100,96 @@ struct ProfileDetailRail: View {
     }
 }
 
+// MARK: - Rail building blocks
+
+/// The rail's scrollable pane chrome shared by every focused editor.
+private struct RailPane<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                content
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(Color.paper)
+    }
+}
+
+/// A rail section: uppercase header above its fields.
+private struct RailSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ProfileSectionHeader(title: title)
+            content
+        }
+    }
+}
+
+/// A labelled rail input: caption label above the field, never beside it —
+/// the rail is too narrow for label/value columns.
+private struct RailField<Input: View>: View {
+    let label: String
+    @ViewBuilder let input: Input
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(Color.inkSoft)
+            input
+        }
+    }
+}
+
+/// The rail's input chrome: a visibly bordered, clickable field that shows a
+/// Pine ring while focused.
+private struct RailInputChrome: ViewModifier {
+    @FocusState private var isFocused: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .textFieldStyle(.plain)
+            .font(.callout)
+            .foregroundStyle(Color.ink)
+            .focused($isFocused)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.paperRaised, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(isFocused ? Color.pine : Color.mist, lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+    }
+}
+
+extension View {
+    fileprivate func railInput() -> some View {
+        modifier(RailInputChrome())
+    }
+}
+
+/// The small save affordance shown while a rail section has unsaved edits.
+private struct RailSaveButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(title, action: action)
+            .buttonStyle(.borderedProminent)
+            .tint(Color.pine)
+            .controlSize(.small)
+    }
+}
+
+// MARK: - Panes
+
 /// Depth editor for a point (role or project): wording, Tags, impact, tech,
 /// strength notes.
 private struct PointDetailPane: View {
@@ -129,18 +218,18 @@ private struct PointDetailPane: View {
     }
 
     var body: some View {
-        Form {
-            Section("Point") {
+        RailPane {
+            RailSection(title: "Point") {
                 TextField("A brief key talking point", text: $text, axis: .vertical)
                     .lineLimit(3...8)
                     .onSubmit(commitText)
+                    .railInput()
                 if text != achievement.text {
-                    Button("Save wording", action: commitText)
+                    RailSaveButton(title: "Save wording", action: commitText)
                 }
             }
-            .listRowBackground(Color.paperRaised)
 
-            Section("Tags") {
+            RailSection(title: "Tags") {
                 if !achievement.skills.isEmpty {
                     TagChipsView(names: achievement.skills.map(\.name).sorted()) { name in
                         removeTag(named: name)
@@ -148,26 +237,30 @@ private struct PointDetailPane: View {
                 }
                 TextField("Add a tag", text: $newTag)
                     .onSubmit(addTag)
+                    .railInput()
             }
-            .listRowBackground(Color.paperRaised)
 
-            Section("Depth") {
-                TextField("Impact metric — e.g. 27 steps → 2 hours", text: $impactMetric)
-                    .onSubmit(commitDetails)
-                TextField("Tech — comma-separated", text: $techText)
-                    .onSubmit(commitDetails)
-                TextField("Strength notes — your STAR context, never on the CV",
-                          text: $strengthNotes, axis: .vertical)
-                    .lineLimit(3...8)
+            RailSection(title: "Depth") {
+                RailField(label: "Impact metric") {
+                    TextField("e.g. 27 steps → 2 hours", text: $impactMetric)
+                        .onSubmit(commitDetails)
+                        .railInput()
+                }
+                RailField(label: "Tech — comma-separated") {
+                    TextField("e.g. Swift, SwiftData", text: $techText)
+                        .onSubmit(commitDetails)
+                        .railInput()
+                }
+                RailField(label: "Strength notes — never on the CV") {
+                    TextField("Your STAR context", text: $strengthNotes, axis: .vertical)
+                        .lineLimit(3...8)
+                        .railInput()
+                }
                 if detailsDirty {
-                    Button("Save depth", action: commitDetails)
+                    RailSaveButton(title: "Save depth", action: commitDetails)
                 }
             }
-            .listRowBackground(Color.paperRaised)
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .background(Color.paper)
     }
 
     private func commitText() {
@@ -232,23 +325,33 @@ private struct RoleDetailPane: View {
     }
 
     var body: some View {
-        Form {
-            Section("Role") {
-                TextField("Title", text: $title)
-                    .onSubmit(commit)
-                TextField("Company", text: $company)
-                    .onSubmit(commit)
-                DatePicker("Started", selection: $start, displayedComponents: .date)
+        RailPane {
+            RailSection(title: "Role") {
+                RailField(label: "Title") {
+                    TextField("e.g. Senior Engineer", text: $title)
+                        .onSubmit(commit)
+                        .railInput()
+                }
+                RailField(label: "Company") {
+                    TextField("Company", text: $company)
+                        .onSubmit(commit)
+                        .railInput()
+                }
+                RailField(label: "Started") {
+                    DatePicker("Started", selection: $start, displayedComponents: .date)
+                        .labelsHidden()
+                }
                 Toggle("Current role", isOn: $isCurrent)
+                    .font(.callout)
+                    .foregroundStyle(Color.ink)
                 if !isCurrent {
-                    DatePicker("Ended", selection: $end, displayedComponents: .date)
+                    RailField(label: "Ended") {
+                        DatePicker("Ended", selection: $end, displayedComponents: .date)
+                            .labelsHidden()
+                    }
                 }
             }
-            .listRowBackground(Color.paperRaised)
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .background(Color.paper)
         .onChange(of: start) { commit() }
         .onChange(of: isCurrent) { commit() }
         .onChange(of: end) { commit() }
@@ -288,25 +391,38 @@ private struct EducationDetailPane: View {
     }
 
     var body: some View {
-        Form {
-            Section("Education") {
-                TextField("Institution", text: $institution)
-                    .onSubmit(commit)
-                TextField("Qualification — e.g. BSc Computer Science", text: $qualification)
-                    .onSubmit(commit)
-                DatePicker("Started", selection: $start, displayedComponents: .date)
-                Toggle("In progress", isOn: $isInProgress)
-                if !isInProgress {
-                    DatePicker("Ended", selection: $end, displayedComponents: .date)
+        RailPane {
+            RailSection(title: "Education") {
+                RailField(label: "Institution") {
+                    TextField("Institution", text: $institution)
+                        .onSubmit(commit)
+                        .railInput()
                 }
-                TextField("Detail — e.g. First-class honours", text: $detail)
-                    .onSubmit(commit)
+                RailField(label: "Qualification") {
+                    TextField("e.g. BSc Computer Science", text: $qualification)
+                        .onSubmit(commit)
+                        .railInput()
+                }
+                RailField(label: "Started") {
+                    DatePicker("Started", selection: $start, displayedComponents: .date)
+                        .labelsHidden()
+                }
+                Toggle("In progress", isOn: $isInProgress)
+                    .font(.callout)
+                    .foregroundStyle(Color.ink)
+                if !isInProgress {
+                    RailField(label: "Ended") {
+                        DatePicker("Ended", selection: $end, displayedComponents: .date)
+                            .labelsHidden()
+                    }
+                }
+                RailField(label: "Detail") {
+                    TextField("e.g. First-class honours", text: $detail)
+                        .onSubmit(commit)
+                        .railInput()
+                }
             }
-            .listRowBackground(Color.paperRaised)
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .background(Color.paper)
         .onChange(of: start) { commit() }
         .onChange(of: isInProgress) { commit() }
         .onChange(of: end) { commit() }
@@ -349,25 +465,35 @@ private struct ProjectDetailPane: View {
     }
 
     var body: some View {
-        Form {
-            Section("Project") {
-                TextField("Name", text: $name)
-                    .onSubmit(commit)
-                TextField("Link", text: $link)
-                    .onSubmit(commit)
-                TextField("Summary — one line", text: $summary, axis: .vertical)
-                    .lineLimit(2...4)
-                    .onSubmit(commit)
-                TextField("Description — how you'd tell it on a CV",
-                          text: $details, axis: .vertical)
-                    .lineLimit(4...12)
+        RailPane {
+            RailSection(title: "Project") {
+                RailField(label: "Name") {
+                    TextField("Name", text: $name)
+                        .onSubmit(commit)
+                        .railInput()
+                }
+                RailField(label: "Link") {
+                    TextField("https://…", text: $link)
+                        .onSubmit(commit)
+                        .railInput()
+                }
+                RailField(label: "Summary — one line") {
+                    TextField("Summary", text: $summary, axis: .vertical)
+                        .lineLimit(2...4)
+                        .onSubmit(commit)
+                        .railInput()
+                }
+                RailField(label: "Description — how you'd tell it on a CV") {
+                    TextField("Description", text: $details, axis: .vertical)
+                        .lineLimit(4...12)
+                        .railInput()
+                }
                 if dirty {
-                    Button("Save project", action: commit)
+                    RailSaveButton(title: "Save project", action: commit)
                 }
             }
-            .listRowBackground(Color.paperRaised)
 
-            Section("Tags") {
+            RailSection(title: "Tags") {
                 if !project.skills.isEmpty {
                     TagChipsView(names: project.skills.map(\.name).sorted()) { name in
                         removeTag(named: name)
@@ -375,12 +501,9 @@ private struct ProjectDetailPane: View {
                 }
                 TextField("Add a tag", text: $newTag)
                     .onSubmit(addTag)
+                    .railInput()
             }
-            .listRowBackground(Color.paperRaised)
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .background(Color.paper)
     }
 
     private func commit() {
@@ -412,7 +535,16 @@ private struct ProjectDetailPane: View {
     let role = try! store.addRole(company: "Acme", title: "Senior Engineer", start: .now, end: nil)
     let point = try! store.addAchievement(to: role, text: "Won the first internal AI Olympiad")
     try! store.tag(point, skillNamed: "AI Engineering")
+    try! store.tag(point, skillNamed: "cross-functional delivery")
     return ProfileDetailRail(store: store, focus: .constant(.point(point)))
+        .frame(width: 300, height: 600)
+}
+
+#Preview("Role focused") {
+    let store = try! ProfileStore(container: ProfileStore.container(inMemory: true))
+    try! store.createProfile(name: "Alex Climber", headline: "Staff Engineer")
+    let role = try! store.addRole(company: "Acme", title: "Senior Engineer", start: .now, end: nil)
+    return ProfileDetailRail(store: store, focus: .constant(.role(role)))
         .frame(width: 300, height: 600)
 }
 

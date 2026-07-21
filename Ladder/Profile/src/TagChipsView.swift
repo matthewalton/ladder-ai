@@ -7,12 +7,13 @@ struct TagChipsView: View {
     var onRemove: ((String) -> Void)?
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), alignment: .leading)], alignment: .leading, spacing: 4) {
+        ChipFlowLayout(spacing: 6) {
             ForEach(names, id: \.self) { name in
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Text(name)
                         .font(.caption)
                         .foregroundStyle(Color.ink)
+                        .fixedSize()
                     if let onRemove {
                         Button {
                             onRemove(name)

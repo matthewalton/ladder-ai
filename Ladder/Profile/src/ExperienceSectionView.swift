@@ -64,20 +64,13 @@ private struct RoleDisclosureView: View {
             )
             .padding(.leading, 4)
 
-            HStack {
-                TextField("Add a point — a brief key talking point", text: $newPointText)
-                    .textFieldStyle(.plain)
-                    .font(.callout)
-                    .foregroundStyle(Color.inkSoft)
-                    .onSubmit(addPoint)
-                if !newPointText.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Button("Add", action: addPoint)
-                        .buttonStyle(.borderless)
-                        .font(.caption)
-                }
-            }
+            PageAddField(
+                prompt: "Add a point — a brief key talking point",
+                text: $newPointText,
+                onSubmit: addPoint
+            )
             .padding(.leading, 20)
-            .padding(.top, 2)
+            .padding(.top, 4)
         } label: {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 1) {

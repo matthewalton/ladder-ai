@@ -12,10 +12,7 @@ struct InterestsSectionView: View {
             ProfileSectionHeader(title: "Interests")
 
             if !profile.interests.isEmpty {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 90), alignment: .leading)],
-                    alignment: .leading, spacing: 4
-                ) {
+                ChipFlowLayout(spacing: 6) {
                     ForEach(Array(profile.interests.enumerated()), id: \.element) { index, interest in
                         InterestChipView(name: interest) {
                             try? store.removeInterest(at: index)
@@ -24,18 +21,8 @@ struct InterestsSectionView: View {
                 }
             }
 
-            HStack {
-                TextField("Add an interest", text: $newInterest)
-                    .textFieldStyle(.plain)
-                    .font(.callout)
-                    .foregroundStyle(Color.inkSoft)
-                    .onSubmit(addInterest)
-                if !newInterest.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Button("Add", action: addInterest)
-                        .buttonStyle(.borderless)
-                        .font(.caption)
-                }
-            }
+            PageAddField(prompt: "Add an interest", text: $newInterest, onSubmit: addInterest)
+                .frame(maxWidth: 280)
         }
     }
 
@@ -57,6 +44,7 @@ private struct InterestChipView: View {
             Text(name)
                 .font(.caption)
                 .foregroundStyle(Color.ink)
+                .fixedSize()
             if isHovering {
                 Button(role: .destructive, action: onRemove) {
                     Image(systemName: "xmark")

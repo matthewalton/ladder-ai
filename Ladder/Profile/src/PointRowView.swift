@@ -15,25 +15,29 @@ struct PointRowView: View {
     }
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("•")
-                .foregroundStyle(Color.pine)
-            Text(achievement.text)
-                .foregroundStyle(Color.ink)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("•")
+                    .foregroundStyle(Color.pine)
+                Text(achievement.text)
+                    .foregroundStyle(Color.ink)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                RowDeleteButton(label: "Delete point", isVisible: isHovering, action: onDelete)
+            }
             if !tagNames.isEmpty {
                 HStack(spacing: 4) {
                     ForEach(tagNames, id: \.self) { name in
                         Text(name)
                             .font(.caption2)
                             .foregroundStyle(Color.inkSoft)
+                            .fixedSize()
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.pineTint, in: RoundedRectangle(cornerRadius: 5))
                     }
                 }
+                .padding(.leading, 15)
             }
-            RowDeleteButton(label: "Delete point", isVisible: isHovering, action: onDelete)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)

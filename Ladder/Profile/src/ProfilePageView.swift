@@ -34,6 +34,12 @@ struct ProfilePageView: View {
                 }
             }
             .background(Color.paper)
+            // Clicking empty page space (or pressing Escape) drops focus and
+            // returns the rail to its placeholder. Row taps win because the
+            // deeper gesture takes precedence.
+            .contentShape(Rectangle())
+            .onTapGesture { focus = nil }
+            .onExitCommand { focus = nil }
 
             Divider()
 
@@ -68,6 +74,38 @@ struct ProfileSectionHeader: View {
             .kerning(1.4)
             .textCase(.uppercase)
             .foregroundStyle(Color.inkSoft)
+    }
+}
+
+/// The page's inline "add" inputs — bordered just enough to read as a field
+/// you can click, without shouting over the CV content.
+struct PageAddField: View {
+    let prompt: String
+    @Binding var text: String
+    let onSubmit: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "plus")
+                .font(.caption)
+                .foregroundStyle(Color.inkSoft)
+            TextField(prompt, text: $text)
+                .textFieldStyle(.plain)
+                .font(.callout)
+                .foregroundStyle(Color.ink)
+                .onSubmit(onSubmit)
+            if !text.trimmingCharacters(in: .whitespaces).isEmpty {
+                Button("Add", action: onSubmit)
+                    .buttonStyle(.borderless)
+                    .font(.caption)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.paperRaised.opacity(0.6), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .strokeBorder(Color.mist, lineWidth: 1))
     }
 }
 

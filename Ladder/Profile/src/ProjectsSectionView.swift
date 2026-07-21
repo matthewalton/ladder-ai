@@ -8,7 +8,7 @@ struct ProjectsSectionView: View {
     @Binding var focus: ProfileFocus?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 ProfileSectionHeader(title: "Projects")
                 Spacer()
@@ -61,6 +61,7 @@ private struct ProjectItemView: View {
             if !project.skills.isEmpty {
                 TagChipsView(names: project.skills.map(\.name).sorted())
                     .padding(.leading, 4)
+                    .padding(.top, 2)
             }
         }
         .contentShape(Rectangle())
