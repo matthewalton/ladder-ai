@@ -44,7 +44,29 @@ struct TailorFlowTests {
         )
     }
 
-    @Test("[TAILOR-1] running a tailor for a pasted job description produces a tailor result for review")
+    @Test("[TAILOR-23] a tailor presented for an application starts from its stored job details")
+    func tailorRunCarriesApplicationDetailsVerbatim() async throws {
+        let profileStore = try makeProfileStore()
+        let service = FixtureIntelligenceService.tailorFixture()
+        let store = makeTailorStore(profileStore: profileStore, service: service)
+        let application = Application(
+            company: "Summit Labs", roleTitle: "Platform Engineer",
+            jobDescription: "Own platform reliability. Kubernetes, CI at scale, incident response.",
+            status: .draft
+        )
+
+        // The derivation ([TAILOR-23], decisions/0008): details come from
+        // the Application, verbatim — the view collects nothing.
+        await store.startRun(JobDetails(application: application))
+
+        #expect(store.phase == .review)
+        let request = try #require(await service.recordedRequests.first)
+        #expect(request.payload.contains("Summit Labs"))
+        #expect(request.payload.contains("Platform Engineer"))
+        #expect(request.payload.contains("Own platform reliability. Kubernetes, CI at scale, incident response."))
+    }
+
+    @Test("[TAILOR-1] running a tailor for a job description produces a tailor result for review")
     func tailorRunProducesResultForReview() async throws {
         let profileStore = try makeProfileStore()
         let store = makeTailorStore(

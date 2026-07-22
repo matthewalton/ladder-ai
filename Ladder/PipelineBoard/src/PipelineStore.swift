@@ -40,11 +40,14 @@ final class PipelineStore {
         applications.filter { $0.status == status }
     }
 
-    /// Creates without CV fields — export stays the only path that attaches
-    /// one. Duplicate company/role pairs are allowed by design.
+    /// The shared creation seam ([PIPEBOARD-35], calendar-sync's
+    /// confirmCreate): creates without CV fields — export stays the only
+    /// path that attaches one. Duplicate company/role pairs are allowed by
+    /// design.
     @discardableResult
     func createApplication(
         company: String, roleTitle: String,
+        jobDescription: String = "",
         source: String?, notes: String,
         appliedAt: Date?
     ) throws -> Application {
@@ -54,7 +57,7 @@ final class PipelineStore {
             throw PipelineStoreError.blankField
         }
         let application = Application(
-            company: company, roleTitle: roleTitle, jobDescription: "",
+            company: company, roleTitle: roleTitle, jobDescription: jobDescription,
             status: appliedAt == nil ? .draft : .applied,
             source: source, appliedAt: appliedAt, notes: notes
         )
@@ -145,7 +148,8 @@ final class PipelineStore {
     /// GET accepting only 2xx.
     var fetchLinkData: (URL) async throws -> Data = PipelineStore.fetchOverHTTP
 
-    private static func fetchOverHTTP(_ url: URL) async throws -> Data {
+    /// Internal, not private: the job import's default fetch too.
+    static func fetchOverHTTP(_ url: URL) async throws -> Data {
         let (data, response) = try await URLSession.shared.data(from: url)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw URLError(.badServerResponse)

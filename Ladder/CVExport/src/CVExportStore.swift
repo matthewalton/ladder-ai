@@ -1,6 +1,10 @@
 import Foundation
 import SwiftData
 
+enum CVExportError: Error, Equatable {
+    case applicationMissing
+}
+
 /// One render serves both destinations — snapshot and save panel.
 @MainActor
 @Observable
@@ -19,22 +23,33 @@ final class CVExportStore {
         context = ModelContext(container)
     }
 
-    /// The Profile is read, never written; each call creates a fresh
-    /// Application.
+    /// The Profile is read, never written; export attaches to the
+    /// application the tailor ran for (decisions/0006) — never a fresh row.
+    /// By ID, fetched in this store's own context: mutating an instance from
+    /// another context would not save here.
     @discardableResult
-    func export(profile: Profile, review: TailorReview, details: JobDetails) throws -> Export {
+    func export(
+        profile: Profile, review: TailorReview, into applicationID: PersistentIdentifier
+    ) throws -> Export {
+        var descriptor = FetchDescriptor<Application>(
+            predicate: #Predicate { $0.persistentModelID == applicationID })
+        descriptor.fetchLimit = 1
+        guard let application = try context.fetch(descriptor).first else {
+            throw CVExportError.applicationMissing
+        }
         let document = CVDocument(profile: profile, review: review)
         let pdfData = CVRenderer.pdfData(for: document)
         let outcome = review.outcome
-        let application = Application(
-            company: details.company,
-            roleTitle: details.roleTitle,
-            jobDescription: details.jobDescription,
-            status: .applied,
-            cvSnapshot: pdfData,
-            cvSelectionRationale: outcome.rationale
-        )
-        context.insert(application)
+        application.cvSnapshot = pdfData
+        application.cvSelectionRationale = outcome.rationale
+        // Exporting is the act of applying ([CVEXPORT-10]); an existing
+        // status past draft — and an existing date — are never touched.
+        if application.status == .draft {
+            application.status = .applied
+            if application.appliedAt == nil {
+                application.appliedAt = .now
+            }
+        }
         try context.save()
         return Export(
             application: application,

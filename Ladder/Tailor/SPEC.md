@@ -4,18 +4,22 @@ key: TAILOR
 
 # Tailor
 
-Paste a job description, have the intelligence service select the best-fit
-content from the Profile — role Achievements point by point, Projects whole
-(decisions/0007) — and expand each brief talking point into one polished CV
-bullet, generate a CV summary tailored to the job description
-(decisions/0006), flag gaps, and state its rationale — then review each
-expanded bullet side by side before anything is used. Expansion is grounded strictly in the point's own fields
-(text, impact metric, tech, Tags, strength notes) and never invents facts;
-education and interests travel in the payload as context only. This slice owns
-the tailor sheet, the tailor run and its validation, the review,
-`Prompts/tailor.md`, and the app's live-LLM firsts: the Settings scene with
-Keychain API key entry, the live Anthropic `IntelligenceService`
-implementation, and the retry-with-repair loop deferred here by [CVIMPORT-10].
+Tailor an application's stored job description: the intelligence service
+selects the best-fit content from the Profile — role Achievements point by
+point, Projects whole (decisions/0007) — and expands each brief talking
+point into one polished CV bullet, generates a CV summary tailored to the
+job description (decisions/0006), flags gaps, and states its rationale —
+then each expanded bullet is reviewed side by side before anything is used.
+The job details — company, role title, job description — arrive from the
+Application the tailor is presented for (decisions/0008); the tailor
+collects nothing by hand. Expansion is grounded strictly in the point's own
+fields (text, impact metric, tech, Tags, strength notes) and never invents
+facts; education and interests travel in the payload as context only. This
+slice owns the tailor presentation, the tailor run and its validation, the
+review, `Prompts/tailor.md`, and the app's live-LLM firsts: the Settings
+scene with Keychain API key entry, the live Anthropic `IntelligenceService`
+implementation, and the retry-with-repair loop deferred here by
+[CVIMPORT-10].
 
 The whole flow is transient (decisions/0001): the tailor result and reviewed
 outcome live in memory only; the `Application` model and any persistence arrive
@@ -28,13 +32,14 @@ Out of scope: PDF render, `Application`/`cvSnapshot` persistence, the fit
 report view (all cv-export), removing an achievement from the selection during
 review, model picker, streaming, anything under the phase gate.
 
-## [TAILOR-1] Running a tailor for a pasted job description produces a tailor result for review
+## [TAILOR-1] Running a tailor for a job description produces a tailor result for review
 
-The tracer criterion: tailor sheet (company, role title, job description) →
-payload built from the Profile → intelligence service → validated tailor
-result held for review. It proves the sheet inputs, the payload and prompt
-assembly, the service seam, decode-based validation, and the tailor flow's
-state machine end to end.
+The tracer criterion: job details (company, role title, job description —
+since decisions/0008 arriving from the Application, [TAILOR-23]) → payload
+built from the Profile → intelligence service → validated tailor result held
+for review. It proves the details input, the payload and prompt assembly,
+the service seam, decode-based validation, and the tailor flow's state
+machine end to end.
 
 Exercised with `FixtureIntelligenceService` returning a canned tailor result
 from `LadderTests/Fixtures/`. The result is transient — nothing is persisted
@@ -45,6 +50,18 @@ at any point in this slice (decisions/0001).
 Refused at start, before any service call. Whitespace-only counts as empty.
 Company and role title are free-text labels carried into the payload; only the
 job description is required for a run.
+
+## [TAILOR-23] A tailor presented for an application starts from its stored job details
+
+decisions/0008: the run's `JobDetails` derive from the Application — company,
+role title and job description verbatim — and the tailor run starts on
+presentation with no input step; the view offers no editing of the details
+(the JD is corrected on the application detail, [PIPEBOARD-21..28], and
+re-tailored from there). The measurable clause is the derivation and the
+recorded fixture payload carrying the stored values verbatim; the auto-run
+presentation and the absence of input chrome are visual-verify. Replaces the
+tailor sheet's input form ([TAILOR-1]'s former "sheet inputs" clause —
+retired with the standalone entry, [PIPEBOARD-34] → [PIPEBOARD-41]).
 
 ## [TAILOR-3] Starting a tailor run when the Profile has neither achievements nor projects is refused
 

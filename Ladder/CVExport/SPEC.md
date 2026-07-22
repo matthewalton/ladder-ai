@@ -6,13 +6,14 @@ key: CVEXPORT
 
 Turn a reviewed outcome into the thing that actually gets sent. Export renders
 the Profile and the reviewed outcome into an A4, single-column, ATS-parseable
-PDF (`ImageRenderer`, per ARCHITECTURE.md's tech stack), persists the app's
-first `Application` — the rendered CV as its immutable snapshot, the selection
-rationale, status applied — hands the same bytes to a save panel, and shows
-the fit report. This slice owns the `Application` model (roadmap-minimal,
-decisions/0001), the rendered CV's content policy (decisions/0002), the
-save-panel delivery (decisions/0003), and the fit report view. It closes
-Phase 1: import → curated Profile → pasted JD → tailored PDF on disk.
+PDF (`ImageRenderer`, per ARCHITECTURE.md's tech stack), attaches it to the
+Application the tailor ran for (decisions/0006) — the rendered CV as its
+immutable snapshot, the selection rationale, a draft flipped to applied —
+hands the same bytes to a save panel, and shows the fit report. This slice
+owns the `Application` model (roadmap-minimal, decisions/0001), the rendered
+CV's content policy (decisions/0002), the save-panel delivery
+(decisions/0003), and the fit report view. It closed Phase 1: import →
+curated Profile → JD → tailored PDF on disk.
 
 The export consumes the tailor slice's reviewed outcome and never re-derives
 anything from the job description: gaps, rationale, and the selection arrive
@@ -23,17 +24,20 @@ Out of scope: the `Stage` model and pipeline board (Phase 2), Typst rendering
 rewordings after review (tailoring owns review), and any change to tailoring
 behaviour.
 
-## [CVEXPORT-1] Exporting a reviewed outcome persists an Application carrying the rendered CV as its snapshot
+## [CVEXPORT-1] Exporting a reviewed outcome attaches the rendered CV to the application as its snapshot
 
-The tracer criterion: reviewed outcome (plus the tailor sheet's job details
-and the Profile) → rendered PDF → `Application` inserted with `cvSnapshot`
-holding the PDF bytes. It proves the render seam, the model, the store, and
-the wiring from the tailor review end to end.
+The tracer criterion: reviewed outcome (plus the Profile) → rendered PDF →
+the provided `Application`'s `cvSnapshot` holding the PDF bytes
+(decisions/0006 — export attaches to the application the tailor ran for,
+never inserts a fresh one). It proves the render seam, the model, the store,
+and the wiring from the tailor review end to end.
 
 Exercised with `FixtureIntelligenceService` driving a tailor run to review,
-then exporting. The snapshot decodes as a PDF (PDFKit `PDFDocument` accepts
-the bytes). `cvSnapshot` is written exactly once, at export — never mutated
-afterwards (ARCHITECTURE.md invariant; decisions/0001).
+then exporting into a pre-created draft Application. The snapshot decodes as
+a PDF (PDFKit `PDFDocument` accepts the bytes). `cvSnapshot` is written
+exactly once, at export — never mutated afterwards (ARCHITECTURE.md
+invariant; decisions/0001); Create CV is not offered again once one exists
+([PIPEBOARD-42]).
 
 ## [CVEXPORT-2] The rendered CV contains the Profile's name, headline and contact details
 
@@ -84,11 +88,13 @@ page bounds. Single-column layout is part of the same content policy
 (decisions/0002) but is a visual-verify concern; the measurable clause is the
 page size.
 
-## [CVEXPORT-8] The persisted Application carries the tailor sheet's company, role title and job description
+## [CVEXPORT-8] An export leaves the application's company, role title and job description untouched
 
-`JobDetails` flows from the tailor sheet into the Application fields verbatim
-— company and role title stay the free-text labels they were on the sheet
-([TAILOR-2] body); empty ones persist as empty strings.
+Since decisions/0006 those fields already live on the Application — written
+at import ([PIPEBOARD-35]) or by the detail's editors — and the tailor read
+them from there ([TAILOR-23]). Export writes only its own fields
+(`cvSnapshot`, `cvSelectionRationale`, the status flip and stamp,
+[CVEXPORT-10]); the job details survive an export character for character.
 
 ## [CVEXPORT-9] The persisted Application stores the selection rationale verbatim
 
@@ -96,12 +102,13 @@ page size.
 character — the transparency record [TAILOR-7] promised cv-export would
 persist. Never summarised, trimmed, or re-derived.
 
-## [CVEXPORT-10] An export creates the Application with status applied
+## [CVEXPORT-10] An export flips a draft application to applied and stamps its applied date
 
-Rendering and saving the CV is the act of applying — there is no draft state
-in this slice (`ApplicationStatus` defines the full ARCHITECTURE.md §3 case
-set, but export always writes `.applied`; the other cases wait for Phase 2's
-pipeline board).
+Rendering and saving the CV is the act of applying (decisions/0006): a
+`.draft` application becomes `.applied` at export, `appliedAt` stamped
+`.now` only when nil — an existing date is never overwritten, the
+[PIPEBOARD-9] stance. An application already past draft keeps its status and
+date untouched.
 
 ## [CVEXPORT-11] A fully-populated Application round-trips through a store reopen
 
@@ -117,18 +124,21 @@ panel are the bytes on `cvSnapshot` — never a second render, which could
 drift. Tested at the export seam (the document/data offered for saving),
 not by driving the macOS panel.
 
-## [CVEXPORT-13] Exporting twice for the same job creates two Applications
+## [CVEXPORT-22] Exporting into an application creates no new Application
 
-No dedup and no refusal (settled at plan): re-tailoring the same JD is a
-legitimate flow, and each export is its own historical record with its own
-snapshot. Any merge/cleanup story belongs to the Phase 2 pipeline.
+Replaces [CVEXPORT-13]'s fresh-row-per-export stance (decisions/0006):
+export sets `cvSnapshot` and `cvSelectionRationale` on exactly the provided
+application — the rationale verbatim, [CVEXPORT-9]'s promise — and the
+application count is unchanged afterwards. No dedup survives upstream:
+importing the same posting twice still makes two Applications
+([PIPEBOARD-35]), each with its own export.
 
 ## [CVEXPORT-14] An export leaves the persisted Profile unchanged
 
 The Profile is export's read-only input, extending [TAILOR-15] through the
 export: after run, review, and export, the Profile's roles, achievements,
-texts, and counts are unchanged — the only new persisted object is the
-Application.
+texts, and counts are unchanged — the only persisted change is on the
+Application the export attached to.
 
 ## [CVEXPORT-15] The fit report lists every flagged gap
 

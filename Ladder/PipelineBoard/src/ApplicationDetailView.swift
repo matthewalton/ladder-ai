@@ -10,6 +10,11 @@ struct ApplicationDetailView: View {
     /// Injected as a closure so this slice never depends on a calendar-sync
     /// type; nil renders no button.
     var onLookBack: (() -> Void)?
+    /// The pause-at-the-application step ([PIPEBOARD-42]): presents the
+    /// tailor for this application. Injected as a closure — the same
+    /// no-cross-slice-dependency stance as `onLookBack`; nil renders no
+    /// button.
+    var onCreateCV: (() -> Void)?
 
     @State private var source: String
     @State private var notes: String
@@ -41,11 +46,13 @@ struct ApplicationDetailView: View {
 
     init(
         store: PipelineStore, application: Application,
-        onLookBack: (() -> Void)? = nil
+        onLookBack: (() -> Void)? = nil,
+        onCreateCV: (() -> Void)? = nil
     ) {
         self.store = store
         self.application = application
         self.onLookBack = onLookBack
+        self.onCreateCV = onCreateCV
         _source = State(initialValue: application.source ?? "")
         _notes = State(initialValue: application.notes)
         _jobDescription = State(initialValue: application.jobDescription)
@@ -72,6 +79,20 @@ struct ApplicationDetailView: View {
                     .background(
                         application.status.chipBackground,
                         in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                if let onCreateCV,
+                    Self.offersCreateCV(
+                        cvSnapshot: application.cvSnapshot,
+                        jobDescription: application.jobDescription)
+                {
+                    Button {
+                        onCreateCV()
+                    } label: {
+                        Label("Create CV", systemImage: "scissors")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.pine)
+                }
             }
             .listRowBackground(Color.paperRaised)
 
@@ -308,6 +329,14 @@ struct ApplicationDetailView: View {
     /// ([PIPEBOARD-25]).
     static func jdImportNeedsConfirmation(existing: String) -> Bool {
         !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Create CV is offered only while no CV exists — the snapshot is
+    /// written once ([CVEXPORT-1]) — and there is a job description to
+    /// tailor against ([PIPEBOARD-42]; [PIPEBOARD-33]'s remove can empty it).
+    static func offersCreateCV(cvSnapshot: Data?, jobDescription: String) -> Bool {
+        cvSnapshot == nil
+            && !jobDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func submitJDLink() {

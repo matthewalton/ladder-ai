@@ -3,20 +3,26 @@ import SwiftUI
 struct TailorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var store: TailorStore
-    @State private var details = JobDetails(company: "", roleTitle: "", jobDescription: "")
     @State private var exportStore: CVExportStore
     @State private var export: CVExportStore.Export?
     @State private var isSavingPDF = false
     @State private var exportFailed = false
 
     private let profileStore: ProfileStore
+    private let application: Application
+    private let details: JobDetails
 
+    /// Always presented for an application ([TAILOR-23], decisions/0008):
+    /// its stored details are the run's input — there is no input form.
     init(
         profileStore: ProfileStore,
+        application: Application,
         keyStore: any APIKeyStore = KeychainAPIKeyStore(),
         makeIntelligence: ((String) -> any IntelligenceService)? = nil
     ) {
         self.profileStore = profileStore
+        self.application = application
+        details = JobDetails(application: application)
         _exportStore = State(initialValue: CVExportStore(container: profileStore.container))
         if let makeIntelligence {
             _store = State(initialValue: TailorStore(
@@ -32,9 +38,9 @@ struct TailorView: View {
     var body: some View {
         Group {
             switch store.phase {
-            case .idle:
-                tailorSheet
-            case .running:
+            case .idle, .running:
+                // The run starts on presentation via `.task` — idle is the
+                // instant before it kicks off.
                 progress("Matching your points to the job…")
             case .review:
                 if let export {
@@ -42,13 +48,18 @@ struct TailorView: View {
                 } else if let review = store.review {
                     TailorReviewView(
                         review: review,
-                        onCancel: { store.reset() },
+                        onCancel: { startRun() },
                         onDone: { dismiss() },
                         onExport: { runExport(review: review) }
                     )
                 }
             case .failed(let error):
                 failed(error)
+            }
+        }
+        .task {
+            if store.phase == .idle {
+                await store.startRun(details)
             }
         }
         .frame(minWidth: 640, minHeight: 480)
@@ -67,10 +78,17 @@ struct TailorView: View {
         }
     }
 
+    private func startRun() {
+        Task { await store.startRun(details) }
+    }
+
     private func runExport(review: TailorReview) {
         guard let profile = profileStore.profile else { return }
         do {
-            export = try exportStore.export(profile: profile, review: review, details: details)
+            // Into this application ([CVEXPORT-22]) — the CV attaches where
+            // the run started.
+            export = try exportStore.export(
+                profile: profile, review: review, into: application.persistentModelID)
             isSavingPDF = true
         } catch {
             exportFailed = true
@@ -82,50 +100,6 @@ struct TailorView: View {
             .filter { !$0.isEmpty }
             .joined(separator: " — ")
         return name.isEmpty ? "CV" : name
-    }
-
-    private var canRun: Bool {
-        !details.jobDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var tailorSheet: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Tailor your Profile to a job")
-                .font(.title3)
-                .foregroundStyle(Color.ink)
-            Text("Paste the job description. Ladder selects your best-fit points and expands each into a polished CV bullet — your Profile itself is never changed.")
-                .font(.callout)
-                .foregroundStyle(Color.inkSoft)
-
-            HStack(spacing: 12) {
-                TextField("Company", text: $details.company)
-                TextField("Role title", text: $details.roleTitle)
-            }
-            .textFieldStyle(.roundedBorder)
-
-            Text("Job description")
-                .font(.headline)
-                .foregroundStyle(Color.ink)
-            TextEditor(text: $details.jobDescription)
-                .font(.body)
-                .scrollContentBackground(.hidden)
-                .padding(6)
-                .background(Color.paperRaised, in: RoundedRectangle(cornerRadius: 8))
-                .frame(minHeight: 160)
-
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                Button("Tailor") {
-                    let details = details
-                    Task { await store.startRun(details) }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.pine)
-                .disabled(!canRun)
-            }
-        }
-        .padding(24)
     }
 
     private func progress(_ message: String) -> some View {
@@ -156,7 +130,7 @@ struct TailorView: View {
                     .tint(Color.pine)
                     Button("Close") { dismiss() }
                 } else {
-                    Button("Try again") { store.reset() }
+                    Button("Try again") { startRun() }
                         .buttonStyle(.borderedProminent)
                         .tint(Color.pine)
                     Button("Close") { dismiss() }
@@ -170,7 +144,7 @@ struct TailorView: View {
     private func message(for error: TailorError) -> String {
         switch error {
         case .jobDescriptionRequired:
-            "Paste the job description first — that's what your achievements are matched against."
+            "This application has no job description yet. Add or import one on its detail, then Create CV again."
         case .achievementsRequired:
             "There's nothing to select from yet. Add achievements to your Profile, or import your CV."
         case .apiKeyRequired:
@@ -312,13 +286,19 @@ private struct ReviewedBulletRow: View {
     }
 }
 
-#Preview("Tailor sheet") {
+#Preview("Tailor run") {
     let profileStore = try! ProfileStore(container: ProfileStore.container(inMemory: true))
     try! profileStore.createProfile(name: "Alex Climber", headline: "Staff Engineer")
     let role = try! profileStore.addRole(company: "Acme", title: "Senior Engineer", start: .now, end: nil)
     try! profileStore.addAchievement(to: role, text: "Cut CI build times across every product target")
+    let application = Application(
+        company: "Summit Labs", roleTitle: "Platform Engineer",
+        jobDescription: "Own platform reliability. Kubernetes, CI at scale, incident response.",
+        status: .draft
+    )
     return TailorView(
         profileStore: profileStore,
+        application: application,
         keyStore: InMemoryAPIKeyStore(key: "sk-preview"),
         makeIntelligence: { _ in FixtureIntelligenceService.tailorFixture() }
     )

@@ -29,7 +29,7 @@ final class ProfileStore {
         self.context = ModelContext(container)
     }
 
-    /// The app's schema, one place. `url` nil means the app's default store.
+    /// The app's schema, one place. `url` nil means the app's own store file.
     static func container(at url: URL? = nil, inMemory: Bool = false) throws -> ModelContainer {
         let schema = Schema([
             Profile.self, Role.self, Achievement.self, SkillTag.self,
@@ -44,9 +44,23 @@ final class ProfileStore {
         } else if let url {
             configuration = ModelConfiguration(schema: schema, url: url)
         } else {
-            configuration = ModelConfiguration(schema: schema)
+            configuration = ModelConfiguration(schema: schema, url: try defaultStoreURL())
         }
         return try ModelContainer(for: schema, configurations: [configuration])
+    }
+
+    /// The app's own store file, never SwiftData's default. The default
+    /// (`~/Library/Application Support/default.store`) is shared by every
+    /// unsandboxed SwiftData process on the machine — including Apple's
+    /// icloudmailagent — and whichever opens it last migrates it to its own
+    /// schema, dropping the others' tables (ADR 0004; this destroyed the
+    /// store on 2026-07-22).
+    private static func defaultStoreURL() throws -> URL {
+        let directory = URL.applicationSupportDirectory
+            .appending(path: "Ladder", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(
+            at: directory, withIntermediateDirectories: true)
+        return directory.appending(path: "Ladder.store")
     }
 
     func load() throws {

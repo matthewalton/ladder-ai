@@ -15,14 +15,20 @@ The `Application` model is migrated in place in `Ladder/CVExport/src/`
 (decisions/0001) — cv-export's observable contract does not change, and its
 [CVEXPORT-11] round-trip stays green throughout. `Stage` stores its kind as a
 raw string (decisions/0002); the transition map and auto-advance rules are
-decisions/0003. The board also owns the manual add (decisions/0004) — the
-second creation path beside cv-export's export, which remains the only path
-that attaches a CV. The application detail also owns the job description
-after creation: editing it in place and the JD import (decisions/0005), which
-extracts a PDF or docx file's text on-device via the shared extractor — or
-fetches a pasted link and extracts the page's text the same way
-(decisions/0006). The detail forms' long-text fields — job description,
-notes, prep context — collapse to indicator rows when set (docs/adr/0003).
+decisions/0003. Since decisions/0008 the board owns the app's one creation
+door: importing a job posting — a pasted link or a PDF — whose text the
+intelligence service structures into company, role title and job
+description, landing a draft Application with no typing. The manual add
+(decisions/0004) and the standalone tailor entry (decisions/0007) are
+superseded by that hero action; cv-export's export attaches the CV to the
+created application ([CVEXPORT-22]) and stays the only path that attaches
+one. The application detail also owns the job description after creation:
+editing it in place and the JD re-import (decisions/0005), which extracts a
+PDF or docx file's text on-device via the shared extractor — or fetches a
+pasted link and extracts the page's text the same way (decisions/0006, both
+now scoped to re-import: raw text, no LLM). The detail forms' long-text
+fields — job description, notes, prep context — collapse to indicator rows
+when set (docs/adr/0003).
 
 Out of scope: calendar matching (the calendar-sync slice consumes the
 `calendarEventID` and `meetingURL` fields this slice only stores), the
@@ -147,39 +153,6 @@ close and reopen.
 quiet elapsed-time footer ("12 days on trail", DESIGN.md §6); no progress
 bars, no percentages — that absence is visual-verify.
 
-## [PIPEBOARD-17] Manually adding an applied Application persists it with the chosen applied date
-
-The manual add (decisions/0004), through the store seam
-(`PipelineStore.createApplication`): company and role title as entered,
-optional source and notes, status `.applied`, `appliedAt` exactly the chosen
-date — backdating allowed, the form defaults to today. The created
-Application carries no CV: `cvSnapshot` and `cvSelectionRationale` nil,
-`jobDescription` empty — export stays the only path that attaches one
-([CVEXPORT-10]). A fresh context sees the row, so creation saved.
-
-## [PIPEBOARD-18] Manually adding a draft Application leaves its applied date unset
-
-The Draft choice in the add form: status `.draft`, `appliedAt` nil — the
-later draft → applied move stamps it ([PIPEBOARD-9], decisions/0003). Until
-this criterion nothing could create a draft at all.
-
-## [PIPEBOARD-19] A manual add with a blank company or role title is refused
-
-The store throws and persists nothing — a whitespace-only value counts as
-blank. The form disables its confirm action on the same rule, but the throw
-is the seam's guarantee, not the UI's (the [PIPEBOARD-6] stance). Duplicates
-are not refused: adding the same company and role twice creates two
-Applications, the [CVEXPORT-13] no-dedup stance.
-
-## [PIPEBOARD-20] The add-application form opens from the empty state and the shell toolbar
-
-Both affordances present the same sheet (decisions/0004): a + toolbar button
-in the Applications shell, and an action in the board's empty state — which
-previously had none, leaving an empty board creatable only via export. The
-measurable clause is that the form and both hosting roots render; button
-chrome, sheet presentation, and the updated empty-state copy are
-visual-verify.
-
 ## [PIPEBOARD-21] Job-description edits on the application detail persist across a store reopen
 
 `updateDetails` grows a `jobDescription` parameter, the [PIPEBOARD-12]
@@ -286,18 +259,6 @@ edits, autosaving through the existing store seams — `updateDetails` for the
 notes ([PIPEBOARD-12]), `updateStage` for the prep context ([PIPEBOARD-15]) —
 never a private write path. Window chrome is visual-verify.
 
-## [PIPEBOARD-34] The tailor sheet opens from the empty state and the Applications shell toolbar
-
-Tailoring starts where applying happens (decisions/0007): the Applications
-shell offers "Tailor a CV" beside the manual add — in the toolbar, and as the
-empty state's lead action — presenting the Tailor slice's sheet; the export
-lands the finished application on this board ([CVEXPORT-1], [CVEXPORT-10],
-[PIPEBOARD-4]). The Profile page's former Tailor entry is removed with this
-criterion: the Profile holds everything about you; the application is where
-it gets trimmed down. The measurable clause is that the sheet and both
-hosting roots render (the [PIPEBOARD-20] stance); button chrome and sheet
-presentation are visual-verify.
-
 ## [PIPEBOARD-33] Removing a long-text field's content requires confirmation before clearing it
 
 All three fields. Confirming clears the value to empty through the store and
@@ -306,3 +267,86 @@ Declining changes nothing. Confirmation everywhere is docs/adr/0003's rule —
 hand-typed notes are as costly to recreate as generated content; only Granola
 notes stay one-click, in their own slice. The needs-confirmation stance
 mirrors [PIPEBOARD-25]; the dialog chrome is visual-verify.
+
+## [PIPEBOARD-35] Importing a job-posting link creates a draft Application with LLM-structured details
+
+The tracer of the import-first creation (decisions/0008), replacing the
+manual add's [PIPEBOARD-17]/[PIPEBOARD-18] and absorbing [PIPEBOARD-19]'s
+guarantees: paste a posting link into the import surface, the fetched page's
+text is structured by the intelligence service into company, role title and
+job description, and a draft Application lands on the board with no typing —
+fields from the extraction, `source` carrying the pasted URL (superseding
+decisions/0006's "the link is not stored" for the creation path), status
+`.draft` with `appliedAt` nil, and no CV fields (export stays the only path
+that attaches one, [CVEXPORT-22]). A fresh context sees the row, so creation
+saved. The creation seam (`PipelineStore.createApplication`) still refuses a
+blank company or role title — whitespace-only counts as blank — and no dedup
+applies: importing the same posting twice is two Applications.
+
+Exercised with an injected fetch and `FixtureIntelligenceService` returning
+the canned job-details result.
+
+## [PIPEBOARD-36] Importing a job-posting PDF file creates a draft Application the same way
+
+The file door of the import (decisions/0008): pick or drop a PDF of the
+posting; the shared extractor pulls its text on-device and the same LLM
+structuring lands the same draft Application, `source` carrying the file's
+name. The sample-cv fixture doubles as the posting file — the import never
+inspects what the text says, only that it extracts (the [PIPEBOARD-22]
+stance).
+
+## [PIPEBOARD-37] A link whose page embeds JobPosting structured data feeds the posting text to the extraction
+
+[PIPEBOARD-28]'s pre-cleaning applied to creation: when the fetched page
+carries a schema.org JobPosting ld+json block, the block's title,
+organisation and description — not the whole-page text — are what the
+intelligence service receives, so Ashby-class JS shells import and the
+payload is the posting without the nav and footer. Asserted via the fixture
+service's recorded payload. Pages without one fall back to whole-page
+extraction.
+
+## [PIPEBOARD-38] A failed job-posting import creates no Application
+
+Every failure mode: a link that is not a valid http(s) URL (refused by the
+sheet's pure helper before any store call), a fetch failure, a page or file
+with no extractable text, a missing API key — refused before any fetch or
+service call, the [TAILOR-4] stance — and a response still invalid after the
+single repair ([PIPEBOARD-39]). The board's application count is unchanged;
+there is no partial Application. The failure is reported in the import
+sheet; message chrome is visual-verify.
+
+## [PIPEBOARD-39] An invalid extraction response gets exactly one repair request
+
+The Tailor decisions/0004 loop adopted for the import: a response failing
+the job-details schema — or carrying a blank required field — triggers one
+repair request carrying the original payload, the invalid response, and the
+failure reason. An invalid-then-valid sequence records two requests, never
+three; a second failure fails the import with nothing created.
+
+## [PIPEBOARD-40] The extraction request carries the versioned job-details prompt
+
+`Prompts/job-details.md` is born here: canonical, versioned, loaded at
+runtime — never an inline string (the [TAILOR-5] stance). The fixture
+service records the request it receives: the recorded prompt equals the
+file's content, and the recorded payload carries the posting's text.
+
+## [PIPEBOARD-41] The import surface opens from the empty state and the shell toolbar
+
+The board's single hero action — "Create CV for new application" — replaces
+[PIPEBOARD-20]'s add form and [PIPEBOARD-34]'s standalone tailor entry in
+both hosts: one prominent affordance in the Applications shell toolbar and
+as the empty state's lead action, presenting the import sheet. The
+measurable clause is that the sheet and both hosting roots render (the
+retired criteria's stance); button chrome, sheet presentation, and the
+empty-state copy are visual-verify.
+
+## [PIPEBOARD-42] Create CV on a snapshot-less application presents tailoring against its stored job description
+
+The pause-at-the-application step (decisions/0008): the created draft is
+selected on the board and its detail offers a prominent "Create CV" — shown
+only while `cvSnapshot` is nil (the write-once invariant, [CVEXPORT-1]) and
+the trimmed job description is non-empty ([PIPEBOARD-33]'s remove can empty
+it). The offer decision is a pure helper so the rule is testable without
+views; pressing it presents the tailor for this application ([TAILOR-23])
+and the export attaches the CV to it ([CVEXPORT-22]). Button prominence and
+sheet presentation are visual-verify.

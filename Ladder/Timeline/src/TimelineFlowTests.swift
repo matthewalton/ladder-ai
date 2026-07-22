@@ -32,12 +32,20 @@ struct TimelineFlowTests {
         )
         await tailorStore.startRun(details)
         let review = try #require(tailorStore.review)
+        // Export attaches to the imported draft (decisions/0006) and flips
+        // it to applied, stamping the date the timeline then reads.
+        let pipelineStore = PipelineStore(container: profileStore.container)
+        try pipelineStore.load()
+        let draft = try pipelineStore.createApplication(
+            company: details.company, roleTitle: details.roleTitle,
+            jobDescription: details.jobDescription,
+            source: nil, notes: "", appliedAt: nil
+        )
         let exportStore = CVExportStore(container: profileStore.container)
         _ = try exportStore.export(
-            profile: try #require(profileStore.profile), review: review, details: details)
+            profile: try #require(profileStore.profile), review: review,
+            into: draft.persistentModelID)
 
-        // load() backfills the applied date the timeline then reads.
-        let pipelineStore = PipelineStore(container: profileStore.container)
         try pipelineStore.load()
         let application = try #require(pipelineStore.applications.first)
 

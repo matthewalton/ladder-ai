@@ -37,18 +37,21 @@ struct StagePersistenceTests {
                 )
             )
             let review = try #require(tailorStore.review)
+            // Export attaches to the imported draft (decisions/0006).
+            let pipelineStore = PipelineStore(container: profileStore.container)
+            try pipelineStore.load()
+            let draft = try pipelineStore.createApplication(
+                company: "Summit Labs", roleTitle: "Platform Engineer",
+                jobDescription: "Own platform reliability.",
+                source: nil, notes: "", appliedAt: nil
+            )
             let exportStore = CVExportStore(container: profileStore.container)
             let export = try exportStore.export(
                 profile: try #require(profileStore.profile), review: review,
-                details: JobDetails(
-                    company: "Summit Labs",
-                    roleTitle: "Platform Engineer",
-                    jobDescription: "Own platform reliability."
-                )
+                into: draft.persistentModelID
             )
             exportedSnapshot = export.pdfData
 
-            let pipelineStore = PipelineStore(container: profileStore.container)
             try pipelineStore.load()
             let application = try #require(pipelineStore.applications.first)
             try pipelineStore.addStage(to: application, kind: .technical)

@@ -20,8 +20,8 @@ struct PipelineRootView<SidebarFooter: View>: View {
     @State private var selection: PersistentIdentifier?
     @State private var showInspector = true
     @State private var contentPane: ContentPane = .board
-    @State private var isAddingApplication = false
-    @State private var isTailoring = false
+    @State private var isImporting = false
+    @State private var tailoringApplication: Application?
 
     private var selectedApplication: Application? {
         selection.flatMap { store.application(for: $0) }
@@ -36,14 +36,24 @@ struct PipelineRootView<SidebarFooter: View>: View {
             }
         }
         // Attached here so the toolbar and empty-state affordances share it.
-        .sheet(isPresented: $isAddingApplication) {
-            AddApplicationSheet(store: store)
+        .sheet(isPresented: $isImporting) {
+            // Pause at the application ([PIPEBOARD-42]): the created draft
+            // is selected with its detail open — Create CV lives there.
+            JobImportSheet(
+                pipelineStore: store,
+                onCreated: { application in
+                    try? store.load()
+                    selection = application.persistentModelID
+                    showInspector = true
+                }
+            )
         }
-        .sheet(isPresented: $isTailoring) {
+        .sheet(item: $tailoringApplication) { application in
             if let profileStore {
-                // The export lands the application on this board; the store
-                // reloads on dismiss so it appears without a relaunch.
-                TailorView(profileStore: profileStore)
+                // The export attaches the CV to this application; the store
+                // reloads on dismiss so the draft → applied move re-columns
+                // the card without a relaunch.
+                TailorView(profileStore: profileStore, application: application)
                     .onDisappear { try? store.load() }
             }
         }
@@ -76,21 +86,17 @@ struct PipelineRootView<SidebarFooter: View>: View {
                     }
                 }
                 .toolbar {
-                    if profileStore != nil {
-                        ToolbarItem {
-                            Button {
-                                isTailoring = true
-                            } label: {
-                                Label("Tailor a CV", systemImage: "scissors")
-                            }
-                        }
-                    }
+                    // The one creation door ([PIPEBOARD-41]) — deliberately
+                    // the only prominent toolbar action.
                     ToolbarItem {
                         Button {
-                            isAddingApplication = true
+                            isImporting = true
                         } label: {
-                            Label("Add application", systemImage: "plus")
+                            Label("Create CV for new application", systemImage: "doc.badge.plus")
+                                .labelStyle(.titleAndIcon)
                         }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.pine)
                     }
                     ToolbarItem {
                         Picker("View", selection: $contentPane) {
@@ -116,7 +122,12 @@ struct PipelineRootView<SidebarFooter: View>: View {
                         store: store, application: application,
                         onLookBack: onLookBack.map { callback in
                             { callback(application) }
-                        }
+                        },
+                        // Tailoring needs the Profile; nil renders no
+                        // Create CV ([PIPEBOARD-42]).
+                        onCreateCV: profileStore == nil
+                            ? nil
+                            : { tailoringApplication = application }
                     )
                     .inspectorColumnWidth(min: 280, ideal: 320)
                 } else {
@@ -139,22 +150,16 @@ struct PipelineRootView<SidebarFooter: View>: View {
             Text("No applications on the trail yet.")
                 .font(.trailNarrative(.title2))
                 .foregroundStyle(Color.inkSoft)
-            Text("Tailor a CV against a job description, or add one by hand.")
+            Text("Paste a job posting's link or drop its PDF — Ladder files the application and starts your CV.")
                 .font(.callout)
                 .foregroundStyle(Color.inkSoft)
-            // The shell toolbar (and its buttons) does not render here.
-            HStack {
-                if profileStore != nil {
-                    Button("Tailor a CV") {
-                        isTailoring = true
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.pine)
-                }
-                Button("Add application") {
-                    isAddingApplication = true
-                }
+            // The shell toolbar (and its button) does not render here.
+            Button("Create CV for new application") {
+                isImporting = true
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(Color.pine)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
