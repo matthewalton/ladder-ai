@@ -1,0 +1,232 @@
+name: Tessl code review
+
+# Run `tessl change review` on a pull request and publish the result as exactly
+# one GitHub PR review (a parent body plus inline comments) via
+# `pulls.createReview`. The CLI produces structured review data and never posts
+# to GitHub itself; .github/change-review/publish-review.mjs is the GitHub-side
+# caller. Setup context lives in tessl-review/ci/STAGE3-HANDOFF.md.
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: PR number to review
+        required: true
+        type: string
+
+concurrency:
+  # One review at a time per PR. An explicit workflow_dispatch represents
+  # intentional human override, so it cancels any in-flight review.
+  #
+  # issue_comment events do not cancel: GitHub evaluates the concurrency group
+  # before the job-level `if` condition, so an ordinary PR comment (one that the
+  # `if` guard will immediately skip) can cancel a running review before the job
+  # even starts. Setting cancel-in-progress to false for issue_comment events
+  # lets those skipped runs queue harmlessly.
+  group: tessl-review-${{ github.event.issue.number || github.event.pull_request.number || github.event.inputs['pr-number'] }}
+  cancel-in-progress: ${{ github.event_name != 'issue_comment' }}
+
+jobs:
+  change-review:
+    # Run on PR events (skipping drafts), workflow_dispatch, or an
+    # `@tessl-change-review` comment from a repo insider. Gating on
+    # author_association keeps the secret-backed run out of reach of drive-by
+    # commenters; ADMIN is included alongside OWNER/MEMBER/COLLABORATOR.
+    if: >-
+      (github.event_name != 'pull_request' || !github.event.pull_request.draft) &&
+      (github.event_name != 'issue_comment' ||
+       (github.event.issue.pull_request &&
+        startsWith(github.event.comment.body, '@tessl-change-review') &&
+        (github.event.comment.author_association == 'OWNER' ||
+         github.event.comment.author_association == 'MEMBER' ||
+         github.event.comment.author_association == 'COLLABORATOR' ||
+         github.event.comment.author_association == 'ADMIN')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      REPO: ${{ github.repository }}
+      # --- Workflow-owned review config (edit these) ---
+      REVIEW_BASE: origin/main
+      # comment | request-changes-on-findings
+      REVIEW_ACTION: comment
+      REVIEW_OUTPUT: change-review.json
+      # Review model (Ladder decision: Anthropic, not the openai/gpt-5.5 default).
+      REVIEW_MODEL: anthropic/claude-sonnet-4-5
+      # Whitespace-separated list of skill refs, expanded into repeated --skill
+      # args. The CLI runs all listed skills in parallel and interlaces their
+      # findings into one structured review output and one published PR review.
+      # First five are the vendored tessl/code-review lenses; the last is the
+      # local Ladder-conventions lens (resolved relative to the _pr checkout).
+      REVIEW_SKILLS: >-
+        tessl/code-review#review-code-legibility
+        tessl/code-review#review-test-risk
+        tessl/code-review#review-contract-boundaries
+        tessl/code-review#review-security-risks
+        tessl/code-review#review-local-precedent
+        tessl-review/skills/review-ladder-conventions
+    steps:
+      # Resolve the PR number, its exact head SHA, and whether the PR comes from
+      # a fork. For pull_request events these come from the event payload; for
+      # workflow_dispatch / issue_comment we look them up so the review pins to
+      # the same commit it diffs.
+      - name: Resolve PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PR_NUMBER: ${{ github.event.inputs['pr-number'] }}
+          COMMENT_PR_NUMBER: ${{ github.event.issue.number }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_IS_CROSS_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ "$EVENT_NAME" = "issue_comment" ]; then
+            if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+              PR_NUMBER="$INPUT_PR_NUMBER"
+            else
+              PR_NUMBER="$COMMENT_PR_NUMBER"
+            fi
+            PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid,isCrossRepository)
+            HEAD_SHA=$(jq -r .headRefOid <<< "$PR_JSON")
+            IS_CROSS_REPOSITORY=$(jq -r .isCrossRepository <<< "$PR_JSON")
+          else
+            PR_NUMBER="$EVENT_PR_NUMBER"
+            HEAD_SHA="$EVENT_HEAD_SHA"
+            IS_CROSS_REPOSITORY="$EVENT_IS_CROSS_REPOSITORY"
+          fi
+          echo "pr-number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "head-sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          echo "is-cross-repository=$IS_CROSS_REPOSITORY" >> "$GITHUB_OUTPUT"
+
+      # Refuse to run a privileged, secret-backed review on a fork PR: its head
+      # is untrusted code that would otherwise execute with the write token.
+      - name: Reject cross-repository PRs
+        if: steps.pr.outputs.is-cross-repository == 'true'
+        run: |
+          echo "Refusing to run privileged change review on a cross-repository PR." >&2
+          exit 1
+
+      # Check out the trusted workflow support files (the publisher) separately
+      # from the reviewed code, pinned to the workflow ref. For issue_comment /
+      # workflow_dispatch runs this keeps the publisher on trusted code while the
+      # reviewed PR head lives under _pr.
+      - name: Checkout workflow support
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: _workflow
+          sparse-checkout: |
+            .github/change-review/publish-review.mjs
+          persist-credentials: false
+
+      # Check out the exact PR head SHA into _pr so the diff and the published
+      # review are pinned to the same commit. fetch-depth: 0 fetches every
+      # branch, so the configured base (origin/main by default) resolves.
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.head-sha }}
+          path: _pr
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Policy: post one automatic Tessl review per PR. An explicit
+      # @tessl-change-review comment OR workflow_dispatch run bypasses this,
+      # since both are explicit human intent. New reviews carry a hidden marker;
+      # count prior marked reviews to avoid repeating automatic review noise.
+      - name: Check review policy
+        id: review-policy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr-number }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "issue_comment" ] || [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "should-run=true" >> "$GITHUB_OUTPUT"
+            echo "Explicit human request; bypassing automatic one-review policy."
+            exit 0
+          fi
+          gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/reviews" > reviews.json
+          COUNT=$(jq -s '
+            [ .[][]
+              | select(.user.login == "github-actions[bot]")
+              | select((.body // "") | contains("<!-- tessl-change-review -->"))
+            ] | length' reviews.json)
+          if [ "$COUNT" -ge 1 ]; then
+            echo "should-run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping: $COUNT existing Tessl review(s); automatic review already ran."
+          else
+            echo "should-run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Tessl
+        if: steps.review-policy.outputs.should-run == 'true'
+        uses: tesslio/setup-tessl@v2
+        with:
+          token: ${{ secrets.TESSL_TOKEN }}
+
+      # The CLI gathers the diff, runs the configured reviewer skill(s) through
+      # the agent in parallel, interlaces their findings, and writes structured
+      # review data. It never posts to GitHub. REVIEW_SKILLS is split on
+      # whitespace and expanded into repeated --skill args. ANTHROPIC_API_KEY is
+      # supplied for the anthropic/claude-sonnet-4-5 review model.
+      - name: Run change review
+        if: steps.review-policy.outputs.should-run == 'true'
+        timeout-minutes: 20
+        working-directory: _pr
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REVIEW_OUTPUT: ${{ env.REVIEW_OUTPUT }}
+          REVIEW_SKILLS: ${{ env.REVIEW_SKILLS }}
+          REVIEW_BASE: ${{ env.REVIEW_BASE }}
+          REVIEW_MODEL: ${{ env.REVIEW_MODEL }}
+        run: |
+          set -euo pipefail
+          read -r -a REVIEW_SKILL_REFS <<< "$REVIEW_SKILLS"
+          if [ "${#REVIEW_SKILL_REFS[@]}" -eq 0 ]; then
+            echo "::error::REVIEW_SKILLS must include at least one skill"
+            exit 1
+          fi
+          skill_args=()
+          for skill in "${REVIEW_SKILL_REFS[@]}"; do
+            skill_args+=(--skill "$skill")
+          done
+          tessl change review \
+            --json \
+            --output "$REVIEW_OUTPUT" \
+            "${skill_args[@]}" \
+            --base "$REVIEW_BASE" \
+            --model "$REVIEW_MODEL"
+
+      # Publish exactly one PR review from the structured output. The publisher
+      # is run from the trusted _workflow checkout, not the reviewed PR worktree.
+      - name: Publish PR review
+        if: steps.review-policy.outputs.should-run == 'true'
+        working-directory: _pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr-number }}
+          REVIEW_ACTION: ${{ env.REVIEW_ACTION }}
+          REVIEW_OUTPUT: ${{ env.REVIEW_OUTPUT }}
+          OUT: review-publish.json
+        run: node ../_workflow/.github/change-review/publish-review.mjs
+
+      - name: Upload artifacts
+        if: always() && steps.review-policy.outputs.should-run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: change-review-${{ steps.pr.outputs.head-sha }}
+          path: |
+            _pr/${{ env.REVIEW_OUTPUT }}
+            _pr/review-publish.json
+          if-no-files-found: ignore

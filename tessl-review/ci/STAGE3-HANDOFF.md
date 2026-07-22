@@ -3,6 +3,45 @@
 Pick this up in a fresh session. Stages 1–2 are done and committed; this is the
 CI step that runs the reviewers on every PR and posts inline comments.
 
+## STATUS (2026-07-22): both TODOs resolved — workflow authored, awaiting secrets + a test PR
+
+The two open questions below were resolved authoritatively from the CLI's own
+embedded `change-review` skill (`~/.local/share/tessl/embedded-plugins/0.92.0/
+harness-engineering/skills/change-review/`), so no guessing and no billed local
+review run were needed:
+
+- **TODO(1) — installer:** the official CI install is the reusable action
+  `uses: tesslio/setup-tessl@v2` (with `token: ${{ secrets.TESSL_TOKEN }}`), NOT
+  a `curl | sh` script. The guessed installer is gone.
+- **TODO(2) — field mapping:** the real `--json` shape is
+  `summary.{overview,warnings,unplacedFindings}`, `comments[]`
+  (`{path,line,side,body,startLine?,startSide?}`), and
+  `metadata.{headSha,skills}` — the draft's `.summary` / `.inlineComments[]`
+  were wrong. Publishing now uses the CLI's hardened reference publisher.
+
+Live artifacts (replacing the old parked `tessl-review/ci/tessl-review.yml` draft,
+now deleted):
+
+- `.github/workflows/tessl-review.yml` — canonical change-review workflow,
+  adapted to Ladder: all 5 vendored `tessl/code-review` lenses + the local
+  `tessl-review/skills/review-ladder-conventions` lens, `--base origin/main`,
+  `--model anthropic/claude-sonnet-4-5`, `REVIEW_ACTION: comment`. Adds fork-PR
+  rejection, trusted-vs-reviewed code separation (`_workflow` vs `_pr`), and a
+  one-automatic-review-per-PR policy the old draft lacked.
+- `.github/change-review/publish-review.mjs` — hardened publisher; one
+  `pulls.createReview` call, degrades unplaced findings into the body, validates
+  each inline comment locally.
+
+Remaining to go live (human): add the two repo secrets, then open a test PR (see
+"Definition of done" below). Note on `ANTHROPIC_API_KEY`: it is wired into the
+run step to match the local setup, but `setup-tessl` + `TESSL_TOKEN` may already
+route the model through Tessl's gateway — the test PR will confirm whether the
+Anthropic key is actually required.
+
+---
+
+## Original handoff (context)
+
 ## What already exists (do not redo)
 
 - **Vendored built-in lenses** committed under `.tessl/plugins/tessl/code-review/`:
