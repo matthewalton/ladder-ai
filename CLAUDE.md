@@ -71,7 +71,7 @@ docs/adr/
 - MVVM-lite: SwiftUI views + `@Observable` stores. No third-party architecture frameworks.
 - All LLM access behind `IntelligenceService`. Development uses `FixtureIntelligenceService` returning canned JSON from `LadderTests/Fixtures/` — no live API calls until the tailor slice turns them on.
 - API key: Keychain only. Never UserDefaults, never in code, never logged.
-- Colors/fonts: only via `Palette.swift` / `Typography.swift` accessors. No raw hex or `.custom` fonts in views (Summit View exempt later, per DESIGN.md §3).
+- Colors/fonts: only via `Palette.swift` / `Typography.swift` accessors. No raw hex or `.custom` fonts in views (Summit View exempt later, per DESIGN.md §3; the rendered CV's print template exempt per CVExport decisions/0007).
 - Dependencies: none without asking.
 - Tests: every SwiftData model change needs a round-trip persistence test. Stores get unit tests with in-memory `ModelContainer`.
 - You cannot see rendered SwiftUI. For UI tasks: build cleanly, keep previews compiling (`#Preview` on every view), and list what the human should visually verify at the end of the session.

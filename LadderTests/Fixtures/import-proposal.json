@@ -17,12 +17,14 @@
       "end": null,
       "achievements": [
         {
+          "title": "Rebuilt the CI pipeline",
           "text": "Cut CI build times across every product target",
           "impactMetric": "reduced build time 40%",
           "tech": ["Swift", "Bazel"],
           "skills": ["Swift", "CI"]
         },
         {
+          "title": null,
           "text": "Shipped the offline sync engine",
           "impactMetric": null,
           "tech": ["SwiftData"],

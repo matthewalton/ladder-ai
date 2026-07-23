@@ -37,3 +37,23 @@ One selected achievement as the fit report presents it — evidence the Profile
 meets the job description, shown with its reviewed text. Derived from the
 selection step, never re-derived from the JD.
 _Avoid_: match, highlight, win
+
+**CV template**:
+The rendered CV's fixed visual identity — its own print palette and typefaces,
+section order, and layout rules, deliberately distinct from the app's
+trail-map design system (decisions/0007). There is exactly one template; it is
+not user-selectable.
+_Avoid_: theme, style preset, layout option
+
+**Fit loop**:
+The automatic ladder that lands the rendered CV on at most two A4 pages:
+density compaction first, then condensing wordy bullets, then — as a last
+resort — trimming the weakest selected items, with any trim noted in the fit
+report. The renderer never silently drops selected content outside this loop.
+_Avoid_: shrink-to-fit, autosize
+
+**Fit metrics**:
+The per-export record of what the fit loop saw and did — content volume,
+settings applied, passes taken, page counts — kept so selection sizing can
+learn what fits over time.
+_Avoid_: telemetry, analytics

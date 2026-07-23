@@ -16,6 +16,10 @@ final class TailorReview {
     /// as-is, never expanded (decisions/0007).
     let selectedProjects: [Project]
 
+    /// The per-CV skill grouping, verbatim from the result (decisions/0009)
+    /// — cv-export's skills table renders it ([CVEXPORT-23]).
+    let skillCategories: [SkillCategory]
+
     init(
         result: TailorResult,
         achievementsByID: [String: Achievement],
@@ -29,6 +33,7 @@ final class TailorReview {
             }
         }
         selectedProjects = result.projects.compactMap { projectsByID[$0] }
+        skillCategories = result.skillCategories
         summary = result.summary
         gaps = result.gaps
         rationale = result.rationale
@@ -51,6 +56,7 @@ final class TailorReview {
                     tags: $0.skills.map(\.name).sorted()
                 )
             },
+            skillCategories: skillCategories,
             summary: summary,
             gaps: gaps,
             rationale: rationale
@@ -77,6 +83,8 @@ struct ReviewedOutcome: Equatable, Sendable {
 
     var items: [Item]
     var projects: [Project] = []
+    /// The grouping cv-export's skills table renders (decisions/0009).
+    var skillCategories: [SkillCategory] = []
     var summary: String = ""
     var gaps: [String]
     var rationale: String

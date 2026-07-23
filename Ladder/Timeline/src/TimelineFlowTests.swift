@@ -42,7 +42,7 @@ struct TimelineFlowTests {
             source: nil, notes: "", appliedAt: nil
         )
         let exportStore = CVExportStore(container: profileStore.container)
-        _ = try exportStore.export(
+        _ = try await exportStore.export(
             profile: try #require(profileStore.profile), review: review,
             into: draft.persistentModelID)
 

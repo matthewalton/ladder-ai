@@ -570,4 +570,81 @@ struct TailorFlowTests {
         // The fence never costs the single repair request.
         #expect(await service.recordedRequests.count == 1)
     }
+
+    /// The makeProfileStore profile with Tags on the fixture-selected points
+    /// (a1, a3) — the selection's Tag union is Swift, CI, Incident response.
+    private func makeTaggedProfileStore() throws -> ProfileStore {
+        let store = try makeProfileStore()
+        let role = try #require(store.profile?.roles.first)
+        let points = role.orderedAchievements
+        try store.tag(points[0], skillNamed: "Swift")
+        try store.tag(points[0], skillNamed: "CI")
+        try store.tag(points[2], skillNamed: "Incident response")
+        return store
+    }
+
+    private var groupedResultJSON: Data {
+        Data("""
+        {
+          "summary": "Platform-minded senior engineer.",
+          "selections": [
+            {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"},
+            {"achievementID": "a3", "bullet": "Led cross-team incident response for a critical payments outage"}
+          ],
+          "skillCategories": [
+            {"name": "Platform Engineering", "skills": ["Swift", "CI"]},
+            {"name": "Operations", "skills": ["Incident response"]}
+          ],
+          "gaps": [],
+          "rationale": "CI and incident work fit the platform focus."
+        }
+        """.utf8)
+    }
+
+    @Test("[TAILOR-24] the tailor result groups the selected skills into named categories")
+    func resultCarriesSkillGrouping() async throws {
+        let profileStore = try makeTaggedProfileStore()
+        let service = FixtureIntelligenceService(returning: groupedResultJSON)
+        let store = makeTailorStore(profileStore: profileStore, service: service)
+
+        await store.startRun(jobDetails)
+
+        #expect(store.phase == .review)
+        let review = try #require(store.review)
+        #expect(review.skillCategories == [
+            SkillCategory(name: "Platform Engineering", skills: ["Swift", "CI"]),
+            SkillCategory(name: "Operations", skills: ["Incident response"]),
+        ], "the grouping is carried verbatim (decisions/0009)")
+        // And travels into the reviewed outcome for cv-export's table
+        // ([CVEXPORT-23]).
+        #expect(review.outcome.skillCategories == review.skillCategories)
+    }
+
+    @Test("[TAILOR-24] a grouping naming a skill outside the selection's Tag union feeds the repair path")
+    func groupingOutsideTagUnionFeedsRepair() async throws {
+        let profileStore = try makeTaggedProfileStore()
+        let invalid = Data("""
+        {
+          "summary": "Platform-minded senior engineer.",
+          "selections": [
+            {"achievementID": "a1", "bullet": "Drove CI build times down"}
+          ],
+          "skillCategories": [
+            {"name": "Platform Engineering", "skills": ["Kubernetes"]}
+          ],
+          "gaps": [],
+          "rationale": "CI focus."
+        }
+        """.utf8)
+        let service = FixtureIntelligenceService(returning: [invalid, groupedResultJSON])
+        let store = makeTailorStore(profileStore: profileStore, service: service)
+
+        await store.startRun(jobDetails)
+
+        // Kubernetes tags nothing selected — the vocabulary bound
+        // (CVExport decisions/0004) is validation, exactly like a bad id.
+        #expect(await service.recordedRequests.count == 2, "one repair request, no more")
+        #expect(store.phase == .review, "a valid repair recovers the run")
+        #expect(store.review?.skillCategories.first?.name == "Platform Engineering")
+    }
 }

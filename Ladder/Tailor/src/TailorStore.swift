@@ -63,6 +63,7 @@ final class TailorStore {
             let service = makeIntelligence(key)
             let validIDs = Set(payload.achievementsByID.keys)
             let validProjectIDs = Set(payload.projectsByID.keys)
+            let tagNamesByID = payload.tagNamesByID
             let request = IntelligenceRequest(prompt: prompt, payload: payload.json)
             let response = try await service.complete(request)
             let result: TailorResult
@@ -70,7 +71,8 @@ final class TailorStore {
                 result = try TailorResult(
                     json: response,
                     validAchievementIDs: validIDs,
-                    validProjectIDs: validProjectIDs
+                    validProjectIDs: validProjectIDs,
+                    tagNamesByID: tagNamesByID
                 )
             } catch let failure as TailorValidationFailure {
                 // Exactly one repair attempt; a repair response failing
@@ -85,7 +87,8 @@ final class TailorStore {
                 result = try TailorResult(
                     json: repairResponse,
                     validAchievementIDs: validIDs,
-                    validProjectIDs: validProjectIDs
+                    validProjectIDs: validProjectIDs,
+                    tagNamesByID: tagNamesByID
                 )
             }
             review = TailorReview(

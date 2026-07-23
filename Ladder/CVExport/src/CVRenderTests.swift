@@ -22,7 +22,7 @@ struct CVRenderTests {
         )
         let acme = try store.addRole(
             company: "Acme", title: "Senior Engineer",
-            start: Date(timeIntervalSince1970: 1_600_000_000), end: nil  // Sep 2020 – Present
+            start: Date(timeIntervalSince1970: 1_600_000_000), end: nil  // Sep 2020 - Present
         )
         try store.addAchievement(to: acme, text: "Cut CI build times across every product target")
         try store.addAchievement(to: acme, text: "Shipped the offline sync engine")
@@ -111,9 +111,9 @@ struct CVRenderTests {
         let text = try extractedText(profileStore: profileStore, review: review)
 
         #expect(text.contains("Senior Engineer, Acme"))
-        #expect(text.contains("Sep 2020 – Present"), "a current role renders its end as Present")
+        #expect(text.contains("Sep 2020 - Present"), "a current role renders its end as Present")
         #expect(text.contains("Engineer, Globex"))
-        #expect(text.contains("Jun 2015 – Feb 2018"), "month-resolution dates")
+        #expect(text.contains("Jun 2015 - Feb 2018"), "month-resolution dates")
         // Newest-first.
         let acme = try #require(text.range(of: "Senior Engineer, Acme"))
         let globex = try #require(text.range(of: "Engineer, Globex"))
@@ -146,7 +146,72 @@ struct CVRenderTests {
         let text = try extractedText(profileStore: profileStore, review: review)
 
         #expect(text.contains("Engineer, Globex"))
-        #expect(text.contains("Jun 2015 – Feb 2018"))
+        #expect(text.contains("Jun 2015 - Feb 2018"))
+    }
+
+    @Test("[CVEXPORT-31] a role's location and industry render on its subline")
+    func roleSublineRendersLocationAndIndustry() throws {
+        let profileStore = try makeProfileStore()
+        let profile = try #require(profileStore.profile)
+        let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
+        // Globex keeps nil for both — no subline at all, never an empty line.
+        try profileStore.updateRole(
+            acme, company: acme.company, title: acme.title, start: acme.start, end: acme.end,
+            location: "London, UK", industry: "Fintech"
+        )
+        let review = try makeReview(profileStore: profileStore)
+
+        let text = try extractedText(profileStore: profileStore, review: review)
+
+        #expect(text.contains("London, UK · Fintech"), "both fields joined on the subline")
+        // Between its role header and that role's first bullet.
+        let header = try #require(text.range(of: "Senior Engineer, Acme"))
+        let subline = try #require(text.range(of: "London, UK · Fintech"))
+        let bullet = try #require(text.range(of: "Drove CI build times down"))
+        #expect(header.lowerBound < subline.lowerBound)
+        #expect(subline.lowerBound < bullet.lowerBound)
+    }
+
+    @Test("[CVEXPORT-31] a role with one print field renders that field alone")
+    func roleSublineRendersLoneField() throws {
+        let profileStore = try makeProfileStore()
+        let profile = try #require(profileStore.profile)
+        let globex = try #require(profile.roles.first(where: { $0.company == "Globex" }))
+        try profileStore.updateRole(
+            globex, company: globex.company, title: globex.title,
+            start: globex.start, end: globex.end,
+            location: nil, industry: "Analytics"
+        )
+        let review = try makeReview(profileStore: profileStore)
+
+        let text = try extractedText(profileStore: profileStore, review: review)
+
+        #expect(text.contains("Analytics"))
+        #expect(!text.contains("· Analytics"), "no separator when one field is absent")
+    }
+
+    @Test("[CVEXPORT-32] a titled achievement's bullet opens with its title")
+    func titledBulletOpensWithItsTitle() throws {
+        let profileStore = try makeProfileStore()
+        let profile = try #require(profileStore.profile)
+        let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
+        // a1 gets a canonical title; a3 stays titleless and renders plain.
+        try profileStore.updateAchievementTitle(
+            acme.orderedAchievements[0], to: "Rebuilt the CI pipeline"
+        )
+        let review = try makeReview(profileStore: profileStore)
+
+        let raw = try extractedText(profileStore: profileStore, review: review)
+        let text = raw.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+
+        #expect(
+            text.contains("Rebuilt the CI pipeline - Drove CI build times down across every product target"),
+            "the canonical title, the hyphen separator, then the reviewed text"
+        )
+        #expect(
+            text.contains("• Built the analytics reporting stack from scratch"),
+            "a titleless bullet renders the reviewed text alone, exactly as before"
+        )
     }
 
     @Test("[CVEXPORT-4] each selected achievement appears under its Role using the reviewed text")
@@ -192,23 +257,56 @@ struct CVRenderTests {
         #expect(!text.contains("Shipped the offline sync engine"))
     }
 
-    @Test("[CVEXPORT-6] the rendered CV's skills line is the union of the selected points' Tags")
-    func renderedCVDerivesSkillsFromSelectedTags() throws {
+    @Test("[CVEXPORT-23] the rendered CV's skills section shows each named skill category with its skills")
+    func renderedCVShowsSkillCategoriesWithTheirSkills() throws {
         let profileStore = try makeProfileStore()
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
-        // CI/CD tags a selected point (a1); Kubernetes tags a2, which stays
-        // outside the selection — the skills line is per-application, so it
-        // must not appear.
+        let globex = try #require(profile.roles.first(where: { $0.company == "Globex" }))
+        // CI/CD and Swift tag selected points; Kubernetes tags a2, outside
+        // the selection — the decisions/0004 vocabulary bound survives the
+        // grouping, so it must not appear.
         try profileStore.tag(acme.orderedAchievements[0], skillNamed: "CI/CD")
+        try profileStore.tag(acme.orderedAchievements[0], skillNamed: "Swift")
         try profileStore.tag(acme.orderedAchievements[1], skillNamed: "Kubernetes")
-        let review = try makeReview(profileStore: profileStore)
+        try profileStore.tag(try #require(globex.orderedAchievements.first), skillNamed: "SQL")
 
-        let text = try extractedText(profileStore: profileStore, review: review)
+        let a1 = acme.orderedAchievements[0]
+        let a3 = try #require(globex.orderedAchievements.first)
+        let result = try TailorResult(
+            json: Data("""
+            {
+              "summary": "Senior engineer with platform-scale CI performance behind them.",
+              "selections": [
+                {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"},
+                {"achievementID": "a3", "bullet": "Built the analytics reporting stack from scratch"}
+              ],
+              "skillCategories": [
+                {"name": "Platform Engineering", "skills": ["CI/CD", "Swift"]},
+                {"name": "Data", "skills": ["SQL"]}
+              ],
+              "gaps": [],
+              "rationale": "CI work maps directly to the JD's platform focus."
+            }
+            """.utf8),
+            validAchievementIDs: ["a1", "a2", "a3"],
+            tagNamesByID: [
+                "a1": a1.skills.map(\.name),
+                "a3": a3.skills.map(\.name),
+            ]
+        )
+        let review = TailorReview(result: result, achievementsByID: ["a1": a1, "a3": a3])
 
-        #expect(text.contains("Skills"))
-        #expect(text.contains("CI/CD"))
-        #expect(!text.contains("Kubernetes"), "unselected points' Tags stay off the CV")
+        let raw = try extractedText(profileStore: profileStore, review: review)
+        let text = raw.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+
+        #expect(text.contains("SKILLS"))
+        #expect(
+            text.contains("Platform Engineering: CI/CD, Swift"),
+            "each category name appears with its skills"
+        )
+        #expect(text.contains("Data: SQL"))
+        #expect(!text.contains("Kubernetes"), "a Tag on unselected content stays absent")
     }
 
     @Test("[CVEXPORT-18] the rendered CV lists every Education entry verbatim, newest-first")
@@ -228,7 +326,7 @@ struct CVRenderTests {
 
         let text = try extractedText(profileStore: profileStore, review: review)
 
-        #expect(text.contains("Education"))
+        #expect(text.contains("EDUCATION"), "the template's tracked-caps section header")
         #expect(text.contains("BSc Computer Science, University of Example"))
         #expect(text.contains("First-class honours"))
         #expect(text.contains("ML Specialisation, Open Courseware"))
@@ -275,13 +373,93 @@ struct CVRenderTests {
 
         let text = try extractedText(profileStore: profileStore, review: review)
 
-        #expect(text.contains("Projects"))
+        #expect(text.contains("PROJECTS"), "the template's tracked-caps section header")
         #expect(text.contains("Trail Mapper"))
         #expect(text.contains("github.com/alex/trail-mapper"))
         #expect(text.contains("Engineered offline tile caching for a production mapping app."),
                 "the selected project's description renders verbatim")
         #expect(!text.contains("Weather Widget"), "an unselected project is absent")
         #expect(!text.contains("Rendered live forecasts."))
+    }
+
+    @Test("[CVEXPORT-34] the rendered CV embeds the template's bundled typefaces")
+    func renderedCVEmbedsTemplateTypefaces() throws {
+        let profileStore = try makeProfileStore()
+        let review = try makeReview(profileStore: profileStore)
+        let profile = try #require(profileStore.profile)
+
+        let pdfData = CVRenderer.pdfData(for: CVDocument(profile: profile, review: review))
+
+        let fonts = try #require(Self.embeddedFontNames(in: pdfData))
+        #expect(fonts.contains { $0.contains("Inter") }, "body text is Inter — \(fonts)")
+        #expect(
+            fonts.contains { $0.contains("SourceSerif4-Bold") },
+            "the name header is Source Serif 4 Bold — \(fonts)"
+        )
+        // The silent failure this guards: registration breaking and every
+        // glyph falling back to the system font.
+        #expect(
+            !fonts.contains { $0.contains("SFPro") || $0.contains(".SF") || $0.contains("Helvetica") },
+            "no system-font fallback for body text — \(fonts)"
+        )
+    }
+
+    /// The `/BaseFont` names of every font resource in every page.
+    private static func embeddedFontNames(in pdfData: Data) -> Set<String>? {
+        guard
+            let provider = CGDataProvider(data: pdfData as CFData),
+            let document = CGPDFDocument(provider)
+        else { return nil }
+        var names: Set<String> = []
+        for pageIndex in 1...document.numberOfPages {
+            guard
+                let dictionary = document.page(at: pageIndex)?.dictionary
+            else { continue }
+            var resources: CGPDFDictionaryRef?
+            guard CGPDFDictionaryGetDictionary(dictionary, "Resources", &resources),
+                  let resources else { continue }
+            var fonts: CGPDFDictionaryRef?
+            guard CGPDFDictionaryGetDictionary(resources, "Font", &fonts),
+                  let fonts else { continue }
+            CGPDFDictionaryApplyBlock(fonts, { _, value, _ in
+                var font: CGPDFDictionaryRef?
+                if CGPDFObjectGetValue(value, .dictionary, &font), let font {
+                    var baseFont: UnsafePointer<CChar>?
+                    if CGPDFDictionaryGetName(font, "BaseFont", &baseFont), let baseFont {
+                        names.insert(String(cString: baseFont))
+                    }
+                }
+                return true
+            }, nil)
+        }
+        return names
+    }
+
+    @Test("[CVEXPORT-33] the rendered CV lists the Profile's interests in order")
+    func renderedCVListsInterestsInOrder() throws {
+        let profileStore = try makeProfileStore()
+        try profileStore.addInterest("Cycling")
+        try profileStore.addInterest("Trail running")
+        try profileStore.addInterest("Coffee")
+        let review = try makeReview(profileStore: profileStore)
+
+        let text = try extractedText(profileStore: profileStore, review: review)
+
+        #expect(text.contains("INTERESTS"))
+        #expect(
+            text.contains("Cycling · Trail running · Coffee"),
+            "entry order preserved ([PROFILE-14])"
+        )
+    }
+
+    @Test("[CVEXPORT-33] a Profile with no interests renders no Interests section")
+    func noInterestsMeansNoInterestsSection() throws {
+        let profileStore = try makeProfileStore()
+        let review = try makeReview(profileStore: profileStore)
+
+        let text = try extractedText(profileStore: profileStore, review: review)
+
+        #expect(!text.contains("INTERESTS"), "an empty section is noise, the [CVEXPORT-21] stance")
     }
 
     @Test("[CVEXPORT-7] every page of the rendered CV measures A4")
@@ -320,7 +498,7 @@ struct CVRenderTests {
             )
             byID["a\(index)"] = achievement
             selections.append(
-                #"{"achievementID": "a\#(index)", "bullet": "Rephrased achievement \#(index) with sharper impact framing"}"#
+                #"{"achievementID": "a\#(index)", "bullet": "Rephrased achievement \#(index) with sharper impact framing, spelling out the constraint it removed, the teams it unblocked, and the metric it moved over the following two quarters"}"#
             )
         }
         let result = try TailorResult(

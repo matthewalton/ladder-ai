@@ -1,4 +1,4 @@
-# import — v4
+# import — v5
 
 You are structuring a CV into Ladder's Profile shape. The user's CV text
 follows this prompt. Extract the career history exactly as written — never
@@ -28,6 +28,7 @@ of your reply is `{`. Match this schema:
       "end": "yyyy-MM or null when this is the current role",
       "achievements": [
         {
+          "title": "the bullet's bold lead-in phrase, verbatim, or null when the bullet has none",
           "text": "one impact statement, verbatim from the CV",
           "impactMetric": "the quantified impact, or null",
           "tech": ["technologies named in this achievement"],
@@ -72,6 +73,11 @@ Rules:
 - A role with no end date, or marked "present", has `"end": null`; the same
   for in-progress education.
 - Every bullet or impact statement under a role becomes one achievement. A
+  bullet that opens with a bold lead-in phrase — "**Shipped the pipeline** -
+  cut deploy time 80%" — splits at the separator: the lead-in is `title`,
+  the rest is `text`, both verbatim with the separator dropped. A bullet
+  with no lead-in has `"title": null` and the whole bullet as `text` —
+  never invent a title. A
   project is the opposite: its bullets or sentences join into one
   `description` paragraph in the CV's own wording — never split a project
   into points, and never invent connective prose beyond joining the CV's own

@@ -161,7 +161,10 @@ struct ProfileStoreTests {
 
         let start = Date(timeIntervalSince1970: 1_400_000_000)
         let end = Date(timeIntervalSince1970: 1_500_000_000)
-        try store.updateRole(role, company: "Initech", title: "Senior Engineer", start: start, end: end)
+        try store.updateRole(
+            role, company: "Initech", title: "Senior Engineer", start: start, end: end,
+            location: nil, industry: nil
+        )
         #expect(role.company == "Initech")
         #expect(role.title == "Senior Engineer")
         #expect(role.start == start)

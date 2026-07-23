@@ -11,6 +11,8 @@ struct TailorView: View {
     private let profileStore: ProfileStore
     private let application: Application
     private let details: JobDetails
+    private let keyStore: any APIKeyStore
+    private let makeIntelligence: ((String) -> any IntelligenceService)?
 
     /// Always presented for an application ([TAILOR-23], decisions/0008):
     /// its stored details are the run's input — there is no input form.
@@ -22,6 +24,8 @@ struct TailorView: View {
     ) {
         self.profileStore = profileStore
         self.application = application
+        self.keyStore = keyStore
+        self.makeIntelligence = makeIntelligence
         details = JobDetails(application: application)
         _exportStore = State(initialValue: CVExportStore(container: profileStore.container))
         if let makeIntelligence {
@@ -84,15 +88,27 @@ struct TailorView: View {
 
     private func runExport(review: TailorReview) {
         guard let profile = profileStore.profile else { return }
-        do {
-            // Into this application ([CVEXPORT-22]) — the CV attaches where
-            // the run started.
-            export = try exportStore.export(
-                profile: profile, review: review, into: application.persistentModelID)
-            isSavingPDF = true
-        } catch {
-            exportFailed = true
+        Task {
+            do {
+                // Into this application ([CVEXPORT-22]) — the CV attaches
+                // where the run started. The fit loop may need the condense
+                // or trim pass (decisions/0008), built on the same service
+                // the run used.
+                export = try await exportStore.export(
+                    profile: profile, review: review,
+                    into: application.persistentModelID,
+                    fitPasses: fitPassRunner())
+                isSavingPDF = true
+            } catch {
+                exportFailed = true
+            }
         }
+    }
+
+    private func fitPassRunner() -> FitPassRunner? {
+        guard let key = try? keyStore.readKey(), !key.isEmpty else { return nil }
+        let service = makeIntelligence?(key) ?? AnthropicIntelligenceService(apiKey: key)
+        return FitPassRunner(service: service)
     }
 
     private var defaultFilename: String {

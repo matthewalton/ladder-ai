@@ -46,7 +46,7 @@ struct StagePersistenceTests {
                 source: nil, notes: "", appliedAt: nil
             )
             let exportStore = CVExportStore(container: profileStore.container)
-            let export = try exportStore.export(
+            let export = try await exportStore.export(
                 profile: try #require(profileStore.profile), review: review,
                 into: draft.persistentModelID
             )

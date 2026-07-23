@@ -19,7 +19,10 @@ slice owns the tailor presentation, the tailor run and its validation, the
 review, `Prompts/tailor.md`, and the app's live-LLM firsts: the Settings
 scene with Keychain API key entry, the live Anthropic `IntelligenceService`
 implementation, and the retry-with-repair loop deferred here by
-[CVIMPORT-10].
+[CVIMPORT-10]. It also owns the CV template's service passes: the per-CV
+skill grouping in the tailor result (decisions/0009) and the condense and
+trim passes cv-export's fit loop calls (decisions/0010) — cv-export renders
+what these return, never rewords anything itself.
 
 The whole flow is transient (decisions/0001): the tailor result and reviewed
 outcome live in memory only; the `Application` model and any persistence arrive
@@ -210,3 +213,34 @@ it is stripped before validation (the shared `FencedJSON` helper), so a
 fenced-but-valid result reaches review without consuming the single repair
 request (decisions/0004) on a formatting quirk. The prompt also forbids
 fences explicitly, but tolerance must not depend on the model obeying.
+
+## [TAILOR-24] The tailor result groups the selected skills into named categories
+
+The skill grouping (decisions/0009): the result schema — and
+`Prompts/tailor.md`, version-bumped — gains categories, each a service-chosen
+name over skills drawn from the selection's Tag union (the vocabulary bound
+CVExport decisions/0004 established; the union is now grouped, never dumped
+flat). A grouping naming a skill outside that union fails validation and
+feeds the repair path ([TAILOR-9]). The grouping is per-CV and transient —
+no `SkillTag` model change — and travels through the reviewed outcome
+verbatim for cv-export's skills table ([CVEXPORT-23]).
+
+## [TAILOR-25] A condense pass returns the same selection with shortened bullet texts
+
+The fit loop's second rung (decisions/0010; [CVEXPORT-26]): the request
+carries the reviewed outcome's current texts, and the response keeps the
+selection identical — validation rejects any added or removed `a…`/`p…` id,
+feeding the single repair ([TAILOR-9] stance). Shortening is grounded in the
+existing bullet alone — no new facts — and achievement titles travel
+untouched (root `CONTEXT.md`: tailoring never writes the title). The
+versioned prompt is `Prompts/condense.md`; exercised with
+`FixtureIntelligenceService` like every service call.
+
+## [TAILOR-26] A trim pass returns a strict subset of the selection
+
+The fit loop's terminal rung (decisions/0010; [CVEXPORT-27]): the service
+drops the items weakest for this job description, and validation accepts
+only a non-empty strict subset of the sent selection — anything else feeds
+the single repair, and a failed repair fails the export run with the reason
+surfaced (no silent fallback). The removed items are the fit report's trim
+list ([CVEXPORT-28]). The versioned prompt is `Prompts/trim.md`.

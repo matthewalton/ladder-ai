@@ -63,10 +63,11 @@ non-default value:
 
 - `Profile`: name, headline, contact, `updatedAt`, ordered `interests`
 - `ContactInfo`: email, phone, location, link (one URL string)
-- one `Role` with company, title, start, and a nil end (a current role) plus a
-  second `Role` with a non-nil end
-- two `Achievement`s under one role, each with text, `impactMetric`, `tech`
-  (two entries), `strengthNotes`, and at least one Tag
+- one `Role` with company, title, location, industry, start, and a nil end (a
+  current role) plus a second `Role` with a non-nil end (decisions/0010 adds
+  the optional location/industry pair)
+- two `Achievement`s under one role, each with `title` (decisions/0010), text,
+  `impactMetric`, `tech` (two entries), `strengthNotes`, and at least one Tag
 - two `SkillTag`s with distinct names
 - two `Education` entries — one completed (non-nil end, non-empty detail), one
   in progress (nil end, empty detail)
@@ -166,8 +167,9 @@ orphan pruning, consistent with [PROFILE-6]).
 ## [PROFILE-17] Replacing the Profile's content leaves exactly the replacement content after a store reopen
 
 The wholesale replace pathway (decisions/0008): the store takes a replacement —
-a plain value carrying identity (name, headline), contact, roles with their
-achievements (text, impact metric, tech, skill names), education, projects
+a plain value carrying identity (name, headline), contact, roles (company,
+title, dates, and the optional location/industry pair — decisions/0010) with
+their achievements (title, text, impact metric, tech, skill names), education, projects
 (name, link, summary, description, skill names — decisions/0009), and
 interests — and rebuilds the Profile from it in one mutation.
 
@@ -196,3 +198,23 @@ replacement content — the single-profile invariant ([PROFILE-4]) holds through
 either branch. The create-profile empty state remains the manual path
 ([PROFILE-2]); nothing is auto-created without content the user chose to
 import.
+
+## [PROFILE-22] Editing a role's location and industry persists across a store reopen
+
+The optional print-field pair on `Role` (decisions/0010): edited in the
+detail rail beside the other role fields, surviving a reopen like any role
+edit. An entry that is empty after trimming persists as nil — absent, never
+an empty string — so downstream renderers can key "no subline" off nil alone
+(cv-export's grey subline renders only what exists, [CVEXPORT-31]). Existing
+roles carry nil for both until the user backfills by hand; no migration
+invents values.
+
+## [PROFILE-23] Editing a point's title persists the new title
+
+`Achievement.title` is the optional bold lead phrase (root `CONTEXT.md`;
+decisions/0010), edited in the detail rail beside the point's text and
+persisting through the [PROFILE-9] store pathway. Empty after trimming
+persists as nil — a titleless point renders plain, exactly as every point
+did before the field existed. The title is canon like the text: manual
+backfill only, and tailoring expands only the description, never writing
+the title (Tailor slice).

@@ -126,6 +126,7 @@ final class ImportStore {
     private static func replacement(from review: ImportReview) -> ProfileReplacement {
         func point(_ achievement: ReviewedAchievement) -> ReplacementPoint {
             ReplacementPoint(
+                title: achievement.proposed.title,
                 text: achievement.proposed.text,
                 impactMetric: achievement.proposed.impactMetric,
                 tech: achievement.proposed.tech,

@@ -10,6 +10,7 @@
       "bullet": "Led cross-team incident response for a critical payments outage"
     }
   ],
+  "skillCategories": [],
   "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],
   "rationale": "CI and incident-response work map directly to the JD's platform-reliability focus; the sync engine achievement is a weaker fit."
 }

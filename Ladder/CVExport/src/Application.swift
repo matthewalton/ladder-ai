@@ -24,6 +24,10 @@ final class Application {
     var appliedAt: Date?
     var cvSnapshot: Data?
     var cvSelectionRationale: String?
+    /// What the fit loop saw and did for this export ([CVEXPORT-30],
+    /// decisions/0008); written once beside the snapshot. The declaration
+    /// default migrates existing rows to nil.
+    var fitMetrics: FitMetrics? = nil
     var createdAt: Date
     var notes: String = ""
 

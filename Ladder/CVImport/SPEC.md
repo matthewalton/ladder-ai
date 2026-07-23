@@ -262,3 +262,13 @@ The complement of [CVIMPORT-29]: detection only ever fills, never blanks. A
 CV with no URL anywhere — no text-layer link, no link annotation — leaves the
 link field exactly as the model proposed it (empty string when the model
 returned null, [CVIMPORT-23]); location always passes through untouched.
+
+## [CVIMPORT-31] The proposal lists each achievement's title and description for review
+
+The title split (Profile decisions/0010): `Prompts/import.md` instructs the
+service to split a CV bullet with a bold lead-in phrase — "**Shipped the
+pipeline** - cut deploy time 80%" — into title "Shipped the pipeline" and
+description "cut deploy time 80%"; a bullet with no lead-in proposes a null
+title and the whole bullet as the description. Confirmed items land the
+title through the replace pathway ([PROFILE-17]) onto `Achievement.title`.
+The canned fixture proposal carries both titled and titleless achievements.

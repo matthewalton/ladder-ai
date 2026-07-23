@@ -1,4 +1,4 @@
-# tailor — v5
+# tailor — v6
 
 You are tailoring Ladder's Profile to one pasted job description. The payload
 following this prompt is JSON with two parts: `profile` (the user's career
@@ -33,6 +33,12 @@ of your reply is `{`. Match this schema:
     }
   ],
   "projects": ["p… ids of the whole projects to include on this CV, e.g. p1"],
+  "skillCategories": [
+    {
+      "name": "a category name you choose for this job, e.g. 'Languages & Frameworks'",
+      "skills": ["tags of the selected achievements and projects, grouped under this category"]
+    }
+  ],
   "gaps": [
     "one requirement the job description asks for that no point supports"
   ],
@@ -57,6 +63,12 @@ Rules:
   description and tags exactly as the payload states them. Include a project
   only when it genuinely fits the job; an empty array means no Projects
   section.
+- `skillCategories` is the CV's skills table: group the `tags` of the
+  content you selected into 2–5 categories named for this job description.
+  Use only tags that appear on selected achievements or selected projects —
+  never other profile tags, never skills of your own — each at most once
+  across the categories, echoed verbatim. No selected tags means an empty
+  array.
 - A point whose fields cannot support expansion is returned near-verbatim.
 - Gaps name what the job description asks for and the profile lacks — short,
   concrete, one requirement per entry. No gaps means an empty array.

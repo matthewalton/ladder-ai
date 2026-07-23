@@ -55,6 +55,24 @@ the canonical text. The input cv-export will consume; transient like
 everything else here.
 _Avoid_: final CV, tailored profile, export
 
+**Skill category**:
+A service-chosen name over a group of the selection's skills, proposed per
+tailor run for the CV's skills table (decisions/0009). Per-CV and transient —
+never stored on `SkillTag`.
+_Avoid_: skill group, tag category, taxonomy
+
+**Condense pass**:
+The fit-support service call that shortens wordy reviewed bullets while
+keeping the selection identical (decisions/0010). Called by cv-export's fit
+loop, never by the user.
+_Avoid_: shorten pass, compression, rewrite pass
+
+**Trim pass**:
+The terminal fit-support service call that drops the selection's weakest
+items, returning a strict subset; every trim surfaces in the fit report
+(decisions/0010).
+_Avoid_: cut pass, pruning, dropping
+
 **Repair request**:
 The single follow-up request sent when a response fails validation, carrying
 the original request content, the invalid response, and the validation

@@ -109,12 +109,16 @@ struct ProfilePersistenceTests {
             let swiftData = SkillTag(name: "SwiftData")
             profile.skills = [swift, swiftData]
 
-            let current = Role(company: "Acme", title: "Senior Engineer", start: currentStart, end: nil)
+            let current = Role(
+                company: "Acme", title: "Senior Engineer", start: currentStart, end: nil,
+                location: "London, UK", industry: "Fintech"
+            )
             let past = Role(company: "Initech", title: "Engineer", start: pastStart, end: pastEnd)
             profile.roles = [current, past]
 
             let first = Achievement(
                 text: "Cut CI build times across every product target",
+                title: "Rebuilt the CI pipeline",
                 impactMetric: "reduced build time 40%",
                 tech: ["Swift", "Bazel"],
                 strengthNotes: "Led the migration solo; strong STAR story",
@@ -122,6 +126,7 @@ struct ProfilePersistenceTests {
             )
             let second = Achievement(
                 text: "Shipped the offline sync engine",
+                title: "Delivered offline sync",
                 impactMetric: "0 data-loss reports in 12 months",
                 tech: ["SwiftData", "CloudKit"],
                 strengthNotes: "Good conflict-resolution war story",
@@ -181,20 +186,26 @@ struct ProfilePersistenceTests {
         #expect(current.title == "Senior Engineer")
         #expect(current.start == currentStart)
         #expect(current.end == nil, "a current role has a nil end")
+        #expect(current.location == "London, UK")
+        #expect(current.industry == "Fintech")
         #expect(past.title == "Engineer")
         #expect(past.start == pastStart)
         #expect(past.end == pastEnd)
+        #expect(past.location == nil, "print fields are optional — absent stays nil (decisions/0010)")
+        #expect(past.industry == nil)
 
         let achievements = current.orderedAchievements
         #expect(achievements.count == 2)
         let first = try #require(achievements.first)
         #expect(first.text == "Cut CI build times across every product target")
+        #expect(first.title == "Rebuilt the CI pipeline")
         #expect(first.impactMetric == "reduced build time 40%")
         #expect(first.tech == ["Swift", "Bazel"])
         #expect(first.strengthNotes == "Led the migration solo; strong STAR story")
         #expect(first.skills.map(\.name) == ["Swift"])
         let second = try #require(achievements.last)
         #expect(second.text == "Shipped the offline sync engine")
+        #expect(second.title == "Delivered offline sync")
         #expect(second.impactMetric == "0 data-loss reports in 12 months")
         #expect(second.tech == ["SwiftData", "CloudKit"])
         #expect(second.strengthNotes == "Good conflict-resolution war story")
@@ -282,8 +293,11 @@ struct ProfilePersistenceTests {
                 roles: [ReplacementRole(
                     company: "Travelex", title: "Software Engineer",
                     start: Date(timeIntervalSince1970: 1_700_000_000), end: nil,
+                    location: "  London, UK  ",  // lands trimmed (decisions/0010)
+                    industry: "   ",  // empty after trimming lands as nil
                     achievements: [
                         ReplacementPoint(
+                            title: "Shipped Rate Sale",
                             text: "Shipped the Rate Sale feature",
                             impactMetric: "5 minutes, down from 2 hours",
                             tech: ["React", "TypeScript"],
@@ -329,11 +343,15 @@ struct ProfilePersistenceTests {
         let role = try #require(profile.roles.first)
         #expect(profile.roles.count == 1)
         #expect(role.company == "Travelex")
+        #expect(role.location == "London, UK", "replacement print fields land trimmed (decisions/0010)")
+        #expect(role.industry == nil, "empty after trimming lands as nil")
         #expect(role.orderedAchievements.map(\.text) == [
             "Shipped the Rate Sale feature", "Won the AI Olympiad",
         ])
         let first = try #require(role.orderedAchievements.first)
+        #expect(first.title == "Shipped Rate Sale")
         #expect(first.impactMetric == "5 minutes, down from 2 hours")
+        #expect(role.orderedAchievements.last?.title == nil, "a point without a lead-in stays titleless")
         #expect(first.tech == ["React", "TypeScript"])
         #expect(first.skills.map(\.name) == ["React"], "skill names dedupe per [PROFILE-8]")
 
@@ -363,6 +381,71 @@ struct ProfilePersistenceTests {
         #expect(try context.fetchCount(FetchDescriptor<Project>()) == 1)
         let tags = try context.fetch(FetchDescriptor<SkillTag>())
         #expect(Set(tags.map(\.name)) == ["React", "Agentic workflows", "SQLite"])
+    }
+
+    @Test("[PROFILE-22] editing a role's location and industry persists across a store reopen")
+    func roleLocationAndIndustryEditsSurviveReopen() throws {
+        let url = temporaryStoreURL()
+        defer { removeStore(at: url) }
+
+        let start = Date(timeIntervalSince1970: 1_600_000_000)
+        do {
+            let store = try ProfileStore(container: ProfileStore.container(at: url))
+            try store.load()
+            try store.createProfile(name: "Alex Climber", headline: "")
+            let filled = try store.addRole(company: "Acme", title: "Engineer", start: start, end: nil)
+            #expect(filled.location == nil, "print fields start absent — manual backfill (decisions/0010)")
+            #expect(filled.industry == nil)
+            try store.updateRole(
+                filled, company: "Acme", title: "Engineer", start: start, end: nil,
+                location: "  London, UK  ", industry: "Fintech"
+            )
+            let blanked = try store.addRole(company: "Initech", title: "Engineer", start: start, end: nil)
+            try store.updateRole(
+                blanked, company: "Initech", title: "Engineer", start: start, end: nil,
+                location: "   ", industry: ""
+            )
+        }
+
+        let reopened = try ProfileStore(container: ProfileStore.container(at: url))
+        try reopened.load()
+        let profile = try #require(reopened.profile)
+        let filled = try #require(profile.roles.first { $0.company == "Acme" })
+        #expect(filled.location == "London, UK", "stored trimmed")
+        #expect(filled.industry == "Fintech")
+        let blanked = try #require(profile.roles.first { $0.company == "Initech" })
+        #expect(blanked.location == nil, "empty after trimming persists as nil, never an empty string")
+        #expect(blanked.industry == nil)
+    }
+
+    @Test("[PROFILE-23] editing a point's title persists the new title")
+    func achievementTitleEditSurvivesReopen() throws {
+        let url = temporaryStoreURL()
+        defer { removeStore(at: url) }
+
+        do {
+            let store = try ProfileStore(container: ProfileStore.container(at: url))
+            try store.load()
+            try store.createProfile(name: "Alex Climber", headline: "")
+            let role = try store.addRole(company: "Acme", title: "Engineer", start: .now, end: nil)
+            let titled = try store.addAchievement(to: role, text: "cut deploy time 80%")
+            #expect(titled.title == nil, "titles start absent — manual backfill (decisions/0010)")
+            try store.updateAchievementTitle(titled, to: "  Shipped the pipeline  ")
+            #expect(titled.title == "Shipped the pipeline", "stored trimmed")
+
+            let blanked = try store.addAchievement(to: role, text: "kept the lights on")
+            try store.updateAchievementTitle(blanked, to: "Temporary")
+            try store.updateAchievementTitle(blanked, to: "   ")
+            #expect(blanked.title == nil, "empty after trimming persists as nil")
+        }
+
+        let reopened = try ProfileStore(container: ProfileStore.container(at: url))
+        try reopened.load()
+        let role = try #require(reopened.profile?.roles.first)
+        let points = role.orderedAchievements
+        #expect(points.first?.title == "Shipped the pipeline")
+        #expect(points.first?.text == "cut deploy time 80%", "the title never displaces the description")
+        #expect(points.last?.title == nil)
     }
 
     @Test("[PROFILE-15] deleting a point persists, with the surviving siblings' order intact")

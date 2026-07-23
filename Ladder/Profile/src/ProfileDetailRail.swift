@@ -198,6 +198,7 @@ private struct PointDetailPane: View {
 
     @State private var text: String
     @State private var newTag = ""
+    @State private var title: String
     @State private var impactMetric: String
     @State private var techText: String
     @State private var strengthNotes: String
@@ -206,6 +207,7 @@ private struct PointDetailPane: View {
         self.store = store
         self.achievement = achievement
         _text = State(initialValue: achievement.text)
+        _title = State(initialValue: achievement.title ?? "")
         _impactMetric = State(initialValue: achievement.impactMetric ?? "")
         _techText = State(initialValue: achievement.tech.joined(separator: ", "))
         _strengthNotes = State(initialValue: achievement.strengthNotes ?? "")
@@ -220,6 +222,14 @@ private struct PointDetailPane: View {
     var body: some View {
         RailPane {
             RailSection(title: "Point") {
+                RailField(label: "Title — the CV bullet's bold lead phrase") {
+                    TextField("e.g. Shipped the pipeline", text: $title)
+                        .onSubmit(commitTitle)
+                        .railInput()
+                }
+                if title != (achievement.title ?? "") {
+                    RailSaveButton(title: "Save title", action: commitTitle)
+                }
                 TextField("A brief key talking point", text: $text, axis: .vertical)
                     .lineLimit(3...8)
                     .onSubmit(commitText)
@@ -273,6 +283,13 @@ private struct PointDetailPane: View {
         text = achievement.text
     }
 
+    /// Unlike the text, clearing the title is a valid edit — it returns the
+    /// bullet to plain rendering (decisions/0010).
+    private func commitTitle() {
+        try? store.updateAchievementTitle(achievement, to: title)
+        title = achievement.title ?? ""
+    }
+
     private func commitDetails() {
         let impact = impactMetric.trimmingCharacters(in: .whitespacesAndNewlines)
         let notes = strengthNotes.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -313,6 +330,8 @@ private struct RoleDetailPane: View {
     @State private var start: Date
     @State private var isCurrent: Bool
     @State private var end: Date
+    @State private var location: String
+    @State private var industry: String
 
     init(store: ProfileStore, role: Role) {
         self.store = store
@@ -322,6 +341,8 @@ private struct RoleDetailPane: View {
         _start = State(initialValue: role.start)
         _isCurrent = State(initialValue: role.end == nil)
         _end = State(initialValue: role.end ?? .now)
+        _location = State(initialValue: role.location ?? "")
+        _industry = State(initialValue: role.industry ?? "")
     }
 
     var body: some View {
@@ -350,6 +371,16 @@ private struct RoleDetailPane: View {
                             .labelsHidden()
                     }
                 }
+                RailField(label: "Location — the CV's grey subline") {
+                    TextField("e.g. London, UK", text: $location)
+                        .onSubmit(commit)
+                        .railInput()
+                }
+                RailField(label: "Industry — the CV's grey subline") {
+                    TextField("e.g. Fintech", text: $industry)
+                        .onSubmit(commit)
+                        .railInput()
+                }
             }
         }
         .onChange(of: start) { commit() }
@@ -363,7 +394,9 @@ private struct RoleDetailPane: View {
             company: company.trimmingCharacters(in: .whitespaces),
             title: title.trimmingCharacters(in: .whitespaces),
             start: start,
-            end: isCurrent ? nil : end
+            end: isCurrent ? nil : end,
+            location: location,
+            industry: industry
         )
     }
 }

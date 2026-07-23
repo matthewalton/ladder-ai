@@ -19,9 +19,16 @@ targets:
           - '**/decisions'
           # Referenced by CODE_SIGN_ENTITLEMENTS, not a build file
           - '**/*.entitlements'
+          # Bundled as a folder reference below, like Prompts.
+          - 'CVExport/src/Fonts'
       # Versioned prompt files, loaded at runtime (CLAUDE.md: Prompts/ is
       # canonical; CVImport SPEC.md [CVIMPORT-13]).
       - path: Prompts
+        type: folder
+        buildPhase: resources
+      # The CV template's bundled typefaces + their OFL licenses (CVExport
+      # decisions/0007), registered by the CVExport slice at render time.
+      - path: Ladder/CVExport/src/Fonts
         type: folder
         buildPhase: resources
       # Canned fixture CVs + proposal JSON: the fixture-driven intelligence

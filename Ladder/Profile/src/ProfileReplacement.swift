@@ -18,12 +18,17 @@ struct ReplacementRole: Equatable, Sendable {
     var title: String
     var start: Date
     var end: Date?  // nil = current role
+    /// Print fields (decisions/0010); empty-after-trim lands as nil.
+    var location: String? = nil
+    var industry: String? = nil
     var achievements: [ReplacementPoint] = []
 }
 
 /// One brief role achievement; skills are Tag names, resolved against the
 /// rebuilt pool by the [PROFILE-8] rule.
 struct ReplacementPoint: Equatable, Sendable {
+    /// The optional bold lead phrase (decisions/0010, [CVIMPORT-31]).
+    var title: String? = nil
     var text: String
     var impactMetric: String? = nil
     var tech: [String] = []

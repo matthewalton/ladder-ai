@@ -12,21 +12,29 @@ struct ApplicationPersistenceTests {
         defer { removeStore(at: url) }
         let snapshot = Data("not a real PDF, but exact bytes are the point".utf8)
         let createdAt = Date(timeIntervalSince1970: 1_770_000_000)
+        // Every field non-default ([CVEXPORT-30], decisions/0008).
+        let fitMetrics = FitMetrics(
+            roleCount: 3, bulletCount: 14, projectCount: 2, skillCount: 9,
+            characterCount: 4_812,
+            compactionStep: 1, stretchFactor: 1.12,
+            condensePassRun: true, trimPassCount: 1, trimmedItemCount: 2,
+            naturalPageCount: 3, finalPageCount: 2
+        )
 
         do {
             let container = try ProfileStore.container(at: url)
             let context = ModelContext(container)
-            context.insert(
-                Application(
-                    company: "Summit Labs",
-                    roleTitle: "Platform Engineer",
-                    jobDescription: "Own platform reliability.",
-                    status: .applied,
-                    cvSnapshot: snapshot,
-                    cvSelectionRationale: "CI work maps directly to the JD's platform focus.",
-                    createdAt: createdAt
-                )
+            let application = Application(
+                company: "Summit Labs",
+                roleTitle: "Platform Engineer",
+                jobDescription: "Own platform reliability.",
+                status: .applied,
+                cvSnapshot: snapshot,
+                cvSelectionRationale: "CI work maps directly to the JD's platform focus.",
+                createdAt: createdAt
             )
+            application.fitMetrics = fitMetrics
+            context.insert(application)
             try context.save()
         }
 
@@ -42,5 +50,6 @@ struct ApplicationPersistenceTests {
         #expect(application.cvSnapshot == snapshot, "snapshot bytes are byte-equal after reopen")
         #expect(application.cvSelectionRationale == "CI work maps directly to the JD's platform focus.")
         #expect(application.createdAt == createdAt)
+        #expect(application.fitMetrics == fitMetrics, "the fit metrics record round-trips whole")
     }
 }

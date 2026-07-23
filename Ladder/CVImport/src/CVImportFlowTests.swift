@@ -59,6 +59,32 @@ struct CVImportFlowTests {
         #expect(profileStore.profile?.roles.isEmpty == true)
     }
 
+    @Test("[CVIMPORT-31] the proposal lists each achievement's title and description for review")
+    func proposalSplitsAchievementTitleAndDescription() async throws {
+        let profileStore = try makeProfileStore()
+        let store = makeImportStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService.importFixture()
+        )
+
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        let review = try #require(store.review)
+        let achievements = try #require(review.roles.first?.achievements)
+        #expect(achievements.map(\.proposed.title) == ["Rebuilt the CI pipeline", nil],
+                "a bullet with a bold lead-in splits; one without proposes a null title")
+        #expect(achievements.map(\.proposed.text) == [
+            "Cut CI build times across every product target",
+            "Shipped the offline sync engine",
+        ])
+
+        // Confirmed titles land through the replace pathway ([PROFILE-17]).
+        store.confirmReview()
+        let landed = try #require(profileStore.profile?.roles
+            .first { $0.company == "Acme" }?.orderedAchievements)
+        #expect(landed.map(\.title) == ["Rebuilt the CI pipeline", nil])
+    }
+
     @Test("[CVIMPORT-2] importing a docx CV produces a proposal of roles for review")
     func docxImportProducesProposalForReview() async throws {
         let profileStore = try makeProfileStore()

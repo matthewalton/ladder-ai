@@ -58,16 +58,25 @@ final class Role {
     var title: String
     var start: Date
     var end: Date?  // nil = current role
+    /// Print fields for the CV template's subline (decisions/0010).
+    /// nil = absent — never an empty string; backfilled manually.
+    var location: String?
+    var industry: String?
     var profile: Profile?
 
     @Relationship(deleteRule: .cascade, inverse: \Achievement.role)
     var achievements: [Achievement]
 
-    init(company: String, title: String, start: Date, end: Date? = nil) {
+    init(
+        company: String, title: String, start: Date, end: Date? = nil,
+        location: String? = nil, industry: String? = nil
+    ) {
         self.company = company
         self.title = title
         self.start = start
         self.end = end
+        self.location = location
+        self.industry = industry
         self.achievements = []
     }
 
@@ -122,6 +131,10 @@ final class Project {
 
 @Model
 final class Achievement {
+    /// The optional bold lead phrase on a rendered CV bullet (root
+    /// CONTEXT.md; decisions/0010). Canon like the text: manual backfill,
+    /// never written by tailoring. nil = titleless — renders plain.
+    var title: String?
     var text: String  // canonical, user-owned wording — never edited by the LLM
     var impactMetric: String?
     var tech: [String]
@@ -134,11 +147,13 @@ final class Achievement {
 
     init(
         text: String,
+        title: String? = nil,
         impactMetric: String? = nil,
         tech: [String] = [],
         strengthNotes: String? = nil,
         sortIndex: Int = 0
     ) {
+        self.title = title
         self.text = text
         self.impactMetric = impactMetric
         self.tech = tech

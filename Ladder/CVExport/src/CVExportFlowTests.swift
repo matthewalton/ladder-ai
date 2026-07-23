@@ -76,7 +76,7 @@ struct CVExportFlowTests {
         let draft = try makeDraft(in: profileStore.container)
         let exportStore = CVExportStore(container: profileStore.container)
 
-        let export = try exportStore.export(
+        let export = try await exportStore.export(
             profile: try #require(profileStore.profile),
             review: review,
             into: draft.persistentModelID
@@ -100,11 +100,39 @@ struct CVExportFlowTests {
         try context.save()
         let exportStore = CVExportStore(container: profileStore.container)
 
-        #expect(throws: CVExportError.applicationMissing) {
-            try exportStore.export(
+        await #expect(throws: CVExportError.applicationMissing) {
+            _ = try await exportStore.export(
                 profile: try #require(profileStore.profile), review: review, into: id)
         }
         #expect(try context.fetch(FetchDescriptor<Application>()).isEmpty)
+    }
+
+    @Test("[CVEXPORT-30] each export persists its fit metrics")
+    func exportPersistsFitMetrics() async throws {
+        let profileStore = try makeProfileStore()
+        let review = try await makeReview(profileStore: profileStore)
+        let draft = try makeDraft(in: profileStore.container)
+        let exportStore = CVExportStore(container: profileStore.container)
+
+        try await exportStore.export(
+            profile: try #require(profileStore.profile),
+            review: review,
+            into: draft.persistentModelID
+        )
+
+        let persisted = try fetchOnly(in: profileStore.container)
+        let metrics = try #require(persisted.fitMetrics, "one export, one record")
+        // The fixture selection: one role, two selected bullets, no
+        // projects — fits naturally, so the loop records a pass-free run.
+        #expect(metrics.roleCount == 1)
+        #expect(metrics.bulletCount == 2)
+        #expect(metrics.projectCount == 0)
+        #expect(metrics.characterCount > 0)
+        #expect(metrics.finalPageCount >= 1)
+        #expect(metrics.naturalPageCount == metrics.finalPageCount)
+        #expect(metrics.condensePassRun == false)
+        #expect(metrics.trimPassCount == 0)
+        #expect(metrics.compactionStep == 0)
     }
 
     @Test("[CVEXPORT-8] an export leaves the application's company, role title and job description untouched")
@@ -114,7 +142,7 @@ struct CVExportFlowTests {
         let draft = try makeDraft(in: profileStore.container)
         let exportStore = CVExportStore(container: profileStore.container)
 
-        try exportStore.export(
+        try await exportStore.export(
             profile: try #require(profileStore.profile), review: review,
             into: draft.persistentModelID
         )
@@ -136,7 +164,7 @@ struct CVExportFlowTests {
         let draft = try makeDraft(in: profileStore.container)
         let exportStore = CVExportStore(container: profileStore.container)
 
-        try exportStore.export(
+        try await exportStore.export(
             profile: try #require(profileStore.profile), review: review,
             into: draft.persistentModelID
         )
@@ -157,7 +185,7 @@ struct CVExportFlowTests {
         #expect(draft.appliedAt == nil)
         let exportStore = CVExportStore(container: profileStore.container)
 
-        try exportStore.export(
+        try await exportStore.export(
             profile: try #require(profileStore.profile), review: review,
             into: draft.persistentModelID
         )
@@ -175,7 +203,7 @@ struct CVExportFlowTests {
         let active = try makeDraft(in: profileStore.container, status: .active, appliedAt: ownDate)
         let exportStore = CVExportStore(container: profileStore.container)
 
-        try exportStore.export(
+        try await exportStore.export(
             profile: try #require(profileStore.profile), review: review,
             into: active.persistentModelID
         )
@@ -192,7 +220,7 @@ struct CVExportFlowTests {
         let draft = try makeDraft(in: profileStore.container)
         let exportStore = CVExportStore(container: profileStore.container)
 
-        let export = try exportStore.export(
+        let export = try await exportStore.export(
             profile: try #require(profileStore.profile), review: review,
             into: draft.persistentModelID
         )
@@ -211,7 +239,7 @@ struct CVExportFlowTests {
         let draft = try makeDraft(in: profileStore.container)
         let exportStore = CVExportStore(container: profileStore.container)
 
-        try exportStore.export(
+        try await exportStore.export(
             profile: try #require(profileStore.profile), review: review,
             into: draft.persistentModelID
         )
@@ -242,7 +270,7 @@ struct CVExportFlowTests {
             let review = try await makeReview(profileStore: profileStore)
             let draft = try makeDraft(in: profileStore.container)
             let exportStore = CVExportStore(container: profileStore.container)
-            try exportStore.export(
+            try await exportStore.export(
                 profile: try #require(profileStore.profile), review: review,
                 into: draft.persistentModelID
             )

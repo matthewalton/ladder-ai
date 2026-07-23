@@ -19,10 +19,20 @@ The export consumes the tailor slice's reviewed outcome and never re-derives
 anything from the job description: gaps, rationale, and the selection arrive
 verbatim from the review. The Profile is read, never written.
 
+Since decisions/0007 the rendered CV follows the **CV template** — its own
+print palette and bundled typefaces, deliberately outside the app's trail-map
+design system — and the **fit loop** (decisions/0008) lands every export on
+at most two block-paginated A4 pages, recording **fit metrics** as it goes
+(this slice's CONTEXT.md defines all three). The loop's condense and trim
+passes are tailor-owned service calls ([TAILOR-25], [TAILOR-26]); this slice
+invokes them and renders what returns, rewording nothing itself.
+
 Out of scope: the `Stage` model and pipeline board (Phase 2), Typst rendering
-(a later upgrade), journey/stats export (Phase 5), editing the selection or
-rewordings after review (tailoring owns review), and any change to tailoring
-behaviour.
+(rejected at the template decision — the styled SwiftUI render stays,
+decisions/0007), journey/stats export (Phase 5), editing the selection or
+rewordings after review (tailoring owns review), user-facing template or
+fit settings (there is one template and the loop is automatic), and learning
+selection budgets from fit metrics (deferred, Baton #162).
 
 ## [CVEXPORT-1] Exporting a reviewed outcome attaches the rendered CV to the application as its snapshot
 
@@ -72,21 +82,13 @@ Tailoring's whole point: the selection is the CV. A profile achievement the
 service did not select — and whose text appears nowhere else — is absent from
 the extracted text (decisions/0002).
 
-## [CVEXPORT-6] The rendered CV's skills line is the union of the selected content's Tags
-
-Derived per application (decisions/0004): the sorted unique union of Tag names
-across the selected achievements and the selected projects (decisions/0005).
-A Tag attached only to unselected content stays off the CV; `profile.skills`
-as a whole is never dumped. Tags exist to map content to the job description,
-so the skills line is exactly the vocabulary this application's selection
-earned.
-
 ## [CVEXPORT-7] Every page of the rendered CV measures A4
 
 595 × 842 points (±1pt for float rounding), every page, asserted via PDFKit
-page bounds. Single-column layout is part of the same content policy
-(decisions/0002) but is a visual-verify concern; the measurable clause is the
-page size.
+page bounds. Pages are composed by the block-aware pagination
+([CVEXPORT-24]), no longer by slicing one tall view at fixed heights.
+Single-column layout is part of the same content policy (decisions/0002) but
+is a visual-verify concern; the measurable clause is the page size.
 
 ## [CVEXPORT-8] An export leaves the application's company, role title and job description untouched
 
@@ -113,9 +115,10 @@ date untouched.
 ## [CVEXPORT-11] A fully-populated Application round-trips through a store reopen
 
 The model-change persistence test CLAUDE.md requires, mirroring [PROFILE-5]:
-an Application with every field populated (snapshot bytes included) is
-byte-equal after closing and reopening the store on the same on-disk
-container.
+an Application with every field populated (snapshot bytes included, and the
+fit metrics record with every field non-default — [CVEXPORT-30],
+decisions/0008) is byte-equal after closing and reopening the store on the
+same on-disk container.
 
 ## [CVEXPORT-12] The saved PDF file is byte-identical to the persisted snapshot
 
@@ -182,3 +185,111 @@ keeps every role for employment continuity). A selected project renders —
 name, link when present, and its description as one prose block, verbatim
 from the Profile ([TAILOR-22]); an empty Projects heading is noise, so no
 selected projects means no Projects section.
+
+## [CVEXPORT-23] The rendered CV's skills section shows each named skill category with its skills
+
+Replaces [CVEXPORT-6]'s flat skills line (Tailor decisions/0009; the id is
+retired): the reviewed outcome carries the service's skill grouping
+([TAILOR-24]), and the renderer draws the categorised table — category name
+in template blue, its skills after it. The vocabulary bound survives from
+decisions/0004: every skill shown comes from the selection's Tag union, so a
+Tag on unselected content stays absent from the extracted text exactly as
+before. The two-column arrangement is visual-verify; the measurable clause
+is each category name appearing with its skills.
+
+## [CVEXPORT-24] A page break never splits a text line
+
+Block-aware pagination (decisions/0008) replaces the raw tall-view slicing
+that could cut a line of text across the A4 boundary: layout composes
+measured blocks — header, summary, role lines, bullets, section headers,
+entries — and a break falls only between blocks. Asserted at the pagination
+seam: every block's frame lands wholly inside one page's content box
+([CVEXPORT-7] fixes the page metrics). A section header block never lands as
+the last block on a page — it travels with its first following block.
+
+## [CVEXPORT-25] A rendered CV never exceeds two pages
+
+The fit loop's hard cap (decisions/0008). The ladder: density compaction
+(template spacing tightened stepwise), then the condense pass
+([TAILOR-25], [CVEXPORT-26]), then the trim pass ([TAILOR-26],
+[CVEXPORT-27]) — repeated until the render fits. Exercised with an oversized
+fixture Profile whose natural render exceeds two pages: the exported
+snapshot's page count is at most 2. The "ideally fills two pages" half of
+the rule is [CVEXPORT-29].
+
+## [CVEXPORT-26] The fit loop sends a condense request only when compaction leaves the CV over two pages
+
+Pass order is fixed and lazy (decisions/0008): content that fits after
+density compaction alone produces an export with zero condense requests —
+asserted via the fixture service's recorded requests. Over-length content
+records exactly the passes it needed, in ladder order.
+
+## [CVEXPORT-27] The fit loop sends a trim request only when a condensed CV still exceeds two pages
+
+The terminal rung (decisions/0008): recorded requests show condense before
+trim, and no trim request when condensing sufficed. A trim's removed items
+are never silently gone — they surface via [CVEXPORT-28].
+
+## [CVEXPORT-28] The fit report lists each item the fit loop trimmed
+
+The trim list: the difference between the reviewed selection and the trim
+pass's returned subset ([TAILOR-26]), each removed item named in the fit
+report beside strengths and gaps. No trim → no trim section, the
+[CVEXPORT-15] empty-section stance.
+
+## [CVEXPORT-29] A CV naturally filling more than one and a half pages renders with stretched spacing
+
+The underflow half of "always two full pages when it can be"
+(decisions/0008): when the natural render's content ends past the 1.5-page
+threshold but short of two full pages, spacing stretches uniformly toward a
+flush second page, capped at 1.25× — the cap wins over flushness, so a
+render may legitimately end short of the bottom margin. At or under the
+threshold, natural spacing renders unchanged — one strong page beats one
+page plus a straggler. Thresholds and cap are template metrics in `CVTheme`;
+asserted at the layout seam via the chosen stretch factor.
+
+## [CVEXPORT-30] Each export persists its fit metrics
+
+The per-export record (decisions/0008; this slice's CONTEXT.md): content
+volume sent to render (role, bullet, project, skill counts and total
+character count), settings applied (compaction step, stretch factor), passes
+run (condense, trim, repair counts), and page counts (natural and final).
+Persisted on the Application beside the snapshot — one export, one record,
+written once. Feedstock for future selection budgets (Baton #162); this
+slice only records. Round-trips under [CVEXPORT-11].
+
+## [CVEXPORT-31] A role's location and industry render on its subline
+
+The grey meta subline beneath the role's title/company line, from the
+Role's optional print fields (Profile decisions/0010, [PROFILE-22]): both
+present → "location · industry"; one present → that one alone; both nil →
+no subline at all — never an empty line. Colour and weight are
+visual-verify; the measurable clause is presence and absence in the
+extracted text.
+
+## [CVEXPORT-32] A titled achievement's bullet opens with its title
+
+Rendered "Title - description" (Profile decisions/0010): the canonical
+`Achievement.title` verbatim — tailoring never writes it (root
+`CONTEXT.md`) — then the hyphen separator, then the reviewed text exactly as
+[CVEXPORT-4] promises it. A nil or empty title renders the reviewed text
+alone, byte-for-byte what a pre-title export produced. The bold weight is
+visual-verify; the measurable clause is the "title - text" ordering in the
+extracted text.
+
+## [CVEXPORT-33] The rendered CV lists the Profile's interests in order
+
+The closing section, entry order preserved ([PROFILE-14]). No interests →
+no Interests section, the [CVEXPORT-21] stance. Interests were already in
+the tailor payload as context ([TAILOR-19]); they render from the Profile
+directly — nothing selects or rewords them.
+
+## [CVEXPORT-34] The rendered CV embeds the template's bundled typefaces
+
+The template's faces (decisions/0007): Inter for body text and Source Serif
+4 Bold for the name header, both bundled in this slice and registered at
+render time. Asserted via the PDF's embedded font names — the extracted
+list contains Inter and Source Serif 4 and no system-font fallback for
+body text. This guards the silent failure where registration breaks and
+every glyph quietly renders in San Francisco. Palette hexes and metrics
+are visual-verify.

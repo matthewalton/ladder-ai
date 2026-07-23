@@ -7,6 +7,18 @@ struct TailorPayload {
     let json: String
     let achievementsByID: [String: Achievement]
     let projectsByID: [String: Project]
+    /// Tag names per payload id (`a…` and `p…`) — the vocabulary bound the
+    /// skill grouping validates against (decisions/0009).
+    var tagNamesByID: [String: [String]] {
+        var tags: [String: [String]] = [:]
+        for (id, achievement) in achievementsByID {
+            tags[id] = achievement.skills.map(\.name)
+        }
+        for (id, project) in projectsByID {
+            tags[id] = project.skills.map(\.name)
+        }
+        return tags
+    }
 
     init(profile: Profile, details: JobDetails) throws {
         // Roles newest-first — SwiftData to-many relationships are unordered,

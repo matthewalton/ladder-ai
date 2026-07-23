@@ -156,6 +156,7 @@ final class ProfileStore {
         func makePoint(_ point: ReplacementPoint, sortIndex: Int) -> Achievement {
             let achievement = Achievement(
                 text: point.text,
+                title: Self.normalizedPrintField(point.title),
                 impactMetric: point.impactMetric,
                 tech: point.tech,
                 sortIndex: sortIndex
@@ -170,7 +171,11 @@ final class ProfileStore {
         }
 
         for role in replacement.roles {
-            let created = Role(company: role.company, title: role.title, start: role.start, end: role.end)
+            let created = Role(
+                company: role.company, title: role.title, start: role.start, end: role.end,
+                location: Self.normalizedPrintField(role.location),
+                industry: Self.normalizedPrintField(role.industry)
+            )
             target.roles.append(created)
             for (index, point) in role.achievements.enumerated() {
                 created.achievements.append(makePoint(point, sortIndex: index))
@@ -225,14 +230,28 @@ final class ProfileStore {
         return role
     }
 
-    func updateRole(_ role: Role, company: String, title: String, start: Date, end: Date?) throws {
+    func updateRole(
+        _ role: Role, company: String, title: String, start: Date, end: Date?,
+        location: String?, industry: String?
+    ) throws {
         let profile = try requireProfile()
         role.company = company
         role.title = title
         role.start = start
         role.end = end
+        role.location = Self.normalizedPrintField(location)
+        role.industry = Self.normalizedPrintField(industry)
         touch(profile)
         try context.save()
+    }
+
+    /// The decisions/0010 rule: trimmed, and empty-after-trim is nil —
+    /// absent, never an empty string.
+    static func normalizedPrintField(_ raw: String?) -> String? {
+        guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty
+        else { return nil }
+        return trimmed
     }
 
     func deleteRole(_ role: Role) throws {
@@ -285,6 +304,15 @@ final class ProfileStore {
     func updateAchievementText(_ achievement: Achievement, to text: String) throws {
         let profile = try requireProfile()
         achievement.text = text
+        touch(profile)
+        try context.save()
+    }
+
+    /// The title is canon like the text (decisions/0010): edited only here,
+    /// never by tailoring. Empty after trimming persists as nil.
+    func updateAchievementTitle(_ achievement: Achievement, to rawTitle: String?) throws {
+        let profile = try requireProfile()
+        achievement.title = Self.normalizedPrintField(rawTitle)
         touch(profile)
         try context.save()
     }

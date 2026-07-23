@@ -104,6 +104,9 @@ struct ProposedRole: Equatable, Sendable, Decodable {
 }
 
 struct ProposedAchievement: Equatable, Sendable, Decodable {
+    /// The bullet's bold lead-in phrase, split from the description
+    /// ([CVIMPORT-31]; Profile decisions/0010). null = no lead-in.
+    var title: String?
     var text: String
     var impactMetric: String?
     var tech: [String]

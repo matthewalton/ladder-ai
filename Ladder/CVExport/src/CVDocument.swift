@@ -9,9 +9,20 @@ struct CVDocument: Equatable {
         var company: String
         var start: Date
         var end: Date?  // nil = current role, rendered as "Present"
+        /// The grey meta subline (Profile decisions/0010, [CVEXPORT-31]):
+        /// "location · industry", either alone, or nil for no subline.
+        var subline: String? = nil
         /// Empty for a role with no selected achievements — the role still
         /// appears.
-        var bullets: [String]
+        var bullets: [Bullet]
+    }
+
+    /// One rendered CV bullet: the canonical `Achievement.title` as the
+    /// bold lead phrase — tailoring never writes it — and the reviewed
+    /// text ([CVEXPORT-32]). A nil title renders the text alone.
+    struct Bullet: Equatable {
+        var title: String? = nil
+        var text: String
     }
 
     struct ProjectSection: Equatable {
@@ -47,9 +58,15 @@ struct CVDocument: Equatable {
     /// Always rendered, newest-first — education is facts, not selectable
     /// content.
     var education: [EducationSection]
-    /// Derived per application: the union of Tag names across the selected
-    /// points, not the whole profile's Tag vocabulary.
-    var skills: [String]
+    /// The per-CV skill grouping, verbatim from the reviewed outcome
+    /// ([TAILOR-24], [CVEXPORT-23]) — replaces the retired flat skills
+    /// line. Validation already bounded every skill to the selection's Tag
+    /// union (Tailor decisions/0009), so the decisions/0004 vocabulary rule
+    /// holds here by construction.
+    var skillCategories: [SkillCategory] = []
+    /// The Profile's interests, entry order ([PROFILE-14]) — rendered as
+    /// the closing section, or no section when empty ([CVEXPORT-33]).
+    var interests: [String] = []
 
     @MainActor
     init(profile: Profile, review: TailorReview) {
@@ -81,8 +98,11 @@ struct CVDocument: Equatable {
                 company: role.company,
                 start: role.start,
                 end: role.end,
-                bullets: role.orderedAchievements.compactMap {
-                    reviewedText[ObjectIdentifier($0)]
+                subline: Self.subline(location: role.location, industry: role.industry),
+                bullets: role.orderedAchievements.compactMap { achievement in
+                    reviewedText[ObjectIdentifier(achievement)].map {
+                        Bullet(title: achievement.title, text: $0)
+                    }
                 }
             )
         }
@@ -101,12 +121,16 @@ struct CVDocument: Equatable {
             )
         }
 
-        // The union of selected content's Tags — achievements and whole
-        // projects alike ([CVEXPORT-6]).
-        skills = Array(
-            Set(review.items.flatMap { $0.achievement.skills.map(\.name) })
-                .union(review.selectedProjects.flatMap { $0.skills.map(\.name) })
-        ).sorted()
+        skillCategories = review.skillCategories
+        interests = profile.interests
+    }
+
+    /// "location · industry" — either alone when the other is nil, nil when
+    /// both are ([CVEXPORT-31]; the fields are nil-or-present by Profile
+    /// decisions/0010, never empty strings).
+    static func subline(location: String?, industry: String?) -> String? {
+        let parts = [location, industry].compactMap(\.self)
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// Month resolution, matching the tailor payload; UTC so tests are
@@ -119,7 +143,10 @@ struct CVDocument: Equatable {
         return formatter.string(from: date)
     }
 
+    /// A plain hyphen, deliberately: the bundled Inter subset loses the en
+    /// dash in PDF text extraction, and the extracted layer is the
+    /// ATS-parseable guarantee.
     static func dateRange(start: Date, end: Date?) -> String {
-        "\(month(from: start)) – \(end.map(month(from:)) ?? "Present")"
+        "\(month(from: start)) - \(end.map(month(from:)) ?? "Present")"
     }
 }

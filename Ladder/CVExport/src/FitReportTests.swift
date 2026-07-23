@@ -63,4 +63,22 @@ struct FitReportTests {
 
         #expect(report.rationale == "CI and incident-response work map directly to the JD's platform-reliability focus.")
     }
+
+    @Test("[CVEXPORT-28] the fit report lists each item the fit loop trimmed")
+    func fitReportListsEachTrimmedItem() {
+        let report = FitReport(
+            outcome: outcome,
+            trimmed: ["Shipped the offline sync engine", "Trail Mapper"]
+        )
+
+        #expect(report.trimmed == ["Shipped the offline sync engine", "Trail Mapper"],
+                "nothing the loop dropped is silently gone")
+    }
+
+    @Test("[CVEXPORT-28] no trim means an empty trim list, not placeholders")
+    func noTrimMeansEmptyList() {
+        let report = FitReport(outcome: outcome)
+
+        #expect(report.trimmed.isEmpty)
+    }
 }
