@@ -1,6 +1,6 @@
 {
-  "dialect": "ts-vitest",
-  "suite": "pnpm test",
-  "skillsVersion": "0.15.0",
-  "lensesVersion": "0.15.0"
+  "dialect": "swift",
+  "suite": "xcodebuild -project Ladder.xcodeproj -scheme Ladder -destination 'platform=macOS' test",
+  "skillsVersion": "0.16.0",
+  "lensesVersion": "0.16.0"
 }

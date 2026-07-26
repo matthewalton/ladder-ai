@@ -235,8 +235,8 @@ importers:
         specifier: ^3.9.5
         version: 3.9.5
       speccle:
-        specifier: ^0.15.0
-        version: 0.15.0
+        specifier: ^0.16.0
+        version: 0.16.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -1620,8 +1620,8 @@ packages:
     resolution: {integrity: sha512-i5uvt8C3ikiWeNZSVZNWcfZPItFQOsYTUAOkcUPGd8DqDy1uOUikjt5dG+uRlwyvR108Fb9DOd4GvXfT0N2/uQ==}
     engines: {node: '>= 12'}
 
-  speccle@0.15.0:
-    resolution: {integrity: sha512-ssVDvaMGeHeuZ0WeO1a9tZx2GvF5FKXKLGcMy0/A0FFjMRuRj174Vxa1ubbvbg2uEXPHaiak10ndNUlPWIBbsQ==}
+  speccle@0.16.0:
+    resolution: {integrity: sha512-bbs5LxNVwrM/UQVtV/8F80p79UjejHufrHCriC/aBe+XBdJ5SqNrLc0E8n5qm//GS5dsY58n6MYCrCuAEiOK2w==}
     engines: {node: '>=24'}
     hasBin: true
 
@@ -3223,7 +3223,7 @@ snapshots:
 
   source-map@0.7.6: {}
 
-  speccle@0.15.0: {}
+  speccle@0.16.0: {}
 
   stackback@0.0.2: {}
 
