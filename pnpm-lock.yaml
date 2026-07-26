@@ -237,9 +237,6 @@ importers:
       speccle:
         specifier: ^0.15.0
         version: 0.15.0
-      speccle-oracle:
-        specifier: ^0.8.1
-        version: 0.8.1
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -1622,12 +1619,6 @@ packages:
   source-map@0.7.6:
     resolution: {integrity: sha512-i5uvt8C3ikiWeNZSVZNWcfZPItFQOsYTUAOkcUPGd8DqDy1uOUikjt5dG+uRlwyvR108Fb9DOd4GvXfT0N2/uQ==}
     engines: {node: '>= 12'}
-
-  speccle-oracle@0.8.1:
-    resolution: {integrity: sha512-rmb0UxbzGnoF0Hwkl7ar3q+ZVn73XIkQ3taDip26NnEdPSspqyqwPEZJ1iYbmmooWdB/lBz24bXHYPYaC0IKag==}
-    engines: {node: '>=24'}
-    deprecated: renamed to speccle — npm i -g speccle
-    hasBin: true
 
   speccle@0.15.0:
     resolution: {integrity: sha512-ssVDvaMGeHeuZ0WeO1a9tZx2GvF5FKXKLGcMy0/A0FFjMRuRj174Vxa1ubbvbg2uEXPHaiak10ndNUlPWIBbsQ==}
@@ -3231,8 +3222,6 @@ snapshots:
   source-map-js@1.2.1: {}
 
   source-map@0.7.6: {}
-
-  speccle-oracle@0.8.1: {}
 
   speccle@0.15.0: {}
 
