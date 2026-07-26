@@ -9,7 +9,7 @@ Application model), the `JourneyNarrative.self` schema entry in
 `Ladder/Profile/src/ProfileStore.swift`, the `journeyFixture()` loader on
 `FixtureIntelligenceService` in `Ladder/Shared/Services/`, the journey
 section's mount point in
-`Ladder/PipelineBoard/src/ApplicationDetailView.swift` (pipeline-board
+`Ladder/PipelineBoard/src/Views/ApplicationDetailView.swift` (pipeline-board
 owns the detail form), and `Prompts/journey.md` at the repo root (the
 canonical prompts location).
 
