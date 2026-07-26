@@ -6,7 +6,7 @@ key: CVIMPORT
 
 Drop a PDF or docx CV, extract its text on-device, have the intelligence
 service propose the CV's full content — identity, contact, roles with their
-achievements and skills, education, projects, interests — review every
+achievements and tags, education, projects, interests — review every
 proposed item, and confirm to make the Profile fresh: the included items
 become the Profile's entire content through the Profile slice's replace
 pathway, creating the Profile when none exists (decisions/0007). This slice
@@ -28,8 +28,10 @@ and the review remains mandatory. The proposal covers the whole CV
 not-imported — the CV summary is generated per application at tailor time
 (Tailor slice). Contact is belt-and-braces: on-device detection overrides the
 model's proposal for email, phone, and link (decisions/0009). Projects
-propose a description and skills, not points (decisions/0010; Profile
-decisions/0009).
+propose a description and tags, not points (decisions/0010; Profile
+decisions/0009). Since 2026-07-26 the proposal carries one flat `tags` array
+per achievement and per project — the old `skills`+`tech` split is gone
+(decisions/0011; root `CONTEXT.md`: Tag).
 
 Out of scope: tailoring, PDF export, automatic duplicate matching,
 retry-with-repair (decisions/0004), streaming, cancellation UX.
@@ -65,8 +67,9 @@ Per-item exclusion:
 - Excluding a role excludes all of its achievements with it.
 - Excluding one achievement keeps the role and its other achievements
   confirmable.
-- Excluding a proposed skill keeps the achievement; the skill is simply not
-  attached. The same holds for a project's proposed skills (decisions/0010).
+- Excluding a proposed tag keeps the achievement; the tag is simply not
+  attached. The same holds for a project's proposed tags (decisions/0010,
+  decisions/0011).
 - The same rule covers education entries, projects, and interests
   ([CVIMPORT-24], [CVIMPORT-26], [CVIMPORT-28]): an excluded item is simply
   absent from the replacement.
@@ -175,9 +178,9 @@ point; the pre-run confirmation warned about it ([CVIMPORT-22]).
 
 - Included roles land with their included achievements in proposed order;
   role ordering in the editor follows dates, not insertion.
-- Two included achievements naming the same skill share one Tag — the
+- Two included achievements naming the same tag share one Tag — the
   [PROFILE-8] rule applied inside the replace; there is no pre-existing pool
-  to reuse (supersedes [CVIMPORT-8]). Project skills join the same pool
+  to reuse (supersedes [CVIMPORT-8]). Project tags join the same pool
   ([PROFILE-21]).
 - Nothing lands before confirmation — the review is mandatory; there is no
   import-without-review path.
@@ -217,14 +220,15 @@ Institution, qualification, `yyyy-MM` dates (null end = in progress), and the
 detail line (grade, honours) when the CV states one. Each entry is a proposed
 item — included by default ([CVIMPORT-4]), excludable ([CVIMPORT-6]).
 
-## [CVIMPORT-28] The proposal lists the CV's projects with description and skills for review
+## [CVIMPORT-28] The proposal lists the CV's projects with description and tags for review
 
 Replaces [CVIMPORT-25]'s points shape (decisions/0010; Profile
 decisions/0009): each project proposes name, link, one-line summary, a
 multi-line description — prose in the CV's own wording, the project's
-bullets/sentences joined, never invented — and skill names for the project as
-a whole. Excluding a project excludes it wholesale; excluding one proposed
-skill keeps the project confirmable ([CVIMPORT-6]).
+bullets/sentences joined, never invented — and tag names for the project as
+a whole (decisions/0011 renamed the list from "skills"). Excluding a project
+excludes it wholesale; excluding one proposed tag keeps the project
+confirmable ([CVIMPORT-6]).
 
 ## [CVIMPORT-26] The proposal lists the CV's interests for review
 
@@ -272,3 +276,16 @@ description "cut deploy time 80%"; a bullet with no lead-in proposes a null
 title and the whole bullet as the description. Confirmed items land the
 title through the replace pathway ([PROFILE-17]) onto `Achievement.title`.
 The canned fixture proposal carries both titled and titleless achievements.
+
+## [CVIMPORT-32] The proposal lists each achievement's tags for review
+
+One flat `tags` array per achievement (decisions/0011; root `CONTEXT.md`:
+Tag): `Prompts/import.md` folds what its v5 schema split across `skills`
+and `tech` — technologies, frameworks, practices, looser themes — into one
+deduplicated list of tag names. Each proposed tag is included by default
+([CVIMPORT-4]) and excludable ([CVIMPORT-6]); confirmed ones land through
+the replace as shared pool Tags ([CVIMPORT-20], [PROFILE-8]) — the
+achievement's replacement value has no `tech` field to receive anything
+(Profile decisions/0011). A response answering with the old keys and no
+`tags` fails validation with its reason ([CVIMPORT-17]). The canned fixture
+proposal carries the `tags` shape.

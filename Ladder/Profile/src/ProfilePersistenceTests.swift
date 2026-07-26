@@ -106,6 +106,7 @@ struct ProfilePersistenceTests {
             context.insert(profile)
 
             let swift = SkillTag(name: "Swift")
+            swift.aliases = ["swiftlang"]  // one Tag carries an Alias ([PROFILE-26])
             let swiftData = SkillTag(name: "SwiftData")
             profile.skills = [swift, swiftData]
 
@@ -120,7 +121,6 @@ struct ProfilePersistenceTests {
                 text: "Cut CI build times across every product target",
                 title: "Rebuilt the CI pipeline",
                 impactMetric: "reduced build time 40%",
-                tech: ["Swift", "Bazel"],
                 strengthNotes: "Led the migration solo; strong STAR story",
                 sortIndex: 0
             )
@@ -128,7 +128,6 @@ struct ProfilePersistenceTests {
                 text: "Shipped the offline sync engine",
                 title: "Delivered offline sync",
                 impactMetric: "0 data-loss reports in 12 months",
-                tech: ["SwiftData", "CloudKit"],
                 strengthNotes: "Good conflict-resolution war story",
                 sortIndex: 1
             )
@@ -179,6 +178,10 @@ struct ProfilePersistenceTests {
         #expect(profile.contact.link == "https://alex.dev")
         #expect(profile.updatedAt == updatedAt)
         #expect(Set(profile.skills.map(\.name)) == ["Swift", "SwiftData"])
+        let swiftTag = try #require(profile.skills.first { $0.name == "Swift" })
+        #expect(swiftTag.aliases == ["swiftlang"], "the recorded Alias round-trips ([PROFILE-26])")
+        let swiftDataTag = try #require(profile.skills.first { $0.name == "SwiftData" })
+        #expect(swiftDataTag.aliases == [], "a Tag without Aliases stays empty")
 
         #expect(profile.roles.count == 2)
         let current = try #require(profile.roles.first { $0.company == "Acme" })
@@ -200,14 +203,12 @@ struct ProfilePersistenceTests {
         #expect(first.text == "Cut CI build times across every product target")
         #expect(first.title == "Rebuilt the CI pipeline")
         #expect(first.impactMetric == "reduced build time 40%")
-        #expect(first.tech == ["Swift", "Bazel"])
         #expect(first.strengthNotes == "Led the migration solo; strong STAR story")
         #expect(first.skills.map(\.name) == ["Swift"])
         let second = try #require(achievements.last)
         #expect(second.text == "Shipped the offline sync engine")
         #expect(second.title == "Delivered offline sync")
         #expect(second.impactMetric == "0 data-loss reports in 12 months")
-        #expect(second.tech == ["SwiftData", "CloudKit"])
         #expect(second.strengthNotes == "Good conflict-resolution war story")
         #expect(second.skills.map(\.name) == ["SwiftData"])
 
@@ -274,7 +275,8 @@ struct ProfilePersistenceTests {
                 start: Date(timeIntervalSince1970: 1_000_000_000), end: nil
             )
             let achievement = try store.addAchievement(to: role, text: "Old achievement")
-            try store.tag(achievement, skillNamed: "OldSkill")
+            let oldTag = try store.tag(achievement, skillNamed: "OldSkill")
+            oldTag.aliases = ["legacy"]  // wiped with the pool — the replace is wholesale
             try store.addEducation(
                 institution: "Old University", qualification: "Old BSc",
                 start: Date(timeIntervalSince1970: 900_000_000), end: nil
@@ -300,7 +302,6 @@ struct ProfilePersistenceTests {
                             title: "Shipped Rate Sale",
                             text: "Shipped the Rate Sale feature",
                             impactMetric: "5 minutes, down from 2 hours",
-                            tech: ["React", "TypeScript"],
                             // Dedupes to one Tag by the [PROFILE-8] rule.
                             skills: ["React", " react "]
                         ),
@@ -352,8 +353,7 @@ struct ProfilePersistenceTests {
         #expect(first.title == "Shipped Rate Sale")
         #expect(first.impactMetric == "5 minutes, down from 2 hours")
         #expect(role.orderedAchievements.last?.title == nil, "a point without a lead-in stays titleless")
-        #expect(first.tech == ["React", "TypeScript"])
-        #expect(first.skills.map(\.name) == ["React"], "skill names dedupe per [PROFILE-8]")
+        #expect(first.skills.map(\.name) == ["React"], "tag names dedupe per [PROFILE-8]")
 
         let education = try #require(profile.education.first)
         #expect(profile.education.count == 1)
@@ -381,6 +381,10 @@ struct ProfilePersistenceTests {
         #expect(try context.fetchCount(FetchDescriptor<Project>()) == 1)
         let tags = try context.fetch(FetchDescriptor<SkillTag>())
         #expect(Set(tags.map(\.name)) == ["React", "Agentic workflows", "SQLite"])
+        let aliasFree = tags.allSatisfy { $0.aliases.isEmpty }
+        #expect(
+            aliasFree,
+            "the rebuilt pool starts Alias-free — recorded Aliases went with the wholesale removal")
     }
 
     @Test("[PROFILE-22] editing a role's location and industry persists across a store reopen")

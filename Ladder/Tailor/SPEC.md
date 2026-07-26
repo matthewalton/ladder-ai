@@ -13,8 +13,9 @@ then each expanded bullet is reviewed side by side before anything is used.
 The job details — company, role title, job description — arrive from the
 Application the tailor is presented for (decisions/0008); the tailor
 collects nothing by hand. Expansion is grounded strictly in the point's own
-fields (text, impact metric, tech, Tags, strength notes) and never invents
-facts; education and interests travel in the payload as context only. This
+fields (text, impact metric, Tags, strength notes — `tech` merged into Tags,
+Profile decisions/0011) and never invents facts; education and interests
+travel in the payload as context only. This
 slice owns the tailor presentation, the tailor run and its validation, the
 review, `Prompts/tailor.md`, and the app's live-LLM firsts: the Settings
 scene with Keychain API key entry, the live Anthropic `IntelligenceService`
@@ -198,7 +199,7 @@ The CV summary is generated per tailor run, tailored to the job description,
 and never stored on the Profile (decisions/0006 — settled with the human: a
 summary should read against the JD, so it has no canonical stored form). It is
 grounded strictly in payload facts — years of experience derived from role
-dates, actual roles, tech, and metrics; the no-invention stance of bullets
+dates, actual roles, Tags, and metrics; the no-invention stance of bullets
 applies. Required by the result schema, so a result without one feeds the
 repair path ([TAILOR-9]); the review shows it beside the rationale, and it
 travels into the reviewed outcome verbatim for cv-export to render

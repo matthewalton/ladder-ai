@@ -5,15 +5,31 @@ import SwiftUI
 struct TagChipsView: View {
     let names: [String]
     var onRemove: ((String) -> Void)?
+    /// Tapping the chip's name opens curation — the tag manage sheet
+    /// (decisions/0013). The chip is the rendering, the SkillTag the model.
+    var onTap: ((String) -> Void)?
 
     var body: some View {
         ChipFlowLayout(spacing: 6) {
             ForEach(names, id: \.self) { name in
                 HStack(spacing: 5) {
-                    Text(name)
-                        .font(.caption)
-                        .foregroundStyle(Color.ink)
-                        .fixedSize()
+                    if let onTap {
+                        Button {
+                            onTap(name)
+                        } label: {
+                            Text(name)
+                                .font(.caption)
+                                .foregroundStyle(Color.ink)
+                                .fixedSize()
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Manage \(name)")
+                    } else {
+                        Text(name)
+                            .font(.caption)
+                            .foregroundStyle(Color.ink)
+                            .fixedSize()
+                    }
                     if let onRemove {
                         Button {
                             onRemove(name)

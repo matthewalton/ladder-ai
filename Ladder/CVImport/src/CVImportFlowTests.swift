@@ -156,8 +156,8 @@ struct CVImportFlowTests {
             #expect(role.included)
             for achievement in role.achievements {
                 #expect(achievement.included)
-                for skill in achievement.skills {
-                    #expect(skill.included)
+                for tag in achievement.tags {
+                    #expect(tag.included)
                 }
             }
         }
@@ -166,8 +166,8 @@ struct CVImportFlowTests {
         }
         for project in review.projects {
             #expect(project.included)
-            for skill in project.skills {
-                #expect(skill.included)
+            for tag in project.tags {
+                #expect(tag.included)
             }
         }
         for interest in review.interests {
@@ -215,8 +215,7 @@ struct CVImportFlowTests {
         ])
         let first = try #require(acme.orderedAchievements.first)
         #expect(first.impactMetric == "reduced build time 40%")
-        #expect(first.tech == ["Swift", "Bazel"])
-        #expect(Set(first.skills.map(\.name)) == ["Swift", "CI"])
+        #expect(Set(first.skills.map(\.name)) == ["Swift", "CI", "Bazel"])
 
         let initech = try #require(profile.roles.first { $0.company == "Initech" })
         #expect(initech.start == monthDate(2018, 9))
@@ -224,11 +223,64 @@ struct CVImportFlowTests {
 
         // The Tag pool is rebuilt from the replacement alone; "Swift" is
         // named by a role achievement and a project yet lands once.
-        #expect(Set(profile.skills.map(\.name)) == ["Swift", "CI", "SwiftData", "Python", "MapKit"])
+        #expect(Set(profile.skills.map(\.name)) == ["Swift", "CI", "Bazel", "SwiftData", "Python", "MapKit"])
         let swift = try #require(profile.skills.first { $0.name == "Swift" })
         let project = try #require(profile.projects.first)
         #expect(project.details == "An offline-first hiking map app with tile caching and route planning, built to survive a week without signal.")
-        #expect(project.skills.contains { $0 === swift }, "the same skill name shares one Tag across the replacement")
+        #expect(project.skills.contains { $0 === swift }, "the same tag name shares one Tag across the replacement")
+    }
+
+    @Test("[CVIMPORT-32] the proposal lists each achievement's tags for review")
+    func proposalListsEachAchievementsTags() async throws {
+        let profileStore = try makeProfileStore()
+        let store = makeImportStore(
+            profileStore: profileStore, service: FixtureIntelligenceService.importFixture())
+
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        let review = try #require(store.review)
+        let first = try #require(review.roles.first?.achievements.first)
+        #expect(
+            first.proposed.tags == ["Swift", "CI", "Bazel"],
+            "one flat tags array per achievement — the skills+tech split is gone (decisions/0011)")
+        let allIncluded = first.tags.allSatisfy(\.included)
+        #expect(allIncluded, "each proposed tag enters review included ([CVIMPORT-4])")
+    }
+
+    @Test("[CVIMPORT-32] a response answering with the old keys and no tags fails validation with its reason")
+    func oldShapeResponseFailsWithItsReason() async throws {
+        let profileStore = try makeProfileStore()
+        let oldShape = Data(
+            #"""
+            {
+              "identity": {
+                "name": "Alex Climber", "headline": null,
+                "contact": { "email": null, "phone": null, "location": null, "link": null }
+              },
+              "roles": [
+                {
+                  "company": "Acme", "title": "Engineer", "start": "2021-04", "end": null,
+                  "achievements": [
+                    {
+                      "title": null, "text": "Cut CI build times", "impactMetric": null,
+                      "tech": ["Swift"], "skills": ["CI"]
+                    }
+                  ]
+                }
+              ],
+              "education": [], "projects": [], "interests": [], "notImportedSections": []
+            }
+            """#.utf8)
+        let store = makeImportStore(
+            profileStore: profileStore, service: FixtureIntelligenceService(returning: oldShape))
+
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        #expect(
+            store.phase
+                == .failed(.proposalInvalid(reason: "the proposal is missing 'roles[0].achievements[0].tags'")),
+            "the prompt and schema move together — no back-compat window (decisions/0011)")
+        #expect(store.review == nil)
     }
 
     @Test("[CVIMPORT-6] a proposed item excluded in review does not land in the Profile")
@@ -242,14 +294,14 @@ struct CVImportFlowTests {
         let review = try #require(store.review)
 
         // Excluding a role excludes its achievements with it; excluding one
-        // achievement keeps the role's others; excluding a skill keeps the
+        // achievement keeps the role's others; excluding a tag keeps the
         // achievement.
         try #require(review.roles.count == 2)
         review.roles[1].included = false
         review.roles[0].achievements[1].included = false
         let firstAchievement = review.roles[0].achievements[0]
-        try #require(firstAchievement.skills.map(\.name) == ["Swift", "CI"])
-        firstAchievement.skills[1].included = false
+        try #require(firstAchievement.tags.map(\.name) == ["Swift", "CI", "Bazel"])
+        firstAchievement.tags[1].included = false
 
         store.confirmReview()
 
@@ -259,7 +311,7 @@ struct CVImportFlowTests {
         #expect(acme.orderedAchievements.map(\.text) == [
             "Cut CI build times across every product target"
         ])
-        #expect(acme.orderedAchievements.first?.skills.map(\.name) == ["Swift"])
+        #expect(Set(acme.orderedAchievements.first?.skills.map(\.name) ?? []) == ["Swift", "Bazel"])
     }
 
     @Test("[CVIMPORT-7] merged roles and achievements are still present after the app relaunches")
@@ -365,8 +417,8 @@ struct CVImportFlowTests {
         #expect(profileStore.profile?.education.isEmpty == true)
     }
 
-    @Test("[CVIMPORT-28] the proposal lists the CV's projects with description and skills for review")
-    func proposalListsProjectsWithDescriptionAndSkillsForReview() async throws {
+    @Test("[CVIMPORT-28] the proposal lists the CV's projects with description and tags for review")
+    func proposalListsProjectsWithDescriptionAndTagsForReview() async throws {
         let profileStore = try makeProfileStore()
         let store = makeImportStore(
             profileStore: profileStore,
@@ -380,10 +432,10 @@ struct CVImportFlowTests {
         #expect(project.proposed.link == "https://github.com/alex/trail-mapper")
         #expect(project.proposed.summary == "Offline-first hiking maps")
         #expect(project.proposed.description == "An offline-first hiking map app with tile caching and route planning, built to survive a week without signal.")
-        #expect(project.skills.map(\.name) == ["Swift", "MapKit"])
+        #expect(project.tags.map(\.name) == ["Swift", "MapKit"])
 
-        // Excluding one proposed skill keeps the project confirmable.
-        project.skills[1].included = false
+        // Excluding one proposed tag keeps the project confirmable.
+        project.tags[1].included = false
         store.confirmReview()
         let landed = try #require(profileStore.profile?.projects.first)
         #expect(landed.skills.map(\.name) == ["Swift"])

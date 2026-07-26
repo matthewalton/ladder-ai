@@ -40,18 +40,20 @@ final class ReviewedRole: Identifiable {
 @Observable
 final class ReviewedAchievement: Identifiable {
     let proposed: ProposedAchievement
-    let skills: [ReviewedSkill]
+    let tags: [ReviewedTag]
     var included = true
 
     init(proposed: ProposedAchievement) {
         self.proposed = proposed
-        self.skills = proposed.skills.map(ReviewedSkill.init)
+        self.tags = proposed.tags.map(ReviewedTag.init)
     }
 }
 
+/// One proposed tag ([CVIMPORT-32]; root `CONTEXT.md`: Tag) — "proposed
+/// skill" was the pre-0011 name.
 @MainActor
 @Observable
-final class ReviewedSkill: Identifiable {
+final class ReviewedTag: Identifiable {
     let name: String
     var included = true
 
@@ -72,17 +74,17 @@ final class ReviewedEducation: Identifiable {
 }
 
 /// Excluding a project excludes it wholesale; excluding one of its proposed
-/// skills keeps the project confirmable ([CVIMPORT-28]).
+/// tags keeps the project confirmable ([CVIMPORT-28]).
 @MainActor
 @Observable
 final class ReviewedProject: Identifiable {
     let proposed: ProposedProject
-    let skills: [ReviewedSkill]
+    let tags: [ReviewedTag]
     var included = true
 
     init(proposed: ProposedProject) {
         self.proposed = proposed
-        self.skills = proposed.skills.map(ReviewedSkill.init)
+        self.tags = proposed.tags.map(ReviewedTag.init)
     }
 }
 

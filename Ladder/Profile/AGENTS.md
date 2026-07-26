@@ -31,5 +31,8 @@ include/exclude globs — they compile into the test bundle, not the app.
 - `decisions/` — choices spanning criteria.
 
 Stores are tested with an in-memory `ModelContainer`; persistence criteria reopen
-a file-backed container at the same URL. Fixture data lives in the tests — no
-network, no live LLM calls in this slice.
+a file-backed container at the same URL. Migration criteria open committed
+fixture stores from `LadderTests/Fixtures/` — never regenerate them. Live LLM
+access exists only in the Tag suggestion flow; tests and previews inject
+`FixtureIntelligenceService` and fake key stores (the CVImport pattern) — no
+network in tests.

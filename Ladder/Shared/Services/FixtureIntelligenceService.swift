@@ -65,6 +65,16 @@ actor FixtureIntelligenceService: IntelligenceService {
         return FixtureIntelligenceService(returning: data)
     }
 
+    static func tagSuggestionsFixture(in bundle: Bundle = .main) -> FixtureIntelligenceService {
+        guard
+            let url = bundle.url(forResource: "tag-suggestions", withExtension: "json", subdirectory: "Fixtures"),
+            let data = try? Data(contentsOf: url)
+        else {
+            fatalError("tag-suggestions.json is missing from the bundled Fixtures folder")
+        }
+        return FixtureIntelligenceService(returning: data)
+    }
+
     static func journeyFixture(in bundle: Bundle = .main) -> FixtureIntelligenceService {
         guard
             let url = bundle.url(forResource: "journey-result", withExtension: "json", subdirectory: "Fixtures"),

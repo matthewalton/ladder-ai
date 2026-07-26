@@ -1,4 +1,4 @@
-# tailor — v6
+# tailor — v7
 
 You are tailoring Ladder's Profile to one pasted job description. The payload
 following this prompt is JSON with two parts: `profile` (the user's career
@@ -9,7 +9,7 @@ carrying stable `p…` ids, plus education and interests for context) and
 The achievements are **brief talking points**, not finished CV prose. Select
 the points that best fit this job and expand each into one polished CV
 bullet, grounded strictly in the point's own fields: its `text`,
-`impactMetric`, `tech`, `tags`, and `strengthNotes`. Projects are selected
+`impactMetric`, `tags`, and `strengthNotes`. Projects are selected
 whole: include a project's `p…` id when its description or tags fit the job,
 omit it when they don't — a project's description is the user's own prose and
 is never rewritten. Flag gaps and state your rationale.

@@ -1,17 +1,9 @@
 # Profile — language
 
-Slice-local terms. `Profile`, `Role`, `Achievement`, and `Tailoring` are defined in
-the root `CONTEXT.md` and are not restated here.
-
-**Tag**:
-A named label attached to Achievements and to Projects so they can be matched
-against a job description. Stored once per distinct name (case-insensitive)
-and shared across the Profile — Achievements and Projects reference Tags, they
-never own private copies. Tags are matching metadata, not
-a CV section of their own (decisions/0006). Implemented by the legacy
-`SkillTag` model — do not rename it in code (decisions/0006).
-_Avoid_: skill, skill tag (in UI copy and docs), chip (that is the UI rendering
-of a Tag)
+Slice-local terms. `Profile`, `Role`, `Achievement`, `Tag`, and `Tailoring` are
+defined in the root `CONTEXT.md` and are not restated here. (`Tag` moved up on
+2026-07-26 when the JD side began sharing the vocabulary; decisions/0006
+remains the record of why it is matching metadata, not a profile section.)
 
 **Point**:
 Alias to avoid — the UI shows Achievements as brief bullet "points", but the
@@ -55,9 +47,16 @@ _Avoid_: notes, description, comments
 
 **Detail rail**:
 The slim persistent pane beside the CV page that edits the focused item's depth
-(wording, Tags, impact metric, tech, strength notes; role/education/project
-fields). It is always present — unfocused it shows a placeholder.
+(wording, Tags, impact metric, strength notes; role/education/project
+fields — `tech` retired, decisions/0011). It is always present — unfocused it
+shows a placeholder.
 _Avoid_: inspector, sidebar
+
+**Tag manage sheet**:
+The sheet a Tag chip opens to curate the one shared Tag — recase its primary
+name, record or remove Aliases (decisions/0013). One Tag at a time: a
+pool-wide manager view is deferred.
+_Avoid_: tag editor, tag settings, pool manager (the deferred view)
 
 **Create-profile empty state**:
 The screen shown when no Profile record exists; the manual creation path

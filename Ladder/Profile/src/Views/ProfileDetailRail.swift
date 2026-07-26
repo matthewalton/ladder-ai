@@ -6,12 +6,20 @@ import SwiftUI
 struct ProfileDetailRail: View {
     @Bindable var store: ProfileStore
     @Binding var focus: ProfileFocus?
+    /// Tag suggestions are the slice's one live-LLM flow (decisions/0012);
+    /// previews and tests inject fakes, production reads the Keychain.
+    var keyStore: any APIKeyStore = KeychainAPIKeyStore()
+    var makeIntelligence: (String) -> any IntelligenceService = {
+        AnthropicIntelligenceService(apiKey: $0)
+    }
 
     var body: some View {
         Group {
             switch focus {
             case .point(let achievement):
-                PointDetailPane(store: store, achievement: achievement)
+                PointDetailPane(
+                    store: store, achievement: achievement,
+                    keyStore: keyStore, makeIntelligence: makeIntelligence)
                     .id(achievement.persistentModelID)
             case .role(let role):
                 RoleDetailPane(store: store, role: role)
@@ -20,7 +28,9 @@ struct ProfileDetailRail: View {
                 EducationDetailPane(store: store, education: education)
                     .id(education.persistentModelID)
             case .project(let project):
-                ProjectDetailPane(store: store, project: project)
+                ProjectDetailPane(
+                    store: store, project: project,
+                    keyStore: keyStore, makeIntelligence: makeIntelligence)
                     .id(project.persistentModelID)
             case nil:
                 placeholder
@@ -190,8 +200,8 @@ private struct RailSaveButton: View {
 
 // MARK: - Panes
 
-/// Depth editor for a point (role or project): wording, Tags, impact, tech,
-/// strength notes.
+/// Depth editor for a point (role or project): wording, Tags, impact,
+/// strength notes (`tech` retired — decisions/0011).
 private struct PointDetailPane: View {
     @Bindable var store: ProfileStore
     let achievement: Achievement
@@ -200,22 +210,26 @@ private struct PointDetailPane: View {
     @State private var newTag = ""
     @State private var title: String
     @State private var impactMetric: String
-    @State private var techText: String
     @State private var strengthNotes: String
+    @State private var suggestions: TagSuggestionStore
+    @State private var managedTag: SkillTag?
 
-    init(store: ProfileStore, achievement: Achievement) {
+    init(
+        store: ProfileStore, achievement: Achievement,
+        keyStore: any APIKeyStore, makeIntelligence: @escaping (String) -> any IntelligenceService
+    ) {
         self.store = store
         self.achievement = achievement
         _text = State(initialValue: achievement.text)
         _title = State(initialValue: achievement.title ?? "")
         _impactMetric = State(initialValue: achievement.impactMetric ?? "")
-        _techText = State(initialValue: achievement.tech.joined(separator: ", "))
         _strengthNotes = State(initialValue: achievement.strengthNotes ?? "")
+        _suggestions = State(initialValue: TagSuggestionStore(
+            profileStore: store, keyStore: keyStore, makeIntelligence: makeIntelligence))
     }
 
     private var detailsDirty: Bool {
         impactMetric != (achievement.impactMetric ?? "")
-            || techText != achievement.tech.joined(separator: ", ")
             || strengthNotes != (achievement.strengthNotes ?? "")
     }
 
@@ -241,23 +255,25 @@ private struct PointDetailPane: View {
 
             RailSection(title: "Tags") {
                 if !achievement.skills.isEmpty {
-                    TagChipsView(names: achievement.skills.map(\.name).sorted()) { name in
-                        removeTag(named: name)
-                    }
+                    TagChipsView(
+                        names: achievement.skills.map(\.name).sorted(),
+                        onRemove: { name in removeTag(named: name) },
+                        onTap: { name in
+                            managedTag = achievement.skills.first { $0.name == name }
+                        }
+                    )
                 }
                 TextField("Add a tag", text: $newTag)
                     .onSubmit(addTag)
                     .railInput()
+                SuggestTagsSection(suggestions: suggestions) {
+                    await suggestions.requestSuggestions(for: achievement)
+                }
             }
 
             RailSection(title: "Depth") {
                 RailField(label: "Impact metric") {
                     TextField("e.g. 27 steps → 2 hours", text: $impactMetric)
-                        .onSubmit(commitDetails)
-                        .railInput()
-                }
-                RailField(label: "Tech — comma-separated") {
-                    TextField("e.g. Swift, SwiftData", text: $techText)
                         .onSubmit(commitDetails)
                         .railInput()
                 }
@@ -270,6 +286,9 @@ private struct PointDetailPane: View {
                     RailSaveButton(title: "Save depth", action: commitDetails)
                 }
             }
+        }
+        .sheet(item: $managedTag) { tag in
+            TagManageSheet(store: store, tag: tag)
         }
     }
 
@@ -293,18 +312,12 @@ private struct PointDetailPane: View {
     private func commitDetails() {
         let impact = impactMetric.trimmingCharacters(in: .whitespacesAndNewlines)
         let notes = strengthNotes.trimmingCharacters(in: .whitespacesAndNewlines)
-        let tech = techText
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
         try? store.updateAchievementDetails(
             achievement,
             impactMetric: impact.isEmpty ? nil : impact,
-            tech: tech,
             strengthNotes: notes.isEmpty ? nil : notes
         )
         impactMetric = achievement.impactMetric ?? ""
-        techText = achievement.tech.joined(separator: ", ")
         strengthNotes = achievement.strengthNotes ?? ""
     }
 
@@ -482,14 +495,21 @@ private struct ProjectDetailPane: View {
     @State private var summary: String
     @State private var details: String
     @State private var newTag = ""
+    @State private var suggestions: TagSuggestionStore
+    @State private var managedTag: SkillTag?
 
-    init(store: ProfileStore, project: Project) {
+    init(
+        store: ProfileStore, project: Project,
+        keyStore: any APIKeyStore, makeIntelligence: @escaping (String) -> any IntelligenceService
+    ) {
         self.store = store
         self.project = project
         _name = State(initialValue: project.name)
         _link = State(initialValue: project.link)
         _summary = State(initialValue: project.summary)
         _details = State(initialValue: project.details)
+        _suggestions = State(initialValue: TagSuggestionStore(
+            profileStore: store, keyStore: keyStore, makeIntelligence: makeIntelligence))
     }
 
     private var dirty: Bool {
@@ -528,14 +548,24 @@ private struct ProjectDetailPane: View {
 
             RailSection(title: "Tags") {
                 if !project.skills.isEmpty {
-                    TagChipsView(names: project.skills.map(\.name).sorted()) { name in
-                        removeTag(named: name)
-                    }
+                    TagChipsView(
+                        names: project.skills.map(\.name).sorted(),
+                        onRemove: { name in removeTag(named: name) },
+                        onTap: { name in
+                            managedTag = project.skills.first { $0.name == name }
+                        }
+                    )
                 }
                 TextField("Add a tag", text: $newTag)
                     .onSubmit(addTag)
                     .railInput()
+                SuggestTagsSection(suggestions: suggestions) {
+                    await suggestions.requestSuggestions(for: project)
+                }
             }
+        }
+        .sheet(item: $managedTag) { tag in
+            TagManageSheet(store: store, tag: tag)
         }
     }
 
@@ -559,6 +589,107 @@ private struct ProjectDetailPane: View {
     private func removeTag(named name: String) {
         guard let tag = project.skills.first(where: { $0.name == name }) else { return }
         try? store.untag(project, tag: tag)
+    }
+}
+
+/// The on-demand Tag suggestion review (decisions/0012; root ADR 0005): the
+/// LLM proposes attach, mint and alias changes; each is confirmed or
+/// declined individually, and nothing lands silently.
+private struct SuggestTagsSection: View {
+    let suggestions: TagSuggestionStore
+    let request: () async -> Void
+
+    @State private var confirmError: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                confirmError = nil
+                Task { await request() }
+            } label: {
+                Label("Suggest tags", systemImage: "sparkles")
+            }
+            .buttonStyle(.bordered)
+            .disabled(suggestions.phase == .requesting)
+
+            switch suggestions.phase {
+            case .idle:
+                EmptyView()
+            case .requesting:
+                ProgressView()
+                    .controlSize(.small)
+            case .failed(let error):
+                Text(Self.message(for: error))
+                    .font(.caption)
+                    .foregroundStyle(Color.clay)
+            case .review:
+                if suggestions.proposals.isEmpty {
+                    Text("Nothing to suggest — the tags already cover this.")
+                        .font(.caption)
+                        .foregroundStyle(Color.inkSoft)
+                }
+                ForEach(suggestions.proposals) { proposal in
+                    proposalRow(proposal)
+                }
+                if let confirmError {
+                    Text(confirmError)
+                        .font(.caption)
+                        .foregroundStyle(Color.clay)
+                }
+            }
+        }
+    }
+
+    private func proposalRow(_ proposal: TagSuggestionProposal) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(Self.label(for: proposal.change))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.ink)
+            Text(proposal.rationale)
+                .font(.caption)
+                .foregroundStyle(Color.inkSoft)
+            HStack(spacing: 8) {
+                Button("Confirm") { confirm(proposal) }
+                Button("Decline") { suggestions.decline(proposal) }
+            }
+            .controlSize(.small)
+            .buttonStyle(.bordered)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.mist, in: RoundedRectangle(cornerRadius: 6))
+    }
+
+    private func confirm(_ proposal: TagSuggestionProposal) {
+        do {
+            try suggestions.confirm(proposal)
+            confirmError = nil
+        } catch ProfileStoreError.aliasAlreadyInUse {
+            confirmError = "That alias already matches a tag — one name, one tag."
+        } catch {
+            confirmError = "Could not apply the suggestion."
+        }
+    }
+
+    private static func label(for change: TagSuggestionProposal.Change) -> String {
+        switch change {
+        case .attach(let tagName): "Attach \(tagName)"
+        case .mint(let name): "New tag “\(name)”"
+        case .alias(let alias, let onTagNamed): "Alias “\(alias)” on \(onTagNamed)"
+        }
+    }
+
+    private static func message(for error: TagSuggestionError) -> String {
+        switch error {
+        case .apiKeyRequired:
+            "Add your API key in Settings to request suggestions."
+        case .requestFailed(let detail):
+            "The request failed (\(detail))."
+        case .responseTruncated:
+            "The response hit the length limit — try again."
+        case .responseInvalid(let reason):
+            "The suggestions were invalid: \(reason)."
+        }
     }
 }
 

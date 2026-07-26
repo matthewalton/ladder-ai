@@ -112,12 +112,15 @@ struct StagePersistenceTests {
         #expect(application.appliedAt == nil, "backfill is load()'s job ([PIPEBOARD-8]), not the migration's")
         #expect(application.stages.isEmpty)
 
-        // The rest of the Phase 1 store survives alongside.
+        // The rest of the Phase 1 store survives alongside. The pool holds
+        // the original Tag plus the achievement's folded tech string —
+        // the [PROFILE-24] fold runs on any pre-migration store
+        // (Profile decisions/0011).
         let profiles = try context.fetch(FetchDescriptor<Profile>())
         let profile = try #require(profiles.first)
         #expect(profile.name == "Matt Alton")
         #expect(profile.roles.count == 1)
-        #expect(profile.skills.count == 1)
+        #expect(profile.skills.count == 2)
         #expect(try context.fetch(FetchDescriptor<Achievement>()).count == 1)
     }
 

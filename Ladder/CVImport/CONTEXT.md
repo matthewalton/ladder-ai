@@ -1,22 +1,24 @@
 # CV Import — language
 
-Slice-local terms. `Profile`, `Role`, `Achievement`, and `Tailoring` are defined
-in the root `CONTEXT.md`; `SkillTag` in the Profile slice's `CONTEXT.md`.
-Neither is restated here.
+Slice-local terms. `Profile`, `Role`, `Achievement`, `Tag`, and `Tailoring`
+are defined in the root `CONTEXT.md` and are not restated here (`Tag` moved
+up on 2026-07-26; the model behind it is still the Profile slice's
+`SkillTag`).
 
 **Proposal**:
 The structure the intelligence service returns for an extracted CV — identity
-and contact, proposed roles, achievements, and skills, education, projects,
-interests (decisions/0008), plus any not-imported sections — held in memory
-for review, never persisted.
+and contact, proposed roles, achievements and their tags, education,
+projects, interests (decisions/0008), plus any not-imported sections — held
+in memory for review, never persisted.
 _Avoid_: draft profile, parsed CV, suggestions, import result
 
 **Proposed item**:
-One reviewable unit inside a proposal — a proposed role, achievement, skill,
-education entry, project, project skill, or interest — carrying its
+One reviewable unit inside a proposal — a proposed role, achievement, tag,
+education entry, project, project tag, or interest — carrying its
 included/excluded state. Identity and contact are not proposed items: they
 always travel with the confirmation.
-_Avoid_: candidate, entry, line item
+_Avoid_: candidate, entry, line item, proposed skill (the pre-0011 name for a
+proposed tag)
 
 **Contact detection**:
 The on-device pass between extraction and review that finds email, phone,

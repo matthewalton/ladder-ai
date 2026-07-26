@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 import SwiftData
 
 enum ProfileStoreError: Error, Equatable {
@@ -6,6 +7,12 @@ enum ProfileStoreError: Error, Equatable {
     case profileAlreadyExists
     case noProfile
     case nameRequired
+    /// Resolution must stay unambiguous — one name, one Tag ([PROFILE-27]).
+    case aliasAlreadyInUse
+    /// The manage sheet's rename is a recase; a real rename is a merge
+    /// question and waits for the pool manager ([PROFILE-30],
+    /// decisions/0013).
+    case renameBeyondRecase
 }
 
 enum ProfilePresentation: Equatable {
@@ -29,24 +36,79 @@ final class ProfileStore {
         self.context = ModelContext(container)
     }
 
-    /// The app's schema, one place. `url` nil means the app's own store file.
+    /// The app's schema, one place — the current versioned schema plus the
+    /// migration plan (decisions/0011). `url` nil means the app's own store
+    /// file.
     static func container(at url: URL? = nil, inMemory: Bool = false) throws -> ModelContainer {
-        let schema = Schema([
-            Profile.self, Role.self, Achievement.self, SkillTag.self,
-            Education.self, Project.self, Application.self,
-            Stage.self, DismissedEvent.self, Transcript.self, Debrief.self,
-            DebriefQuestion.self, PrepPack.self, PrepTalkingPoint.self,
-            JourneyNarrative.self,
-        ])
-        let configuration: ModelConfiguration
+        let schema = Schema(versionedSchema: LadderSchemaV2.self)
         if inMemory {
-            configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-        } else if let url {
-            configuration = ModelConfiguration(schema: schema, url: url)
-        } else {
-            configuration = ModelConfiguration(schema: schema, url: try defaultStoreURL())
+            let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            return try ModelContainer(
+                for: schema, migrationPlan: LadderMigrationPlan.self,
+                configurations: [configuration])
         }
-        return try ModelContainer(for: schema, configurations: [configuration])
+
+        let storeURL = try url ?? defaultStoreURL()
+        if storeStillCarriesTech(at: storeURL) {
+            // The one-way step gets a safety net first ([PROFILE-25]; root
+            // ADR 0004 is why a destructive migration never touches the only
+            // copy): the store file set is copied before anything opens it.
+            try backUpStoreFiles(at: storeURL)
+            // Staged migration only recognises the plan's checkpoints, but a
+            // committed phase-era store predates V1. A plain lightweight open
+            // against V1 brings any such store exactly to the V1 checkpoint
+            // (a store already at V1 passes through untouched), and the plan
+            // then runs its custom stage.
+            try bringStoreToV1(at: storeURL)
+        }
+        let configuration = ModelConfiguration(schema: schema, url: storeURL)
+        return try ModelContainer(
+            for: schema, migrationPlan: LadderMigrationPlan.self,
+            configurations: [configuration])
+    }
+
+    /// The V1→V2 discriminator, read without Core Data: a store whose
+    /// Achievement table still has the `tech` column (`ZTECH`) has not been
+    /// through the fold ([PROFILE-24]). A fresh path, or a migrated store,
+    /// answers false — reopening an already-migrated store never re-enters
+    /// the migration gate.
+    private static func storeStillCarriesTech(at url: URL) -> Bool {
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
+            return false
+        }
+        defer { sqlite3_close(db) }
+        var statement: OpaquePointer?
+        let query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'ZACHIEVEMENT'"
+        guard sqlite3_prepare_v2(db, query, -1, &statement, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_step(statement) == SQLITE_ROW,
+              let sql = sqlite3_column_text(statement, 0)
+        else { return false }
+        return String(cString: sql).contains("ZTECH")
+    }
+
+    /// Copies the store file and its WAL/SHM sidecars to sibling
+    /// `.pre-migration-backup` paths — byte copies, taken before any open
+    /// touches the file ([PROFILE-25]).
+    private static func backUpStoreFiles(at url: URL) throws {
+        for suffix in ["", "-wal", "-shm"] {
+            let source = URL(fileURLWithPath: url.path + suffix)
+            guard FileManager.default.fileExists(atPath: source.path) else { continue }
+            let destination = URL(fileURLWithPath: url.path + suffix + ".pre-migration-backup")
+            try? FileManager.default.removeItem(at: destination)
+            try FileManager.default.copyItem(at: source, to: destination)
+        }
+    }
+
+    /// Lightweight-only open/close against the frozen V1 schema — the same
+    /// implicit migration every pre-versioning launch performed, ending
+    /// exactly at the plan's first checkpoint.
+    private static func bringStoreToV1(at url: URL) throws {
+        let v1 = Schema(versionedSchema: LadderSchemaV1.self)
+        let configuration = ModelConfiguration(schema: v1, url: url)
+        _ = try ModelContainer(for: v1, configurations: [configuration])
     }
 
     /// The app's own store file, never SwiftData's default. The default
@@ -158,7 +220,6 @@ final class ProfileStore {
                 text: point.text,
                 title: Self.normalizedPrintField(point.title),
                 impactMetric: point.impactMetric,
-                tech: point.tech,
                 sortIndex: sortIndex
             )
             for skillName in point.skills {
@@ -288,12 +349,10 @@ final class ProfileStore {
     func updateAchievementDetails(
         _ achievement: Achievement,
         impactMetric: String?,
-        tech: [String],
         strengthNotes: String?
     ) throws {
         let profile = try requireProfile()
         achievement.impactMetric = impactMetric
-        achievement.tech = tech
         achievement.strengthNotes = strengthNotes
         touch(profile)
         try context.save()
@@ -343,17 +402,63 @@ final class ProfileStore {
         return tag
     }
 
-    /// The [PROFILE-8] rule: case-insensitive, trimmed, first casing wins.
+    /// The [PROFILE-8] rule, alias-aware since [PROFILE-28]: trimmed,
+    /// case-insensitive across primary names and Aliases alike; first casing
+    /// wins when minting.
     private func resolvePoolTag(named rawName: String, in profile: Profile) -> SkillTag {
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         if let existing = profile.skills.first(where: {
             $0.name.caseInsensitiveCompare(name) == .orderedSame
+                || $0.aliases.contains(name.lowercased())  // aliases are stored lowercase
         }) {
             return existing
         }
         let tag = SkillTag(name: name)
         profile.skills.append(tag)
         return tag
+    }
+
+    /// Records a matching-only Alias on a Tag ([PROFILE-26]): trimmed,
+    /// lowercased, persisted. Empty after trimming is ignored. An alias
+    /// matching any primary name or alias already in the pool — the target
+    /// Tag's own included — is refused ([PROFILE-27]).
+    func recordAlias(_ rawAlias: String, on tag: SkillTag) throws {
+        let profile = try requireProfile()
+        let alias = rawAlias.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !alias.isEmpty else { return }
+        let collides = profile.skills.contains { poolTag in
+            poolTag.name.caseInsensitiveCompare(alias) == .orderedSame
+                || poolTag.aliases.contains(alias)  // aliases are stored lowercase
+        }
+        if collides { throw ProfileStoreError.aliasAlreadyInUse }
+        tag.aliases.append(alias)
+        touch(profile)
+        try context.save()
+    }
+
+    /// Curates the primary name's display casing ([PROFILE-29]): the new
+    /// name must equal the old case-insensitively — anything more is a merge
+    /// question the deferred pool manager owns ([PROFILE-30]). Points and
+    /// Projects share the one record, so the recase propagates untouched.
+    func recaseTag(_ tag: SkillTag, to rawName: String) throws {
+        let profile = try requireProfile()
+        let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard tag.name.caseInsensitiveCompare(name) == .orderedSame else {
+            throw ProfileStoreError.renameBeyondRecase
+        }
+        tag.name = name
+        touch(profile)
+        try context.save()
+    }
+
+    /// Severs the alias only ([PROFILE-40]) — the Tag, its casing, and its
+    /// links are untouched; the name simply stops resolving.
+    func removeAlias(_ rawAlias: String, from tag: SkillTag) throws {
+        let profile = try requireProfile()
+        let alias = rawAlias.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        tag.aliases.removeAll { $0 == alias }
+        touch(profile)
+        try context.save()
     }
 
     /// Removes the link only — the Tag itself survives (no orphan pruning,

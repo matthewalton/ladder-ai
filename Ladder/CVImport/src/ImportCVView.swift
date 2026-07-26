@@ -342,10 +342,10 @@ private struct ReviewedProjectSection: View {
                     .opacity(project.included ? 1 : 0.4)
                     .padding(.vertical, 2)
             }
-            if !project.skills.isEmpty {
+            if !project.tags.isEmpty {
                 HStack(spacing: 4) {
-                    ForEach(project.skills) { skill in
-                        ReviewedSkillChip(skill: skill)
+                    ForEach(project.tags) { tag in
+                        ReviewedTagChip(tag: tag)
                             .disabled(!project.included)
                     }
                 }
@@ -429,10 +429,10 @@ private struct ReviewedAchievementRow: View {
                     .foregroundStyle(Color.inkSoft)
             }
 
-            if !achievement.skills.isEmpty {
+            if !achievement.tags.isEmpty {
                 HStack(spacing: 4) {
-                    ForEach(achievement.skills) { skill in
-                        ReviewedSkillChip(skill: skill)
+                    ForEach(achievement.tags) { tag in
+                        ReviewedTagChip(tag: tag)
                             .disabled(!achievement.included)
                     }
                 }
@@ -444,20 +444,20 @@ private struct ReviewedAchievementRow: View {
 }
 
 /// Rendering only — the SkillTag is created at replace time.
-private struct ReviewedSkillChip: View {
-    @Bindable var skill: ReviewedSkill
+private struct ReviewedTagChip: View {
+    @Bindable var tag: ReviewedTag
 
     var body: some View {
         Button {
-            skill.included.toggle()
+            tag.included.toggle()
         } label: {
-            Text(skill.name)
+            Text(tag.name)
                 .font(.caption)
-                .foregroundStyle(skill.included ? Color.ink : Color.inkSoft)
+                .foregroundStyle(tag.included ? Color.ink : Color.inkSoft)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(
-                    skill.included ? Color.pineTint : Color.mist,
+                    tag.included ? Color.pineTint : Color.mist,
                     in: RoundedRectangle(cornerRadius: 6)
                 )
         }
@@ -498,8 +498,7 @@ private struct ReviewedSkillChip: View {
             {
               "text": "Cut CI build times across every product target",
               "impactMetric": "reduced build time 40%",
-              "tech": ["Swift", "Bazel"],
-              "skills": ["Swift", "CI"]
+              "tags": ["Swift", "CI", "Bazel"]
             }
           ]
         }
@@ -519,7 +518,7 @@ private struct ReviewedSkillChip: View {
           "link": "https://github.com/alex/trail-mapper",
           "summary": "Offline-first hiking maps",
           "description": "An offline-first hiking map app with tile caching and route planning, built to survive a week without signal.",
-          "skills": ["Swift", "MapKit"]
+          "tags": ["Swift", "MapKit"]
         }
       ],
       "interests": ["Climbing", "Trail running"],

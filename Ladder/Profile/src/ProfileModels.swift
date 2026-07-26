@@ -137,7 +137,6 @@ final class Achievement {
     var title: String?
     var text: String  // canonical, user-owned wording — never edited by the LLM
     var impactMetric: String?
-    var tech: [String]
     var strengthNotes: String?
     var sortIndex: Int
     var role: Role?
@@ -149,14 +148,12 @@ final class Achievement {
         text: String,
         title: String? = nil,
         impactMetric: String? = nil,
-        tech: [String] = [],
         strengthNotes: String? = nil,
         sortIndex: Int = 0
     ) {
         self.title = title
         self.text = text
         self.impactMetric = impactMetric
-        self.tech = tech
         self.strengthNotes = strengthNotes
         self.sortIndex = sortIndex
         self.skills = []
@@ -164,10 +161,16 @@ final class Achievement {
 }
 
 /// Shared across the Profile — achievements and projects reference SkillTags,
-/// they never own private copies.
+/// they never own private copies. "SkillTag" is the legacy model name for the
+/// domain's Tag (root CONTEXT.md) — never renamed in code.
 @Model
 final class SkillTag {
+    /// The primary name, in curated display casing ("iOS", never "Ios").
     var name: String
+    /// Matching-only alternate names — lowercase, trimmed, never shown on a
+    /// chip (root CONTEXT.md: Alias; [PROFILE-26]). The declaration default
+    /// fills existing rows through the V1→V2 migration.
+    var aliases: [String] = []
     var profile: Profile?
 
     @Relationship(inverse: \Achievement.skills)
@@ -178,6 +181,7 @@ final class SkillTag {
 
     init(name: String) {
         self.name = name
+        self.aliases = []
         self.achievements = []
         self.projects = []
     }

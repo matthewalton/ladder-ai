@@ -1,0 +1,20 @@
+{
+  "suggestions": [
+    {
+      "kind": "attach",
+      "tag": "Kubernetes",
+      "rationale": "The point describes operating a production cluster."
+    },
+    {
+      "kind": "mint",
+      "name": "Incident response",
+      "rationale": "Holding a cluster healthy through a region failover evidences owning a live incident."
+    },
+    {
+      "kind": "alias",
+      "alias": "k8s",
+      "tag": "Kubernetes",
+      "rationale": "Job descriptions commonly abbreviate Kubernetes as k8s."
+    }
+  ]
+}

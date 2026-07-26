@@ -129,8 +129,7 @@ final class ImportStore {
                 title: achievement.proposed.title,
                 text: achievement.proposed.text,
                 impactMetric: achievement.proposed.impactMetric,
-                tech: achievement.proposed.tech,
-                skills: achievement.skills.filter(\.included).map(\.name)
+                skills: achievement.tags.filter(\.included).map(\.name)
             )
         }
         return ProfileReplacement(
@@ -166,7 +165,7 @@ final class ImportStore {
                     link: project.proposed.link ?? "",
                     summary: project.proposed.summary ?? "",
                     details: project.proposed.description ?? "",
-                    skills: project.skills.filter(\.included).map(\.name)
+                    skills: project.tags.filter(\.included).map(\.name)
                 )
             },
             interests: review.interests.filter(\.included).map(\.name)

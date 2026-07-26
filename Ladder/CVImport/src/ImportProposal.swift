@@ -109,8 +109,9 @@ struct ProposedAchievement: Equatable, Sendable, Decodable {
     var title: String?
     var text: String
     var impactMetric: String?
-    var tech: [String]
-    var skills: [String]
+    /// One flat tags array ([CVIMPORT-32]; decisions/0011) — the v5
+    /// `skills`+`tech` split is gone.
+    var tags: [String]
 }
 
 struct ProposedEducation: Equatable, Sendable, Decodable {
@@ -121,14 +122,14 @@ struct ProposedEducation: Equatable, Sendable, Decodable {
     var detail: String?
 }
 
-/// Projects propose a description and skills, not points (decisions/0010;
-/// Profile decisions/0009).
+/// Projects propose a description and tags, not points (decisions/0010;
+/// Profile decisions/0009; decisions/0011 renamed the list from "skills").
 struct ProposedProject: Equatable, Sendable, Decodable {
     var name: String
     var link: String?
     var summary: String?
     var description: String?
-    var skills: [String]
+    var tags: [String]
 }
 
 /// CV content outside the import scope — the summary paragraph,

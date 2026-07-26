@@ -23,7 +23,6 @@ struct DebriefPayload {
                         index: ordered.count,
                         text: achievement.text,
                         impactMetric: achievement.impactMetric,
-                        tech: achievement.tech,
                         skills: achievement.skills.map(\.name).sorted(),
                         strengthNotes: achievement.strengthNotes
                     ))
@@ -69,7 +68,6 @@ private struct PayloadAchievement: Encodable {
     var index: Int
     var text: String
     var impactMetric: String?
-    var tech: [String]
     var skills: [String]
     var strengthNotes: String?
 }

@@ -25,13 +25,12 @@ struct ReplacementRole: Equatable, Sendable {
 }
 
 /// One brief role achievement; skills are Tag names, resolved against the
-/// rebuilt pool by the [PROFILE-8] rule.
+/// rebuilt pool by the [PROFILE-8] rule (`tech` is gone — decisions/0011).
 struct ReplacementPoint: Equatable, Sendable {
     /// The optional bold lead phrase (decisions/0010, [CVIMPORT-31]).
     var title: String? = nil
     var text: String
     var impactMetric: String? = nil
-    var tech: [String] = []
     var skills: [String] = []
 }
 

@@ -147,7 +147,6 @@ private struct PayloadAchievement: Encodable {
     var id: String
     var text: String
     var impactMetric: String?
-    var tech: [String]
     var tags: [String]
     var strengthNotes: String?
 
@@ -156,7 +155,6 @@ private struct PayloadAchievement: Encodable {
         self.id = id
         text = achievement.text
         impactMetric = achievement.impactMetric
-        tech = achievement.tech
         tags = achievement.skills.map(\.name).sorted()
         strengthNotes = achievement.strengthNotes
     }
