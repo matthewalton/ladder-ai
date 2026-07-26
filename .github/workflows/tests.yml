@@ -1,0 +1,60 @@
+# The Swift suite, on every pull request and every push to main.
+#
+# Ladder's slices are governed by SPEC.md criteria, and `speccle claims` proves each one is
+# claimed by a test *name*. Only running the suite proves those tests pass. Without this job
+# the review driver scores a change's risk while nothing has confirmed the code still works.
+#
+# `Ladder.xcodeproj` is gitignored — `project.yml` is the source of truth — so the project is
+# generated here before anything builds. A change to project.yml is therefore covered too.
+
+name: Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+# Least privilege: read the tree, nothing else.
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # project.yml sets a macOS 26.0 deployment target, so the image has to be macOS 26.
+    # Pinned rather than `macos-latest`: the runner should move when this file says so.
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The image ships several Xcodes and the default is not always the newest. Pick the
+      # highest version present and print it, so a toolchain mismatch reads as a version in
+      # the log rather than as a wall of compiler errors.
+      - name: Select Xcode
+        run: |
+          latest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$latest/Contents/Developer"
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Ladder.xcodeproj
+        run: xcodegen generate
+
+      # The same invocation `.speccle/config.json` records as the suite, and the same one
+      # `pnpm test` runs locally — one command, so a green CI run means what a green local
+      # run means. Ladder is on Swift Testing, so XCTest's summary reports "Executed 0
+      # tests" and the real result is the "Test run with N tests" line below it.
+      - name: Run the suite
+        run: |
+          xcodebuild -project Ladder.xcodeproj \
+                     -scheme Ladder \
+                     -destination 'platform=macOS' \
+                     test
