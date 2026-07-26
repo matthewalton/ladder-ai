@@ -1,0 +1,91 @@
+# Speccle review — the outer loop, running in CI. Written by `speccle review init`.
+#
+# It fans this repo's `.speccle/lenses/` over a pull request's change set, posts what they find
+# as one review with inline comments, and reports the deterministic risk verdict as a check.
+# It finds and comments; it never pushes a fix — fixes come back through the local `review`
+# skill, which can re-run the checks-gate and revert a fix that goes red.
+#
+# Before this can run:
+#   1. Add a metered ANTHROPIC_API_KEY repo secret. This driver calls a model once per lens per
+#      pull request, which is why it is opt-in; the local `review` skill needs no key.
+#   2. Protect this file. Anyone who can edit a workflow can read the secrets it uses — put
+#      `.github/` behind CODEOWNERS or a branch protection rule.
+#
+# Re-run `speccle review init` to move the pinned version below.
+
+name: Speccle review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  # The rerun path: an `@review` comment on the pull request, gated on write access below.
+  issue_comment:
+    types: [created]
+
+# Least privilege: post a review, read the tree, nothing else.
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: speccle-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    # Two ways in, each gated. A pull request must come from a branch of this repo, never a
+    # fork: a fork's pull request must not reach the API key. A comment must come from someone
+    # who can already write here, or `@review` would be a way to spend the key from outside.
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       startsWith(github.event.comment.body, '@review') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    steps:
+      # The comment event carries no refs, so resolve them for both paths the same way.
+      - name: Resolve the pull request
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          number=${{ github.event.pull_request.number || github.event.issue.number }}
+          pr=$(gh api "repos/${{ github.repository }}/pulls/$number")
+          {
+            echo "number=$number"
+            echo "base=$(echo "$pr" | jq -r .base.ref)"
+            echo "head=$(echo "$pr" | jq -r .head.sha)"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v5
+        with:
+          # The head commit itself, not the synthetic merge commit: the change set under review
+          # is what the branch says, and the comment path would otherwise land on the default
+          # branch. The head is data here — the reviewing code comes from npm, pinned below.
+          ref: ${{ steps.pr.outputs.head }}
+          # `risk` measures from the merge base, which a shallow clone has no history to find.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # `origin/` prefixes the base ref because checkout leaves it as a remote-tracking ref;
+      # a bare branch name would not resolve.
+      - name: Review the change set
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          npx -y speccle@0.16.0 review run
+          --pr ${{ steps.pr.outputs.number }}
+          --base origin/${{ steps.pr.outputs.base }}
+          ${{ github.event_name == 'issue_comment' && '--force' || '' }}
+
+      # The status check. `risk` exits 1 at or above the review threshold, so a failing step is
+      # the failing check. Whether that blocks the merge is branch protection — GitHub's, and
+      # this repo's call to make, not Speccle's. It runs last so the findings post either way.
+      - name: Risk gate
+        run: npx -y speccle@0.16.0 risk --base origin/${{ steps.pr.outputs.base }}

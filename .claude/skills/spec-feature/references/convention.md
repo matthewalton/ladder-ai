@@ -29,11 +29,20 @@ scanner/
 ```
 
 The root holds the markdown contract and nothing else. All code and tests sit in
-`src/`, tests beside the code they defend. The subfolder is always named `src` —
-uniformity is the point: every feature folder in every project has an identical shape,
-so nothing about a particular slice needs explaining. `decisions/` appears with the
-feature's first decision; the other four entries are the floor, even for a tiny
-feature.
+`src/`, tests beside the code they defend, and the code subfolder is always named
+`src` — every feature folder in every project opens the same way. `decisions/` appears
+with the feature's first decision; the other four entries are the floor, even for a
+tiny feature.
+
+Inside `src/`, subfolders are allowed but not the default
+(ADR-0037). Keep
+`src/` flat while it holds **ten files or fewer** directly — count the code and test
+files sitting in it, subfolders excluded. The file that would make it eleven triggers
+grouping: gather the code into shallow (prefer one level), purpose-named subfolders,
+and the same ten-file limit applies within each subfolder. A `src/` that has grown into
+a pile is often a signal to split the slice into siblings instead; nest when it is
+genuinely one cohesive feature that simply carries many files. Tests stay beside the
+code they defend at whatever depth it sits.
 
 Everything about the feature lives inside the subtree. An agent landing in the folder
 needs nothing else to understand it — and `AGENTS.md` is where it starts reading.
@@ -113,10 +122,18 @@ about one behaviour is not a decision record — it is that criterion's body.
 
 ## Test linking
 
-A test defends a criterion when the `[KEY-n]` token appears anywhere in its **full
-concatenated name** — enclosing `describe` titles included. One
+A test defends a criterion when the criterion id appears anywhere in its **full
+concatenated name** — enclosing group titles included. One
 `describe('[CHECKOUT-1] tax rounding', …)` claims every test inside it. Mutation and
 coverage reports already carry full names, so the join is mechanical.
+
+What counts as a test file, and what counts as its name, is the **test dialect**'s
+business (ADR-0038).
+Where a framework gives a test a string name, the id is claimed bracketed —
+`[CHECKOUT-1]`. Where the name _is_ an identifier, the id takes its identifier-safe
+spelling: `func test_CHECKOUT_1_taxRounds()` claims `CHECKOUT-1`. The two spellings are
+one id, not two — `SPEC.md` headings and every report use the bracketed form
+(ADR-0039).
 
 ## Spec discovery
 
@@ -170,7 +187,53 @@ parentheses. Plain acronyms (JSON, HTTP) and unlisted extensions pass — the ru
 under-flags by design
 (ADR-0032).
 
-## v1 target stack
+## Supported stacks
 
-The convention is language-agnostic, but v1 tooling targets: TypeScript, vitest,
-StrykerJS with `perTest` coverage analysis, Istanbul `json-summary` coverage.
+Speccle is **multi-language across a supported set, not language-agnostic**. A repo
+declares which test dialect it is on; it never declares how that dialect works, so a
+clean `claims` run means the same thing in every repo
+(ADR-0038). An
+unsupported stack is unsupported, and says so.
+
+Two frontiers, and they are not the same:
+
+- **The contract, the lint, and the claim join** reach every supported dialect.
+  `ts-vitest` reads `describe`/`it`/`test` titles out of `*.test.*` and `*.spec.*`
+  files. `swift` reads Swift Testing `@Test("…")` and `@Suite("…")` display names, and
+  XCTest `func test…()` identifiers, out of `*Tests.swift` files and anything under a
+  `Tests` directory.
+- **The oracle-strength heatmap** reaches TypeScript. It needs a mutation tool that
+  attributes coverage per test: StrykerJS with `perTest` coverage analysis, plus
+  Istanbul `json-summary` coverage. Elsewhere the reports are simply missing, and the
+  heatmap degrades on its own.
+
+Adding a language is a Speccle change with tests behind it, never a regex a repo
+supplies.
+
+## Repo facts
+
+Two things Speccle needs are true about a repo, not decidable by Speccle: which **test
+dialect** the repo is on, and the **suite command** that runs its tests — the checks gate
+cannot infer `xcodebuild test -scheme Ladder`. They live in `.speccle/config.json` at the
+repo root:
+
+```json
+{
+  "dialect": "swift",
+  "suite": "xcodebuild test -scheme Ladder",
+  "overrides": [{ "path": "web", "dialect": "ts-vitest", "suite": "pnpm test" }]
+}
+```
+
+`speccle init` auto-detects the dialect — `swift` from a `Package.swift`, `ts-vitest`
+otherwise — and a default suite command, then **writes the result down**: the written
+record is the source of truth, never the detection, and `init` never overwrites a config
+it finds. A mixed-language tree corrects the defaults under a subtree with `overrides`,
+where the longest matching path wins
+(ADR-0040).
+
+This is the one thing Speccle reads from a repo, and it never grows into a knob on
+judgement. "Speccle has no configuration" is really **"Speccle has no configurable
+judgement"**: a dialect name or a shell command is a fact — Speccle cannot know it and
+there is nothing to game — while a lint rule or the claim join decides whether you pass,
+and stays fixed so a clean run keeps meaning the same thing in every repo.

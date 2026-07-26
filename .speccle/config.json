@@ -1,0 +1,6 @@
+{
+  "dialect": "ts-vitest",
+  "suite": "pnpm test",
+  "skillsVersion": "0.15.0",
+  "lensesVersion": "0.15.0"
+}

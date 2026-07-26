@@ -20,9 +20,10 @@ say so and point at the `feature` pipeline (or `spec-feature` for the contract a
 rather than drafting one here — drafting has its own skill, and an unlinted spec must
 not reach this one. Verify the precondition rather than assuming it:
 `<oracle> lint <feature-folder>` exits `0` (resolve the oracle as every Speccle skill
-does: `speccle-oracle` on `PATH`, else
-`node <speccle-repo>/packages/oracle/src/cli.ts`; if neither resolves, point at the
-README's install steps and stop).
+does: the repo's own `<repo-root>/node_modules/.bin/speccle` first — a
+devDependency is never on `PATH`, so test for the file — else `speccle` on
+`PATH`, else `node <speccle-repo>/packages/oracle/src/cli.ts`; if none resolves, point
+at the README's install steps and stop).
 
 The folder shape and test-linking rules are fixed by the convention, bundled beside
 this skill at `${CLAUDE_SKILL_DIR}/references/convention.md`.
@@ -39,6 +40,16 @@ how hard the tests bite.
 
 Everything this skill writes lands in the feature's `src/` — tests beside the code
 they defend; the feature root stays pure markdown.
+
+Keep `src/` flat while it holds **ten files or fewer** directly (code and tests
+together — count the entries, don't judge the crowding). The file that would make it
+eleven triggers grouping: gather the code into shallow, purpose-named subfolders — one
+level, tests still beside the code they defend at that depth — and the same
+ten-file limit then applies inside each subfolder. Before nesting, ask whether the
+pile is really one slice: a `src/` that has grown two clearly separate concerns is
+usually two slices, and splitting into a sibling folder beats burying the seam under
+subfolders. Nest when it is genuinely one cohesive feature that just carries many
+files.
 
 - **New slice** (no code in `src/` yet): every criterion is unimplemented; the tracer
   rule below applies.

@@ -234,6 +234,9 @@ importers:
       prettier:
         specifier: ^3.9.5
         version: 3.9.5
+      speccle:
+        specifier: ^0.15.0
+        version: 0.15.0
       speccle-oracle:
         specifier: ^0.8.1
         version: 0.8.1
@@ -1622,6 +1625,12 @@ packages:
 
   speccle-oracle@0.8.1:
     resolution: {integrity: sha512-rmb0UxbzGnoF0Hwkl7ar3q+ZVn73XIkQ3taDip26NnEdPSspqyqwPEZJ1iYbmmooWdB/lBz24bXHYPYaC0IKag==}
+    engines: {node: '>=24'}
+    deprecated: renamed to speccle — npm i -g speccle
+    hasBin: true
+
+  speccle@0.15.0:
+    resolution: {integrity: sha512-ssVDvaMGeHeuZ0WeO1a9tZx2GvF5FKXKLGcMy0/A0FFjMRuRj174Vxa1ubbvbg2uEXPHaiak10ndNUlPWIBbsQ==}
     engines: {node: '>=24'}
     hasBin: true
 
@@ -3224,6 +3233,8 @@ snapshots:
   source-map@0.7.6: {}
 
   speccle-oracle@0.8.1: {}
+
+  speccle@0.15.0: {}
 
   stackback@0.0.2: {}
 

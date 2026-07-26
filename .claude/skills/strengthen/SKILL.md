@@ -6,11 +6,10 @@ allowed-tools: Read(/${CLAUDE_PLUGIN_ROOT}/skills/*/references/**)
 
 # strengthen
 
-A slice can be green and badly defended. `implement-feature` leaves it that way on
-purpose, and the `feature` pipeline's checks-gate never measures it; this skill is
-the periodic audit that closes the gap, on its own cadence — and the deferred
-backstop for what no deterministic check sees: behaviour no criterion covers, tests
-that execute without biting.
+A slice can be green and badly defended: `implement-feature` leaves it that way on
+purpose, and the `feature` pipeline's checks-gate never measures it. This skill is the
+periodic audit that closes the gap — catching what no deterministic check sees:
+behaviour no criterion covers, and tests that run without asserting.
 
 The division of labour is fixed: **the human runs the expensive commands; this skill
 evaluates what they produce.** Coverage and mutation are minutes of compute — never
@@ -29,12 +28,17 @@ mutant", not "missed mutation"; "test-fitting", not "gaming the score"; "fresh" 
 
 Once, in this order, and reuse what works:
 
-1. `speccle-oracle` on `PATH` — the normal case; Speccle's install links it there.
-2. Otherwise, from a clone of the speccle repo, run it from source — Node ≥ 24 executes
+1. `<repo-root>/node_modules/.bin/speccle` — the repo's own pinned copy, put
+   there by `strength init`. A devDependency is never on `PATH` in this shell, so test
+   for the file; in a monorepo check the package you are working in as well as the
+   root. It wins over a global install: the pin is a committed choice, and lint rules
+   change between versions.
+2. `speccle` on `PATH` — a global install.
+3. Otherwise, from a clone of the speccle repo, run it from source — Node ≥ 24 executes
    TypeScript directly, so no build is needed:
    `node <speccle-repo>/packages/oracle/src/cli.ts`.
 
-If neither resolves, point the user at the install steps in Speccle's README and stop.
+If none resolves, point the user at the install steps in Speccle's README and stop.
 
 ## 2. Check freshness before anything else
 
@@ -70,24 +74,14 @@ Route on what it says:
 
 Oracle strength needs to know which tests covered each mutant, and that constrains the
 target to TypeScript + vitest + StrykerJS. When `--check` says missing and the stack
-itself is absent, check for all four before asking anyone to run anything:
-
-| Requirement                       | Where                                |
-| --------------------------------- | ------------------------------------ |
-| `@stryker-mutator/core` + runner  | `package.json` devDependencies       |
-| `coverageAnalysis: "perTest"`     | `stryker.config.json`                |
-| the `json` reporter, and its path | `stryker.config.json` `jsonReporter` |
-| istanbul provider, `json-summary` | `vitest.config.ts` `test.coverage`   |
-
-`perTest` is the hard one: without it Stryker never records `coveredBy`, the join has
-nothing to walk back to criterion ids, and `oracle strength` exits `2` saying so.
+itself is absent, check the four requirements in
+`${CLAUDE_SKILL_DIR}/references/stack.md` before asking anyone to run anything.
 
 **If something is missing, stop and offer.** Show what is absent, then offer the one
-command that provisions all of it — `speccle-oracle strength init <path>` installs the
-missing devDependencies and writes the preset configs, keeping any that already exist —
-and wait for the user's go-ahead before running it. Never write to the target's
-`package.json`, lockfile, or test config without the user agreeing first — this skill
-measures someone else's project; it does not quietly re-tool it.
+command that provisions all of it — `speccle strength init <path>` — and wait for
+the user's go-ahead before running it. Never write to the target's `package.json`,
+lockfile, or test config without the user agreeing first — this skill measures someone
+else's project; it does not quietly re-tool it.
 
 ## 4. Read the heatmap
 
@@ -95,39 +89,17 @@ measures someone else's project; it does not quietly re-tool it.
 <oracle> strength <path>
 ```
 
-The reports are already on disk — §2 proved it. Show the human heatmap to the user.
-It prints a bar and `killed/covered` per criterion, with each criterion's survivors
-listed beneath it:
+The reports are already on disk — §2 proved it. Show the human heatmap to the user: a
+bar and `killed/covered` per criterion, each criterion's survivors listed beneath it. Use
+`--json` for the routing work and never scrape the human output — the output shape and
+the full `--json` schema are in `${CLAUDE_SKILL_DIR}/references/heatmap.md`. `strength`
+is a report, not a gate: it exits `0` with survivors present, `2` on a bad or missing
+report.
 
-```
-features/checkout/SPEC.md
-  CHECKOUT-1  ████████████████████  100.0%    14/14  When a line item is taxed, tax rounds half-up to 2dp
-  CHECKOUT-3  ██████████████████░░   88.2%    15/17  When a basket exceeds 100 line items, checkout rejects it
-      features/checkout/checkout.ts:13:11  StringLiteral → ``
-      features/checkout/checkout.ts:14:17  StringLiteral → ""
-```
-
-Use `--json` for the routing work: `{ root, strength, lineCoverage, features[], unclaimed,
-unknownClaims, unclaimedMutants, staticMutants }`, each criterion carrying `survivors[]`
-with `file`, `line`, `column`, `mutator`, `replacement`. `strength` is a report, not a
-gate: it exits `0` with survivors present, `2` on a bad or missing report. Never scrape
-the human output.
-
-Four fields are not routing work, and are worth saying out loud before you start:
-
-- **`unclaimed`** — a criterion no test's name carries. It scores nothing rather than
-  zero. It needs a test written against it before it can be weak; that is
-  `implement-feature`'s job, not a survivor to route.
-- **`unknownClaims`** — a test claims an id no spec declares. Someone renamed or deleted a
-  criterion. Fix the test name or restore the criterion.
-- **`unclaimedMutants`** — code the criteria do not reach at all, each entry naming its
-  `file`, `line`, `column`, `mutator`, `replacement`. Not weak criteria; a map of the
-  regions the spec is silent about. Do not route these as survivors — name the region to
-  the human and let them decide whether a feature owes a spec there.
-- **`staticMutants`** — mutants that run at module load (word lists, regex literals), so
-  per-test coverage can attribute them to no criterion: `{ killed, survivors[] }`. The
-  killed ones are fine — some test noticed. A survivor is a real gap, but it can never be
-  claimed by a criterion id; name it to the human alongside the unclaimed mutants.
+Four of the `--json` fields — `unclaimed`, `unknownClaims`, `unclaimedMutants`,
+`staticMutants` — are **not** routing work: none is a survivor to route. Say them out
+loud before you start; `references/heatmap.md` gives each one's shape and what it asks of
+you instead.
 
 ## 5. Route every surviving mutant
 
@@ -180,8 +152,8 @@ These survivors are the human path. The spec owes a criterion about what the rej
 tells the caller. Draft it, announce it, test it — and watch `[CHECKOUT-3]` reach 100%
 untouched, because a kill counts for every criterion covering the mutant.
 
-Rising oracle strength and a sharpening spec are the same motion. If strength rose and the
-spec did not change, check that you did not fit a test to a mutant.
+If oracle strength rose but the spec did not change, check that you did not fit a test to
+a mutant.
 
 ## 6. Confirm, mark evaluated, hand back
 
@@ -208,5 +180,5 @@ Then report, verified rather than assumed:
 5. What is left, and why: each remaining survivor is annotated as equivalent, with its
    argument, or named as a gap awaiting the human's ruling.
 
-A survivor you cannot explain is not a finished job. Say it is still there rather than
-letting a nicer headline number imply otherwise.
+A survivor you cannot explain is not finished — say so plainly rather than letting a
+nicer headline imply otherwise.
