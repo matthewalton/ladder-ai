@@ -3,7 +3,7 @@ import prettier from 'eslint-config-prettier/flat';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['node_modules', 'coverage', 'reports', '.stryker-tmp'] },
+  { ignores: ['node_modules'] },
   js.configs.recommended,
   tseslint.configs.strict,
   tseslint.configs.stylistic,
