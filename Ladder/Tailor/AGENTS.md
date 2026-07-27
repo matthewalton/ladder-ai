@@ -8,7 +8,8 @@ API key entry, and the live `AnthropicIntelligenceService` (in
 the scan seam, and the `Match` model it persists (the model file is in this
 slice's `src/`; `Application` itself lives in `Ladder/CVExport/src/`) — and,
 since ticket #162 slice 3, the scan-first flow: Match review, ranked
-payload, overlap view, and the FitMetrics content budget.
+payload, overlap view, and the FitMetrics content budget — plus, since
+ticket #195, the per-point relevance stats in the tailor result and review.
 
 ## Commands
 

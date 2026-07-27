@@ -16,11 +16,15 @@ struct TailorResult: Equatable, Sendable, Decodable {
     /// The per-CV skill grouping (decisions/0009); absent decodes as no
     /// grouping — the rendered CV then has no skills table.
     var skillCategories: [SkillCategory]
+    /// The per-point relevance stats, keyed by selected `a…`/`p…` id —
+    /// required for every selected point, transient like the whole result
+    /// (decisions/0017).
+    var relevance: [String: RelevanceStats]
     var gaps: [String]
     var rationale: String
 
     private enum CodingKeys: String, CodingKey {
-        case summary, selections, projects, skillCategories, gaps, rationale
+        case summary, selections, projects, skillCategories, relevance, gaps, rationale
     }
 
     init(from decoder: any Decoder) throws {
@@ -30,6 +34,11 @@ struct TailorResult: Equatable, Sendable, Decodable {
         projects = try container.decodeIfPresent([String].self, forKey: .projects) ?? []
         skillCategories =
             try container.decodeIfPresent([SkillCategory].self, forKey: .skillCategories) ?? []
+        // Absent decodes as empty so a missing block reads as "unjudged
+        // selected points" — a validation failure with a repairable reason,
+        // never a bare decode error.
+        relevance =
+            try container.decodeIfPresent([String: RelevanceStats].self, forKey: .relevance) ?? [:]
         gaps = try container.decode([String].self, forKey: .gaps)
         rationale = try container.decode(String.self, forKey: .rationale)
     }
@@ -78,6 +87,48 @@ struct TailorResult: Equatable, Sendable, Decodable {
                 reason: "skillCategories name skills not on the selected content: \(strays.joined(separator: ", ")). Group only the `tags` of the achievements and projects you selected."
             )
         }
+        // Every selected point is judged, only selected points are judged,
+        // and every score sits on the 0–5 scale ([TAILOR-59], [TAILOR-60]).
+        let unjudged = selectedIDs.filter { relevance[$0] == nil }
+        guard unjudged.isEmpty else {
+            throw TailorValidationFailure(
+                reason: "relevance is missing for selected ids: \(unjudged.joined(separator: ", ")). Judge every selected achievement and project on all four criteria, 0–5."
+            )
+        }
+        let unselected = relevance.keys.filter { !Set(selectedIDs).contains($0) }.sorted()
+        guard unselected.isEmpty else {
+            throw TailorValidationFailure(
+                reason: "relevance judges ids that were not selected: \(unselected.joined(separator: ", ")). Judge only the ids in `selections` and `projects`."
+            )
+        }
+        let misscored = relevance.filter { !$0.value.isOnScale }.keys.sorted()
+        guard misscored.isEmpty else {
+            throw TailorValidationFailure(
+                reason: "relevance scores out of range for: \(misscored.joined(separator: ", ")). Every criterion score is an integer from 0 to 5."
+            )
+        }
+    }
+}
+
+/// The four LLM-judged relevance scores one selected point carries
+/// ([TAILOR-59]) — tech/tooling, topic/domain, responsibility/seniority,
+/// impact/outcome, each an integer 0–5. Per-point stats only: they never
+/// move the Match score (root ADR 0005; decisions/0017).
+struct RelevanceStats: Equatable, Sendable, Decodable {
+    var tech: Int
+    var domain: Int
+    var seniority: Int
+    var impact: Int
+
+    /// The overall relevance ([TAILOR-61]): the unweighted mean of the four
+    /// sub-scores, computed here and never returned by the model — a mean
+    /// of four 0–5 integers lands on quarter precision exactly.
+    var overall: Double {
+        Double(tech + domain + seniority + impact) / 4
+    }
+
+    var isOnScale: Bool {
+        [tech, domain, seniority, impact].allSatisfy { (0...5).contains($0) }
     }
 }
 

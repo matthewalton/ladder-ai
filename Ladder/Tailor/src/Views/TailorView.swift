@@ -289,6 +289,7 @@ struct TailorReviewView: View {
                                         .foregroundStyle(Color.inkSoft)
                                 }
                                 CoveredTagsLine(tags: review.coveredMatchedTags(for: project))
+                                RelevanceLine(stats: review.relevanceStats(for: project))
                             }
                             .padding(.vertical, 2)
                         }
@@ -359,6 +360,8 @@ private struct ReviewedBulletRow: View {
             .padding(.leading, 20)
             CoveredTagsLine(tags: coveredTags)
                 .padding(.leading, 20)
+            RelevanceLine(stats: item.relevance)
+                .padding(.leading, 20)
         }
         .padding(.vertical, 4)
     }
@@ -378,6 +381,30 @@ struct CoveredTagsLine: View {
                 Text(tags.joined(separator: " · "))
                     .font(.caption)
                     .foregroundStyle(Color.pine)
+            }
+        }
+    }
+}
+
+/// "Relevance: 3.5 — tech 5 · domain 4 · seniority 3 · impact 2" — the
+/// judged complement of the covered-Tags line ([TAILOR-62]): the Swift mean
+/// with every sub-score visible beside it (decisions/0017). Nothing at all
+/// when the point carries no stats.
+struct RelevanceLine: View {
+    var stats: RelevanceStats?
+
+    var body: some View {
+        if let stats {
+            HStack(alignment: .top, spacing: 4) {
+                Text("Relevance:")
+                    .font(.caption)
+                    .foregroundStyle(Color.inkSoft)
+                Text(stats.overall.formatted(.number.precision(.fractionLength(0...2))))
+                    .font(.caption)
+                    .foregroundStyle(Color.pine)
+                Text("— tech \(stats.tech) · domain \(stats.domain) · seniority \(stats.seniority) · impact \(stats.impact)")
+                    .font(.caption)
+                    .foregroundStyle(Color.inkSoft)
             }
         }
     }
@@ -430,6 +457,7 @@ struct CoveredTagsLine: View {
           "selections": [
             {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
           ],
+          "relevance": {"a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4}},
           "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],
           "rationale": "CI work maps directly to the JD's platform focus."
         }

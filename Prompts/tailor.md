@@ -1,4 +1,4 @@
-# tailor — v8
+# tailor — v9
 
 You are tailoring Ladder's Profile to one pasted job description. The payload
 following this prompt is JSON with two parts: `profile` (the user's career
@@ -56,6 +56,9 @@ of your reply is `{`. Match this schema:
       "skills": ["tags of the selected achievements and projects, grouped under this category"]
     }
   ],
+  "relevance": {
+    "a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4}
+  },
   "gaps": [
     "one requirement the job description asks for that no point supports"
   ],
@@ -86,6 +89,16 @@ Rules:
   never other profile tags, never skills of your own — each at most once
   across the categories, echoed verbatim. No selected tags means an empty
   array.
+- `relevance` judges every selected point — one entry per id in
+  `selections` and `projects`, those ids and no others. Four criteria, each
+  an integer from 0 (no relevance) to 5 (direct hit): `tech` — how well the
+  point's technologies and tooling match the job description's; `domain` —
+  how close its topic and domain sit to the job's; `seniority` — how well
+  its responsibility level matches what the job asks for; `impact` — how
+  strongly its outcome or metric speaks to what the job values. Judge each
+  criterion independently on the point's own fields against the job
+  description. Never return an overall or combined score — the app computes
+  that itself.
 - A point whose fields cannot support expansion is returned near-verbatim.
 - Gaps name what the job description asks for and the profile lacks — short,
   concrete, one requirement per entry. No gaps means an empty array.

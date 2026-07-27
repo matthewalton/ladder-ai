@@ -444,6 +444,7 @@ struct TailorFlowTests {
           "summary": "Engineer with production mapping experience.",
           "selections": [],
           "projects": ["p1"],
+          "relevance": {"p1": {"tech": 4, "domain": 5, "seniority": 2, "impact": 3}},
           "gaps": [],
           "rationale": "The project work fits the JD directly."
         }
@@ -503,6 +504,7 @@ struct TailorFlowTests {
           "summary": "Engineer whose project work fits the JD.",
           "selections": [],
           "projects": ["p1"],
+          "relevance": {"p1": {"tech": 3, "domain": 4, "seniority": 2, "impact": 3}},
           "gaps": [],
           "rationale": "Project work only."
         }
@@ -595,6 +597,10 @@ struct TailorFlowTests {
             {"name": "Platform Engineering", "skills": ["Swift", "CI"]},
             {"name": "Operations", "skills": ["Incident response"]}
           ],
+          "relevance": {
+            "a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4},
+            "a3": {"tech": 2, "domain": 4, "seniority": 4, "impact": 5}
+          },
           "gaps": [],
           "rationale": "CI and incident work fit the platform focus."
         }
@@ -646,5 +652,143 @@ struct TailorFlowTests {
         #expect(await service.recordedRequests.count == 2, "one repair request, no more")
         #expect(store.phase == .review, "a valid repair recovers the run")
         #expect(store.review?.skillCategories.first?.name == "Platform Engineering")
+    }
+
+    @Test("[TAILOR-60] a tailor result missing a selected point's relevance scores fails validation")
+    func missingRelevanceFeedsTheSingleRepair() async throws {
+        // Selects a1 but judges nothing — the whole `relevance` block absent.
+        let statless = Data("""
+        {
+          "summary": "Platform-minded senior engineer.",
+          "selections": [
+            {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
+          ],
+          "gaps": [],
+          "rationale": "CI focus."
+        }
+        """.utf8)
+        let validJSON = try Data(contentsOf: #require(
+            Bundle.main.url(forResource: "tailor-result", withExtension: "json", subdirectory: "Fixtures")))
+        let service = FixtureIntelligenceService(returning: [statless, validJSON])
+        let store = makeTailorStore(profileStore: try makeProfileStore(), service: service)
+
+        await store.startRun(jobDetails)
+
+        // The decisions/0004 loop, exactly like a schema mismatch.
+        #expect(store.phase == .review, "a valid repair recovers the run")
+        let requests = await service.recordedRequests
+        #expect(requests.count == 2, "an invalid-then-valid sequence records two requests, never three")
+        let repair = try #require(requests.last)
+        #expect(repair.payload.contains("relevance is missing for selected ids: a1"))
+    }
+
+    @Test("[TAILOR-60] a relevance score outside 0 to 5 fails validation")
+    func outOfRangeRelevanceScoreFeedsTheSingleRepair() async throws {
+        let misscored = Data("""
+        {
+          "summary": "Platform-minded senior engineer.",
+          "selections": [
+            {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
+          ],
+          "relevance": {"a1": {"tech": 6, "domain": 4, "seniority": 3, "impact": 4}},
+          "gaps": [],
+          "rationale": "CI focus."
+        }
+        """.utf8)
+        let service = FixtureIntelligenceService(returning: [misscored, misscored])
+        let store = makeTailorStore(profileStore: try makeProfileStore(), service: service)
+
+        await store.startRun(jobDetails)
+
+        #expect(store.phase == .failed(.resultInvalid), "the same misscored repair fails the run")
+        #expect(store.review == nil, "no review is offered")
+        #expect(await service.recordedRequests.count == 2, "one repair request, no more")
+    }
+
+    @Test("[TAILOR-60] relevance keyed to an id outside the selection fails validation")
+    func unselectedRelevanceIDFeedsTheSingleRepair() async throws {
+        // a2 exists on the Profile but was not selected — the model judged
+        // a point it did not select.
+        let judgingUnselected = Data("""
+        {
+          "summary": "Platform-minded senior engineer.",
+          "selections": [
+            {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
+          ],
+          "relevance": {
+            "a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4},
+            "a2": {"tech": 1, "domain": 1, "seniority": 1, "impact": 1}
+          },
+          "gaps": [],
+          "rationale": "CI focus."
+        }
+        """.utf8)
+        let service = FixtureIntelligenceService(returning: [judgingUnselected, judgingUnselected])
+        let store = makeTailorStore(profileStore: try makeProfileStore(), service: service)
+
+        await store.startRun(jobDetails)
+
+        #expect(store.phase == .failed(.resultInvalid))
+        #expect(await service.recordedRequests.count == 2, "one repair request, no more")
+    }
+
+    @Test("[TAILOR-59] the tailor result carries four relevance scores for each selected point")
+    func resultCarriesRelevanceForEverySelectedPoint() async throws {
+        let store = makeTailorStore(
+            profileStore: try makeProfileStore(),
+            service: FixtureIntelligenceService.tailorFixture()
+        )
+
+        await store.startRun(jobDetails)
+
+        let review = try #require(store.review)
+        try #require(review.items.count == 2)
+        // The canned fixture judges a1 and a3 — the model's sub-scores held
+        // verbatim, per point (decisions/0017).
+        #expect(review.items[0].relevance
+            == RelevanceStats(tech: 5, domain: 4, seniority: 3, impact: 4))
+        #expect(review.items[1].relevance
+            == RelevanceStats(tech: 2, domain: 4, seniority: 4, impact: 5))
+    }
+
+    @Test("[TAILOR-61] a selected point's overall relevance is the unweighted mean of its four relevance scores")
+    func overallRelevanceIsTheUnweightedMean() {
+        // Computed in Swift, never returned by the model (decisions/0017);
+        // a mean of four 0–5 integers lands on quarter precision exactly.
+        #expect(RelevanceStats(tech: 5, domain: 4, seniority: 3, impact: 2).overall == 3.5)
+        #expect(RelevanceStats(tech: 3, domain: 3, seniority: 3, impact: 2).overall == 2.75)
+        #expect(RelevanceStats(tech: 0, domain: 0, seniority: 0, impact: 0).overall == 0)
+        #expect(RelevanceStats(tech: 5, domain: 5, seniority: 5, impact: 5).overall == 5)
+        #expect(RelevanceStats(tech: 5, domain: 4, seniority: 3, impact: 4).overall == 4)
+    }
+
+    @Test("[TAILOR-59] a selected whole project carries its relevance scores too")
+    func selectedProjectCarriesRelevance() async throws {
+        let profileStore = try makeProfileStore()
+        try profileStore.addProject(
+            name: "Trail Mapper",
+            details: "Built tile caching so a week's maps survive without signal."
+        )
+        let selectingProject = Data("""
+        {
+          "summary": "Engineer with production mapping experience.",
+          "selections": [],
+          "projects": ["p1"],
+          "relevance": {"p1": {"tech": 4, "domain": 5, "seniority": 2, "impact": 3}},
+          "gaps": [],
+          "rationale": "The project work fits the JD directly."
+        }
+        """.utf8)
+        let store = makeTailorStore(
+            profileStore: profileStore,
+            service: FixtureIntelligenceService(returning: selectingProject)
+        )
+
+        await store.startRun(jobDetails)
+
+        let review = try #require(store.review)
+        let selected = try #require(review.selectedProjects.first)
+        #expect(review.relevanceStats(for: selected)
+            == RelevanceStats(tech: 4, domain: 5, seniority: 2, impact: 3))
     }
 }

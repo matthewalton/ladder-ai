@@ -543,6 +543,7 @@ struct TailorFlowStoreTests {
               "summary": "Engineer with production mapping experience.",
               "selections": [],
               "projects": ["p1"],
+              "relevance": {"p1": {"tech": 4, "domain": 5, "seniority": 2, "impact": 3}},
               "gaps": [],
               "rationale": "The project work fits the JD directly."
             }
@@ -557,6 +558,91 @@ struct TailorFlowStoreTests {
         let review = try #require(store.review)
         let selected = try #require(review.selectedProjects.first)
         #expect(review.coveredMatchedTags(for: selected) == ["Swift"])
+    }
+
+    @Test("[TAILOR-62] the tailor review shows each selected point's relevance scores beside its covered matched Tags")
+    func reviewPairsRelevanceWithCoveredTags() async throws {
+        let (profileStore, application) = try makeWorld()
+        let service = FixtureIntelligenceService(
+            returning: [try fixtureData("jd-scan"), try fixtureData("tailor-result")])
+        let flow = makeFlow(profileStore: profileStore, application: application, service: service)
+        await flow.start()
+        await flow.confirmMatchReview()
+
+        // Both signals present per point, side by side — the deterministic
+        // coverage and the judged relevance, never merged (root ADR 0005).
+        let review = try #require(flow.review)
+        let first = try #require(review.items.first)
+        #expect(review.coveredMatchedTags(for: first.achievement) == ["Kubernetes", "Swift"])
+        let stats = try #require(first.relevance)
+        #expect(stats == RelevanceStats(tech: 5, domain: 4, seniority: 3, impact: 4))
+        #expect(stats.overall == 4, "the Swift mean presented beside the visible sub-scores")
+    }
+
+    @Test("[TAILOR-62] a selected project's relevance scores sit beside its covered matched Tags")
+    func projectRelevancePairsWithCoverage() async throws {
+        let (profileStore, _) = try makeWorld()
+        let project = try profileStore.addProject(
+            name: "Trail Mapper", details: "Built tile caching so maps survive without signal.")
+        try profileStore.tag(project, skillNamed: "Swift")
+        let selectingProject = Data("""
+            {
+              "summary": "Engineer with production mapping experience.",
+              "selections": [],
+              "projects": ["p1"],
+              "relevance": {"p1": {"tech": 4, "domain": 5, "seniority": 2, "impact": 3}},
+              "gaps": [],
+              "rationale": "The project work fits the JD directly."
+            }
+            """.utf8)
+        let store = TailorStore(
+            profileStore: profileStore,
+            keyStore: InMemoryAPIKeyStore(key: "sk-test"),
+            makeIntelligence: { _ in FixtureIntelligenceService(returning: selectingProject) })
+
+        await store.startRun(jobDetails, matchedTagNames: ["Swift", "Kubernetes"])
+
+        let review = try #require(store.review)
+        let selected = try #require(review.selectedProjects.first)
+        #expect(review.coveredMatchedTags(for: selected) == ["Swift"])
+        let stats = try #require(review.relevanceStats(for: selected))
+        #expect(stats == RelevanceStats(tech: 4, domain: 5, seniority: 2, impact: 3))
+        #expect(stats.overall == 3.5)
+    }
+
+    @Test("[TAILOR-63] a tailor run carrying relevance stats leaves the Application's Match unchanged")
+    func statsCarryingRunLeavesTheMatchUntouched() async throws {
+        let (profileStore, application) = try makeWorld()
+        let service = FixtureIntelligenceService(
+            returning: [try fixtureData("jd-scan"), try fixtureData("tailor-result")])
+        let flow = makeFlow(profileStore: profileStore, application: application, service: service)
+        await flow.start()
+
+        // The scan stored the Match; no suggestion is accepted, so
+        // confirmation writes nothing more — any change after this point
+        // could only come from the tailor run that follows it.
+        let match = try #require(application.match)
+        let matchedBefore = match.matchedTags.map(\.name).sorted()
+        let gapsBefore = match.vocabularyGaps
+        let scannedAtBefore = match.scannedAt
+        let scoreBefore = match.score
+
+        await flow.confirmMatchReview()
+        let review = try #require(flow.review)
+        try #require(!review.items.isEmpty, "the run completed with stats on every selected point")
+        for item in review.items {
+            #expect(item.relevance != nil)
+            item.accepted = true
+        }
+        _ = review.outcome
+
+        // Root ADR 0005's hard line: judged relevance is per-point stats
+        // only — the vocabulary-level Match and its derived score never move.
+        let after = try #require(application.match)
+        #expect(after.matchedTags.map(\.name).sorted() == matchedBefore)
+        #expect(after.vocabularyGaps == gapsBefore)
+        #expect(after.scannedAt == scannedAtBefore, "no scan ran — the stamp stays put")
+        #expect(after.score == scoreBefore, "the derived score is identical before and after the run")
     }
 
     @Test("[TAILOR-55] the tailor review lists the matched Tags no selected point covers")

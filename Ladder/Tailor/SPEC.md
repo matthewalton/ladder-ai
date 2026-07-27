@@ -45,6 +45,15 @@ v2), and confirming one moves that gap into the matched Tags
 point's matched-Tag overlap, carries the content budget FitMetrics history
 supports (decisions/0016), and the tailor review gains the overlap view.
 
+Since ticket #195 the tailor result also carries per-point relevance stats:
+four LLM-judged criteria — tech/tooling, topic/domain,
+responsibility/seniority, impact/outcome — scored per selected point in the
+same tailor request, with an overall relevance computed in Swift as their
+unweighted mean (decisions/0017). The review shows them beside the
+deterministic overlap view — the judged and deterministic signals sit side
+by side, never merged — and the stats are transient with the result
+(decisions/0001) and never a factor in the Match score (root ADR 0005).
+
 The tailor flow itself stays transient (decisions/0001): the tailor result
 and reviewed outcome live in memory only. The Match is the slice's one
 persisted artefact (decisions/0011); everything else that persists arrives
@@ -55,10 +64,10 @@ to Settings (decisions/0002); the model is pinned to the latest Sonnet
 
 Out of scope: PDF render, `Application`/`cvSnapshot` persistence, the fit
 report view (all cv-export), removing an achievement from the selection during
-review, model picker, streaming, anything under the phase gate — and, with
-the Match review landed (ticket #162 slice 3), what still waits: per-point
-LLM-judged relevance stats (a later ticket, per the 2026-07-26 grill), and
-the standalone on-demand scan door on the Application detail (Baton #194).
+review, model picker, streaming, anything under the phase gate — and
+persisting relevance stats, deferred to the CV-composition record (Baton
+#164; decisions/0017). The on-demand scan door on the Application detail
+shipped in PipelineBoard ([PIPEBOARD-44]).
 
 ## [TAILOR-1] Running a tailor for a job description produces a tailor result for review
 
@@ -574,3 +583,56 @@ condense or trim — means the payload carries no budget at all: no key, no
 zeros, byte-shape identical to today's payload. First-run behaviour is
 unchanged; the budget appears only once an export has proven what fits
 (decisions/0016).
+
+## [TAILOR-59] The tailor result carries four relevance scores for each selected point
+
+The per-point stats root ADR 0005 deferred to tailor time (decisions/0017;
+ticket #195). Four LLM-judged criteria per selected achievement and project
+— tech/tooling, topic/domain, responsibility/seniority, impact/outcome —
+each an integer 0 to 5, judged in the same tailor request, never a second
+pass (decisions/0017). The result schema requires them per selected point,
+and `Prompts/tailor.md` version-bumps to define the four criteria and the
+scale. Exercised with the canned fixture result carrying stats for every
+selected point; the recorded prompt still equals the file's content
+([TAILOR-5]). Transient like the whole result (decisions/0001); persistence
+is deliberately deferred (Baton #164; decisions/0017).
+
+## [TAILOR-60] A tailor result missing a selected point's relevance scores fails validation
+
+The invalid-stats class, every case feeding the single repair exactly like a
+schema mismatch ([TAILOR-9]; decisions/0004): scores absent for a selected
+point; any score outside 0 to 5 (a 6, a −1); stats keyed to an id outside
+the selection — the model judged a point it did not select. An
+invalid-then-valid sequence records two requests, never three. A
+fenced-but-valid result is stripped by the shared `FencedJSON` helper first
+and consumes no repair ([TAILOR-18]).
+
+## [TAILOR-61] A selected point's overall relevance is the unweighted mean of its four relevance scores
+
+Computed in Swift from the model's sub-scores, never returned by the model
+(decisions/0017): scores 5, 4, 3, 2 → 3.5; 3, 3, 3, 2 → 2.75; 0, 0, 0, 0
+→ 0. A mean of four integers lands on quarter precision, and the helper
+preserves it exactly — display formatting is visual-verify. No weighting:
+every criterion counts equally, so the aggregate can never disagree with
+the visible sub-scores it derives from.
+
+## [TAILOR-62] The tailor review shows each selected point's relevance scores beside its covered matched Tags
+
+The LLM-judged complement of the overlap view ([TAILOR-54]): per selected
+point, the four sub-scores and the overall relevance appear beside the
+deterministic covered-Tags list — side by side, never merged into one
+figure (root ADR 0005 keeps the deterministic and judged signals separate).
+The presented state is the testable surface; which controls render where is
+visual-verify ([TAILOR-46] stance). The review's grouping and ordering are
+untouched: roles group ([TAILOR-11]), and relevance never reorders anything
+— [TAILOR-53]'s deterministic payload sort likewise stands.
+
+## [TAILOR-63] A tailor run carrying relevance stats leaves the Application's Match unchanged
+
+Root ADR 0005's hard line, exercised: run the scan-first flow to a tailor
+result whose fixture stats score every selected point, review, accept — the
+Match's matched Tags, vocabulary gaps, and `scannedAt` are exactly as the
+Match review's confirmation left them ([TAILOR-49]), and the derived score
+([TAILOR-41]) is identical before and after the tailor run. Relevance stats
+are per-point, vocabulary-blind, and die with the flow — nothing they carry
+reaches the store ([TAILOR-15]'s guarantee extends over them).

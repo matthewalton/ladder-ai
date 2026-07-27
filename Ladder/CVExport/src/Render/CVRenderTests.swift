@@ -52,6 +52,10 @@ struct CVRenderTests {
                 {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"},
                 {"achievementID": "a3", "bullet": "Built the analytics reporting stack from scratch"}
               ],
+              "relevance": {
+                "a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4},
+                "a3": {"tech": 3, "domain": 4, "seniority": 3, "impact": 4}
+              },
               "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],
               "rationale": "CI work maps directly to the JD's platform focus."
             }
@@ -133,6 +137,7 @@ struct CVRenderTests {
               "selections": [
                 {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
               ],
+              "relevance": {"a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4}},
               "gaps": [],
               "rationale": "CI focus."
             }
@@ -285,6 +290,10 @@ struct CVRenderTests {
                 {"name": "Platform Engineering", "skills": ["CI/CD", "Swift"]},
                 {"name": "Data", "skills": ["SQL"]}
               ],
+              "relevance": {
+                "a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4},
+                "a3": {"tech": 3, "domain": 4, "seniority": 3, "impact": 4}
+              },
               "gaps": [],
               "rationale": "CI work maps directly to the JD's platform focus."
             }
@@ -358,6 +367,10 @@ struct CVRenderTests {
                 {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
               ],
               "projects": ["p1"],
+              "relevance": {
+                "a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4},
+                "p1": {"tech": 4, "domain": 5, "seniority": 2, "impact": 3}
+              },
               "gaps": [],
               "rationale": "Platform and mapping work both fit."
             }
@@ -490,6 +503,7 @@ struct CVRenderTests {
             start: Date(timeIntervalSince1970: 1_600_000_000), end: nil
         )
         var selections: [String] = []
+        var relevanceEntries: [String] = []
         var byID: [String: Achievement] = [:]
         for index in 1...40 {
             let achievement = try store.addAchievement(
@@ -500,12 +514,16 @@ struct CVRenderTests {
             selections.append(
                 #"{"achievementID": "a\#(index)", "bullet": "Rephrased achievement \#(index) with sharper impact framing, spelling out the constraint it removed, the teams it unblocked, and the metric it moved over the following two quarters"}"#
             )
+            relevanceEntries.append(
+                #""a\#(index)": {"tech": 3, "domain": 3, "seniority": 3, "impact": 3}"#
+            )
         }
         let result = try TailorResult(
             json: Data("""
             {
               "summary": "Everything-fits engineer.",
               "selections": [\(selections.joined(separator: ","))],
+              "relevance": {\(relevanceEntries.joined(separator: ","))},
               "gaps": [],
               "rationale": "Everything fits."
             }

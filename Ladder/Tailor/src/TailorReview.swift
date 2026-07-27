@@ -25,6 +25,10 @@ final class TailorReview {
     /// ([TAILOR-54], [TAILOR-55]).
     private let matchedTagNames: [String]
 
+    /// Selected projects' relevance stats ([TAILOR-59]) — keyed by the
+    /// model object, since the payload id stays behind in the result.
+    private let projectRelevance: [ObjectIdentifier: RelevanceStats]
+
     init(
         result: TailorResult,
         achievementsByID: [String: Achievement],
@@ -36,14 +40,28 @@ final class TailorReview {
         // so every selection resolves.
         items = result.selections.compactMap { selection in
             achievementsByID[selection.achievementID].map {
-                ReviewedBullet(achievement: $0, bullet: selection.bullet)
+                ReviewedBullet(
+                    achievement: $0, bullet: selection.bullet,
+                    relevance: result.relevance[selection.achievementID])
             }
         }
         selectedProjects = result.projects.compactMap { projectsByID[$0] }
+        projectRelevance = Dictionary(
+            uniqueKeysWithValues: result.projects.compactMap { id in
+                projectsByID[id].flatMap { project in
+                    result.relevance[id].map { (ObjectIdentifier(project), $0) }
+                }
+            })
         skillCategories = result.skillCategories
         summary = result.summary
         gaps = result.gaps
         rationale = result.rationale
+    }
+
+    /// The judged complement of the overlap view ([TAILOR-62]): a selected
+    /// project's relevance stats, verbatim from the result.
+    func relevanceStats(for project: Project) -> RelevanceStats? {
+        projectRelevance[ObjectIdentifier(project)]
     }
 
     /// The overlap view's per-point side ([TAILOR-54]): the matched Tags
@@ -132,10 +150,14 @@ final class ReviewedBullet: Identifiable {
     /// Rejecting keeps the selection; the CV falls back to the brief
     /// canonical point — the canon stays the user's.
     let bullet: String
+    /// The point's judged relevance stats, verbatim from the result
+    /// ([TAILOR-59]) — review display only, never persisted.
+    let relevance: RelevanceStats?
     var accepted = true
 
-    init(achievement: Achievement, bullet: String) {
+    init(achievement: Achievement, bullet: String, relevance: RelevanceStats? = nil) {
         self.achievement = achievement
         self.bullet = bullet
+        self.relevance = relevance
     }
 }

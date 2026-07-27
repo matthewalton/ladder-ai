@@ -65,6 +65,21 @@ the tailor payload, it orders the payload and feeds the review's overlap
 view; never LLM-judged (root ADR 0005).
 _Avoid_: relevance, per-point match, fit
 
+**Relevance stats**:
+The four LLM-judged scores the tailor result carries per selected point —
+tech/tooling, topic/domain, responsibility/seniority, impact/outcome, each
+an integer 0 to 5 — judged in the same tailor request (decisions/0017).
+Transient with the result, shown beside the Overlap's deterministic signal,
+and never a factor in the Match score (root ADR 0005).
+_Avoid_: relevance criteria (collides with the spec's own criteria), fit
+score, match quality
+
+**Overall relevance**:
+One selected point's aggregate: the unweighted mean of its four relevance
+stats, computed in Swift to quarter precision, never returned by the model
+(decisions/0017). Shown alongside — never instead of — the sub-scores.
+_Avoid_: rank, weighted score, combined score
+
 **Content budget**:
 The advisory volume target — bullets, projects, characters — derived from
 FitMetrics history as each field's maximum across exports that fit two
