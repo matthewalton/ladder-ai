@@ -79,7 +79,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >-
-          npx -y speccle@0.16.0 review run
+          npx -y speccle@0.18.0 review run
           --pr ${{ steps.pr.outputs.number }}
           --base origin/${{ steps.pr.outputs.base }}
           ${{ github.event_name == 'issue_comment' && '--force' || '' }}
@@ -88,4 +88,4 @@ jobs:
       # the failing check. Whether that blocks the merge is branch protection — GitHub's, and
       # this repo's call to make, not Speccle's. It runs last so the findings post either way.
       - name: Risk gate
-        run: npx -y speccle@0.16.0 risk --base origin/${{ steps.pr.outputs.base }}
+        run: npx -y speccle@0.18.0 risk --base origin/${{ steps.pr.outputs.base }}

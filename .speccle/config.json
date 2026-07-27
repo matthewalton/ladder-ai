@@ -1,6 +1,6 @@
 {
   "dialect": "swift",
   "suite": "xcodebuild -project Ladder.xcodeproj -scheme Ladder -destination 'platform=macOS' test",
-  "skillsVersion": "0.16.0",
-  "lensesVersion": "0.16.0"
+  "skillsVersion": "0.18.0",
+  "lensesVersion": "0.18.0"
 }
