@@ -17,7 +17,7 @@ Features are built with the Speccle skills, not ad-hoc. Start at `/plan-feature`
 Each feature slice owns its markdown contract; acceptance criteria live in the slice's `SPEC.md`, not in a global task list. Cross-cutting decisions become ADRs in `docs/adr/`; slice-local decisions go in the slice's `decisions/`. There is no DECISIONS.md. Each slice's own `CLAUDE.md` carries what that slice needs beyond this file — chiefly the edits a change there forces outside its folder.
 
 ## Current phase: **4 — Intelligence**
-Hard gate: do not create or modify anything under `Journey/`. Phase gates are defined in ARCHITECTURE.md §4 and only the human advances them (by editing this line).
+Hard gate: do not create or modify anything under `Ladder/Features/Journey/`. Phase gates are defined in ARCHITECTURE.md §4 and only the human advances them (by editing this line).
 
 ## Project setup
 The Xcode project is generated — never edit `Ladder.xcodeproj` directly.
@@ -43,21 +43,25 @@ Ladder/
     Models/       SwiftData models (ARCHITECTURE.md §3)
     DesignSystem/ Palette.swift, Typography.swift, Blaze shapes
     Services/     protocol definitions + implementations
-  Profile/        Phase 1 slice: profile editor
-  CVImport/       Phase 1 slice: CV import (PDF/docx → review → merge)
-  Tailor/         Phase 1 slice: JD → tailored, reviewed outcome
-  CVExport/       Phase 1 slice: CV render + export (owns the Application model)
-  PipelineBoard/  Phase 2 slice: Stage model, applications board, transitions
-                  (Phase 2 slices are siblings like this — no umbrella Pipeline/)
-  TranscriptImport/ Phase 3 slice: import external (Granola) transcripts onto a Stage
-                  (Phase 3 slices are siblings — no umbrella Capture/. Native capture
-                   is deferred per ADR 0002: Recorder/ was built then removed at
-                   fe22ae5; Transcription/, SystemAudio/, PreCall/ return with it)
-  Debrief/        Phase 4 slice (current): Debrief model + generation from a
-                  Stage's notes overview via IntelligenceService
-                  (Phase 4 slices are siblings — no umbrella Intelligence/;
-                   PrepPack/ and JourneySynthesis/ follow per ROADMAP.md)
-  Journey/        Phase 5 (gated)
+  Features/       every Speccle slice, one folder each — nothing else lives here
+    Profile/        Phase 1 slice: profile editor
+    CVImport/       Phase 1 slice: CV import (PDF/docx → review → merge)
+    Tailor/         Phase 1 slice: JD → tailored, reviewed outcome
+    CVExport/       Phase 1 slice: CV render + export (owns the Application model)
+    PipelineBoard/  Phase 2 slice: Stage model, applications board, transitions
+    Timeline/       Phase 2 slice: the trail view over an application's stages
+                    (Phase 2 slices are siblings like this — no umbrella Pipeline/)
+    TranscriptImport/ Phase 3 slice: import external (Granola) transcripts onto a Stage
+    CalendarSync/   Phase 3 slice: read-only calendar scan → stage proposals
+                    (Phase 3 slices are siblings — no umbrella Capture/. Native capture
+                     is deferred per ADR 0002: Recorder/ was built then removed at
+                     fe22ae5; Transcription/, SystemAudio/, PreCall/ return with it)
+    Debrief/        Phase 4 slice (current): Debrief model + generation from a
+                    Stage's notes overview via IntelligenceService
+    PrepPack/       Phase 4 slice (current): prep pack generation for a Stage
+    JourneySynthesis/ Phase 4 slice (current): the application's journey narrative
+                    (Phase 4 slices are siblings — no umbrella Intelligence/)
+    Journey/        Phase 5 (gated)
 Prompts/          versioned LLM prompt files (*.md) — canonical location (never TailorPrompts/)
 LadderTests/
 docs/adr/
@@ -74,7 +78,7 @@ docs/adr/
 ## Testing
 These hold for every slice; a slice's own `CLAUDE.md` records only what differs.
 - Code and tests are colocated in each slice's `src/`. `*Tests.swift` files are routed to the `LadderTests` target by `project.yml` globs (Profile decisions/0001) — they compile into the test bundle, not the app.
-- Every SwiftData model change needs a round-trip persistence test. Store tests use an in-memory container (`ProfileStore.container(inMemory: true)`); persistence criteria reopen a file-backed container at the same URL via the shared `temporaryStoreURL()` / `removeStore(at:)` helpers in `Ladder/Profile/src/ProfilePersistenceTests.swift`.
+- Every SwiftData model change needs a round-trip persistence test. Store tests use an in-memory container (`ProfileStore.container(inMemory: true)`); persistence criteria reopen a file-backed container at the same URL via the shared `temporaryStoreURL()` / `removeStore(at:)` helpers in `Ladder/Features/Profile/src/ProfilePersistenceTests.swift`.
 - Dates are passed in explicitly (the `[PIPEBOARD-16]` pattern). Tests never read the clock.
 - Committed fixture stores under `LadderTests/Fixtures/` were each written by an older schema — **never regenerate one**. That is their entire value. Copy the `.store` file with its `-wal`/`-shm` sidecars together.
 - No test touches the network: inject `FixtureIntelligenceService` and fake key stores.

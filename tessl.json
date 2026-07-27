@@ -1,6 +1,0 @@
-{
-  "name": "ladder-ai",
-  "mode": "vendored",
-  "agents": ["claude-code"],
-  "dependencies": {}
-}
