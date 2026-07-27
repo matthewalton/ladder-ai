@@ -4,7 +4,9 @@ The slice owns the tailor flow: the tailor sheet, the run through
 `IntelligenceService`, result validation with the repair loop, the
 side-by-side review, `Prompts/tailor.md`, the Settings scene with Keychain
 API key entry, and the live `AnthropicIntelligenceService` (in
-`Ladder/Shared/Services/`).
+`Ladder/Shared/Services/`). It also owns the JD scan — `Prompts/jd-scan.md`,
+the scan seam, and the `Match` model it persists (the model file is in this
+slice's `src/`; `Application` itself lives in `Ladder/CVExport/src/`).
 
 ## Commands
 

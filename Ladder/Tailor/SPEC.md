@@ -25,16 +25,31 @@ skill grouping in the tailor result (decisions/0009) and the condense and
 trim passes cv-export's fit loop calls (decisions/0010) — cv-export renders
 what these return, never rewords anything itself.
 
-The whole flow is transient (decisions/0001): the tailor result and reviewed
-outcome live in memory only; the `Application` model and any persistence arrive
-with the cv-export slice. Without a stored API key the run refuses and points
+Since ticket #162 slice 2 the slice also owns tailoring's first step, the JD
+scan (root `CONTEXT.md`): the intelligence service reads an Application's
+stored job description against the Profile's Tag vocabulary — primary names
+and Aliases — and the validated scan result is persisted as the Application's
+Match: matched Tags as live `SkillTag` references, vocabulary gaps as
+strings, refreshed by every scan (decisions/0011). The scan's Tag
+suggestions stay transient (decisions/0013), and the deterministic Match
+score derives from the Match, never stored (decisions/0012; root ADR 0005).
+The scan is headless this amendment — a store seam, no UI door.
+
+The tailor flow itself stays transient (decisions/0001): the tailor result
+and reviewed outcome live in memory only. The Match is the slice's one
+persisted artefact (decisions/0011); everything else that persists arrives
+via the cv-export slice. Without a stored API key a run refuses and points
 to Settings (decisions/0002); the model is pinned to the latest Sonnet
 (decisions/0003); validation failures get exactly one repair request
 (decisions/0004).
 
 Out of scope: PDF render, `Application`/`cvSnapshot` persistence, the fit
 report view (all cv-export), removing an achievement from the selection during
-review, model picker, streaming, anything under the phase gate.
+review, model picker, streaming, anything under the phase gate — and, until
+the Match review arrives (ticket #162 slice 3), everything root ADR 0005
+gates behind it: the review UI with suggestion checkboxes, wiring the scan as
+the tailor run's automatic first step, selection scoring and the ranked
+payload, the overlap view, and the FitMetrics content budget.
 
 ## [TAILOR-1] Running a tailor for a job description produces a tailor result for review
 
@@ -46,8 +61,9 @@ the service seam, decode-based validation, and the tailor flow's state
 machine end to end.
 
 Exercised with `FixtureIntelligenceService` returning a canned tailor result
-from `LadderTests/Fixtures/`. The result is transient — nothing is persisted
-at any point in this slice (decisions/0001).
+from `LadderTests/Fixtures/`. The result is transient — a tailor run
+persists nothing (decisions/0001); the Match is written by the JD scan
+alone (decisions/0011).
 
 ## [TAILOR-2] A tailor run with an empty job description is refused
 
@@ -157,8 +173,9 @@ slice.
 
 Rephrasings never mutate `Achievement.text` — the canon is user-owned (root
 CONTEXT.md). Exercised end to end: run, review, accept everything; the store's
-achievements, their texts, and all counts are byte-identical, and nothing new
-is persisted (decisions/0001).
+achievements, their texts, and all counts are byte-identical, and the run and
+review persist nothing (decisions/0001) — the Match is written by the JD
+scan alone (decisions/0011), and no scan runs here.
 
 ## [TAILOR-16] A saved API key round-trips through the Keychain store
 
@@ -245,3 +262,144 @@ only a non-empty strict subset of the sent selection — anything else feeds
 the single repair, and a failed repair fails the export run with the reason
 surfaced (no silent fallback). The removed items are the fit report's trim
 list ([CVEXPORT-28]). The versioned prompt is `Prompts/trim.md`.
+
+## [TAILOR-27] A JD scan stores a Match on the Application
+
+The amendment's tracer: the scan seam (`JDScanStore`) takes an Application,
+builds the payload from its stored job description and the Profile's Tag
+vocabulary, sends it through the intelligence service, validates the scan
+result, and persists the Match — matched Tags resolved case-insensitively
+through primary names and Aliases to the pool's live `SkillTag` instances
+(never copies; two asks resolving to the same Tag land one reference),
+vocabulary gaps stored verbatim as strings, `scannedAt` stamped. A fresh
+context sees the Match, so it saved.
+
+The `Match` model is one-to-one from `Application` with cascade delete (the
+`JourneyNarrative` shape); the model file lives in this slice's `src/`, and
+`Application` gains the relationship amended in place in
+`Ladder/CVExport/src/` (the PipelineBoard decisions/0001 precedent —
+[CVEXPORT-11] stays green). Exercised with `FixtureIntelligenceService`
+returning the canned scan result; the fixture's matched names deliberately
+arrive in non-primary casing and via an Alias to prove resolution.
+
+## [TAILOR-28] The scan request carries the versioned jd-scan prompt and the pool vocabulary
+
+`Prompts/jd-scan.md` is born in this amendment: canonical, versioned, loaded
+at runtime — never an inline string (the [TAILOR-5] stance). The fixture
+service records the request it receives: the recorded prompt equals the
+file's content, and the recorded payload carries the Application's job
+description verbatim plus every pool Tag's primary name with its Aliases
+([PROFILE-31]'s vocabulary shape) — the model matches or aliases before it
+mints, and a flagged vocabulary gap is then a genuine one.
+
+## [TAILOR-29] A scan result matching a name absent from the pool fails validation
+
+Matched names resolve against the pool case-insensitively across primary
+names and Aliases; a "matched" name resolving to nothing means the model
+invented vocabulary, and the failure feeds the repair path exactly like a
+schema mismatch ([TAILOR-9] stance). Suggestions are not validated against
+the pool here: their pool consistency is enforced at confirmation, where the
+store's view is never stale ([PROFILE-34]/[PROFILE-35] precedent) — and
+confirmation arrives with the Match review, out of scope this amendment.
+
+## [TAILOR-30] A JD scan returns its Tag suggestions without persisting them
+
+The pool-level kinds — mint and alias (root ADR 0005) — arrive in the scan
+result, held in memory for the Match review to consume (decisions/0013); the
+canned fixture carries both. Attach is a point-door kind: it grounds in a
+point's evidence and moves per-point stats, never the vocabulary-level Match
+score, so the scan — which reads only the JD and the vocabulary — never
+proposes it; the on-demand and import doors own it (decisions/0013). After
+the scan, a store reopen shows the Match holding only matched Tags, gaps,
+and `scannedAt` — no suggestion data anywhere in the store, and the pool
+unchanged: the LLM proposes, only the user writes.
+
+## [TAILOR-31] An invalid scan response gets exactly one repair request
+
+The decisions/0004 loop: a response failing the scan schema — or
+[TAILOR-29]'s referential check — triggers one repair request carrying the
+original request content, the invalid response, and the failure reason. An
+invalid-then-valid sequence records two requests, never three. A
+fenced-but-valid response is stripped by the shared `FencedJSON` helper and
+consumes no repair ([TAILOR-18]'s tolerance).
+
+## [TAILOR-32] A scan whose repair response fails validation leaves the Application's Match unchanged
+
+The second failure ends the scan in a failed state with the reason surfaced,
+and the store is untouched: an existing Match keeps its matched Tags, gaps,
+and `scannedAt` exactly; an Application that never had one still has none.
+No partial Match is ever written.
+
+## [TAILOR-33] A JD scan on an empty job description is refused
+
+Refused at start, before any service call — whitespace-only counts as empty
+(the [TAILOR-2] stance). The Application's Match, if any, is unchanged.
+
+## [TAILOR-34] A JD scan with no API key stored is refused
+
+Checked before any service call; the refusal points to Settings, and
+production never falls back to fixture data (decisions/0002) —
+`FixtureIntelligenceService` stays a test and preview concern.
+
+## [TAILOR-35] The scan run creates its live service with the stored API key
+
+The key store plus `makeIntelligence` factory shape ([PROFILE-38];
+decisions/0002 and 0003 lineage): exercised without network via a fake key
+store holding a known key and a factory recording the key it was handed. The
+default factory is the shared `AnthropicIntelligenceService` (pinned model).
+
+## [TAILOR-36] A second JD scan replaces the Application's Match
+
+The Match tracks the pool, never freezes (root `CONTEXT.md`: Match): each
+scan resolves against the pool as it now stands, the previous matched
+references and gaps are gone, and `scannedAt` moves. An Application has at
+most one Match — a `Match` fetch after the second scan counts one for it,
+no orphans. The immutable record of what was sent remains the CV snapshot.
+
+## [TAILOR-37] A fully-populated Match round-trips through a store reopen
+
+The model-change persistence test CLAUDE.md requires ([PIPEBOARD-3]'s
+pattern): matched Tags, vocabulary gaps, and `scannedAt` all populated,
+value-equal after closing and reopening the store on the same on-disk
+container. The schema grows a V3 `VersionedSchema` step in
+`LadderSchemaVersions.swift` with a lightweight V2→V3 stage — new model, new
+optional relationship, nothing folded — and `Match.self` registers wherever
+the container's schema is built.
+
+## [TAILOR-38] Deleting an Application removes its Match
+
+The cascade delete rule, proven by a fetch ([PIPEBOARD-11]'s pattern): after
+deleting an Application with a Match, a `Match` fetch returns no orphans —
+and the matched `SkillTag`s themselves survive; only the references go.
+
+## [TAILOR-39] A pool Tag rename propagates into every Match referencing it
+
+Matched Tags are the shared `SkillTag` instances, so a recase through the
+manage sheet ([PROFILE-29]; renames are recase-only, [PROFILE-30]) shows in
+the Match without touching it — the live-reference storage root ADR 0005
+leans on.
+
+## [TAILOR-40] Deleting a pool Tag removes it from every Match's matched Tags
+
+The relationship empties, never dangles. The ask the Tag covered is not
+resurrected as a vocabulary gap — gaps change only when a scan runs
+([TAILOR-36]); until then the Match simply matches less.
+
+## [TAILOR-41] A Match derives its score from its matched and gap counts alone
+
+The deterministic Match score (root ADR 0005; decisions/0012): a pure
+helper computes matched ÷ (matched + gaps) as a whole percentage, rounded
+half-up — 12 matched with 6 gaps → 67 (12 ÷ 18 = 66.7); 5 matched with 0
+gaps → 100; 0 matched with 5 gaps → 0. A Match with no asks at all — zero
+matched, zero gaps — has no score (nil), never a divide-by-zero or a fake
+100. The score is derived on read and never stored (decisions/0012), so
+slice 3's review can recompute it live and offline as suggestions toggle.
+
+## [TAILOR-42] A pre-Match store opens with every Application's Match absent
+
+Migration safety for the V2→V3 step: the committed fixture stores
+(`LadderTests/Fixtures/Phase1Store/`, `PreTechMigrationStore/` — never
+regenerate either) travel the full migration chain and open with every
+Application carrying no Match; their existing rows stay defended by
+[PIPEBOARD-2] and the Profile migration criteria, which keep running under
+the new schema.

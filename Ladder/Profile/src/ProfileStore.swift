@@ -40,7 +40,7 @@ final class ProfileStore {
     /// migration plan (decisions/0011). `url` nil means the app's own store
     /// file.
     static func container(at url: URL? = nil, inMemory: Bool = false) throws -> ModelContainer {
-        let schema = Schema(versionedSchema: LadderSchemaV2.self)
+        let schema = Schema(versionedSchema: LadderSchemaV3.self)
         if inMemory {
             let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
             return try ModelContainer(

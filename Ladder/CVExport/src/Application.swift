@@ -40,6 +40,12 @@ final class Application {
     @Relationship(deleteRule: .cascade, inverse: \JourneyNarrative.application)
     var journeyNarrative: JourneyNarrative?
 
+    /// The Application's Match — written only by the JD scan and replaced
+    /// wholesale by each one (owned by the tailor slice — see
+    /// Ladder/Tailor/, decisions/0011).
+    @Relationship(deleteRule: .cascade, inverse: \Match.application)
+    var match: Match?
+
     /// To-many relationships are unordered; `sortIndex` carries the chain
     /// order.
     var orderedStages: [Stage] {

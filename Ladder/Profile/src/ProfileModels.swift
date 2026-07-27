@@ -179,10 +179,16 @@ final class SkillTag {
     @Relationship(inverse: \Project.skills)
     var projects: [Project]
 
+    /// The Matches holding this Tag as a live reference (Tailor
+    /// decisions/0011) — deleting the Tag removes it from each.
+    @Relationship(inverse: \Match.matchedTags)
+    var matches: [Match]
+
     init(name: String) {
         self.name = name
         self.aliases = []
         self.achievements = []
         self.projects = []
+        self.matches = []
     }
 }

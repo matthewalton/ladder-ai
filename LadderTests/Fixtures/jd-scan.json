@@ -1,0 +1,17 @@
+{
+  "matched": ["swift", "k8s", "kubernetes"],
+  "gaps": ["GraphQL", "Team leadership"],
+  "suggestions": [
+    {
+      "kind": "mint",
+      "name": "GraphQL",
+      "rationale": "The JD asks for GraphQL and the vocabulary has no entry for it."
+    },
+    {
+      "kind": "alias",
+      "alias": "swift ui",
+      "tag": "SwiftUI",
+      "rationale": "The JD writes SwiftUI as 'Swift UI'; the alias makes the ask resolve."
+    }
+  ]
+}

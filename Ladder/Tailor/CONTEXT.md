@@ -1,7 +1,10 @@
 # Tailor — language
 
-Slice-local terms. `Profile`, `Role`, `Achievement`, `Application`, and
-`Tailoring` are defined in the root `CONTEXT.md`; none is restated here.
+Slice-local terms. `Profile`, `Role`, `Achievement`, `Application`,
+`Tailoring`, `Tag`, `Alias`, `Tag suggestion`, `JD scan`, `Match`, and `Gap`
+are defined in the root `CONTEXT.md`; none is restated here. (This slice's
+gaps come in both root kinds: the JD scan finds vocabulary gaps, the tailor
+result carries evidence gaps.)
 
 **Tailor sheet**:
 The entry sheet collecting company, role title, and the pasted job
@@ -33,10 +36,11 @@ The canonical `Achievement.text` stays untouched; a rephrasing exists only in
 the tailor result and reviewed outcome.
 _Avoid_: rewrite, edit, improved bullet
 
-**Gap**:
-A job-description requirement the service found no supporting Achievement
-for. Surfaced verbatim from the result; the slice never re-derives gaps.
-_Avoid_: weakness, missing skill, shortfall
+**Scan result**:
+The validated structure the JD scan returns — matched pool Tags, vocabulary
+gaps, and Tag suggestions. The Match is persisted from it (decisions/0011);
+the suggestions stay in memory for review (decisions/0013).
+_Avoid_: scan response, extraction, scan output
 
 **Rationale**:
 The service's stated reasoning for its selection, surfaced verbatim for
