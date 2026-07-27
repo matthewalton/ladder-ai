@@ -39,7 +39,7 @@ it quietly, and every other slice works untouched.
 ## Consequences
 
 - Every criterion runs headlessly against the fixture service; no test may
-  construct an `EKEventStore` ([CALSYNC-17], AGENTS.md).
+  construct an `EKEventStore` ([CALSYNC-17], CLAUDE.md).
 - The seam is the testable surface for the scan window ([CALSYNC-13]) and the
   change signal ([CALSYNC-14]).
 - The usage description is pinned by [CALSYNC-18]; the entitlement itself is

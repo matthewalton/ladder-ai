@@ -31,4 +31,4 @@ fail-fast stance ([PROFILE-39]). `Prompts/tags.md` is the versioned prompt.
   individually ([PROFILE-33] through [PROFILE-36]).
 - Confirm-time resolution guards against stale pool views ([PROFILE-34]).
 - The slice's "no live LLM access" scope line is gone; `SPEC.md`'s intro and
-  `AGENTS.md` state the new boundary.
+  `CLAUDE.md` state the new boundary.

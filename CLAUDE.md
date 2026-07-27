@@ -12,13 +12,9 @@ macOS-native interview companion. SwiftUI + SwiftData, **macOS 26 only** (ADR 00
 If a task conflicts with these docs, stop and flag it — do not silently deviate.
 
 ## Workflow: Speccle
-Features are built with the Speccle skills, not ad-hoc:
-- `/plan-feature` to route work (new slice vs amendment vs carve)
-- `/feature` to build a slice end-to-end (spec → tagged tests → implementation → oracle gate)
-- `/implement-feature` when a linted SPEC.md already exists
-- `/strengthen` to measure and improve oracle strength
+Features are built with the Speccle skills, not ad-hoc. Start at `/plan-feature`, which routes the work (new slice vs amendment vs carve) and hands off to the rest. The installed skills describe themselves — don't mirror their roster here, it only goes stale; `.speccle/config.json` pins the version.
 
-Each feature slice owns its markdown contract (SPEC.md etc.); acceptance criteria live there, not in a global task list. Cross-cutting decisions become ADRs in `docs/adr/`; slice-local decisions go in the slice's `decisions/`. There is no DECISIONS.md.
+Each feature slice owns its markdown contract; acceptance criteria live in the slice's `SPEC.md`, not in a global task list. Cross-cutting decisions become ADRs in `docs/adr/`; slice-local decisions go in the slice's `decisions/`. There is no DECISIONS.md. Each slice's own `CLAUDE.md` carries what that slice needs beyond this file — chiefly the edits a change there forces outside its folder.
 
 ## Current phase: **4 — Intelligence**
 Hard gate: do not create or modify anything under `Journey/`. Phase gates are defined in ARCHITECTURE.md §4 and only the human advances them (by editing this line).
@@ -73,5 +69,12 @@ docs/adr/
 - API key: Keychain only. Never UserDefaults, never in code, never logged.
 - Colors/fonts: only via `Palette.swift` / `Typography.swift` accessors. No raw hex or `.custom` fonts in views (Summit View exempt later, per DESIGN.md §3; the rendered CV's print template exempt per CVExport decisions/0007).
 - Dependencies: none without asking.
-- Tests: every SwiftData model change needs a round-trip persistence test. Stores get unit tests with in-memory `ModelContainer`.
-- You cannot see rendered SwiftUI. For UI tasks: build cleanly, keep previews compiling (`#Preview` on every view), and list what the human should visually verify at the end of the session.
+- You cannot see rendered SwiftUI. For UI tasks: build cleanly, keep previews compiling (`#Preview` on every view), and list what the human should visually verify at the end of the session. Each slice's `CLAUDE.md` names the parts of that slice needing eyes.
+
+## Testing
+These hold for every slice; a slice's own `CLAUDE.md` records only what differs.
+- Code and tests are colocated in each slice's `src/`. `*Tests.swift` files are routed to the `LadderTests` target by `project.yml` globs (Profile decisions/0001) — they compile into the test bundle, not the app.
+- Every SwiftData model change needs a round-trip persistence test. Store tests use an in-memory container (`ProfileStore.container(inMemory: true)`); persistence criteria reopen a file-backed container at the same URL via the shared `temporaryStoreURL()` / `removeStore(at:)` helpers in `Ladder/Profile/src/ProfilePersistenceTests.swift`.
+- Dates are passed in explicitly (the `[PIPEBOARD-16]` pattern). Tests never read the clock.
+- Committed fixture stores under `LadderTests/Fixtures/` were each written by an older schema — **never regenerate one**. That is their entire value. Copy the `.store` file with its `-wal`/`-shm` sidecars together.
+- No test touches the network: inject `FixtureIntelligenceService` and fake key stores.
