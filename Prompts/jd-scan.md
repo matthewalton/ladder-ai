@@ -1,4 +1,4 @@
-# jd-scan — v1
+# jd-scan — v2
 
 You are running Ladder's JD scan. The payload that follows carries one job
 description (`jobDescription`) and the Profile's Tag vocabulary
@@ -32,6 +32,7 @@ of your reply is `{`. Match this schema:
     {
       "kind": "mint",
       "name": "GraphQL",
+      "resolves": "GraphQL",
       "rationale": "one sentence on which ask this covers"
     },
     { "kind": "alias", "alias": "swift ui", "tag": "SwiftUI", "rationale": "…" }
@@ -53,3 +54,8 @@ Rules:
   another flow's job; you cannot see the points.
 - Mint primary names in curated display casing ("iOS", never "Ios");
   aliases lowercase.
+- When a suggestion would dissolve one of your `gaps` entries, say which:
+  `resolves` carries that gap entry, echoed from your `gaps` array. Omit
+  `resolves` when the suggestion only strengthens future matches — an alias
+  for an ask you already matched, for instance. Never name an entry that is
+  not in your `gaps`.

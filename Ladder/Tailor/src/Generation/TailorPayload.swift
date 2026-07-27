@@ -20,14 +20,23 @@ struct TailorPayload {
         return tags
     }
 
-    init(profile: Profile, details: JobDetails) throws {
+    init(
+        profile: Profile, details: JobDetails, matchedTagNames: [String] = [],
+        budget: ContentBudget? = nil
+    ) throws {
         // Roles newest-first — SwiftData to-many relationships are unordered,
         // and the JSON must be deterministic.
         let orderedRoles = profile.roles.sorted {
             ($0.start, $1.company) > ($1.start, $0.company)
         }
+        let matched = Set(matchedTagNames.map { $0.lowercased() })
         var byID: [String: Achievement] = [:]
 
+        // Within each role, achievements rank by descending matched-Tag
+        // overlap, ties keeping the Profile's own order ([TAILOR-53]); the
+        // roles themselves never reorder — chronology is the CV's spine.
+        // Ids are payload-positional, assigned after the ranking, stable
+        // within this one payload ([TAILOR-19]).
         var nextRolePointID = 1
         let payloadRoles = orderedRoles.map { role in
             PayloadRole(
@@ -35,20 +44,24 @@ struct TailorPayload {
                 title: role.title,
                 start: Self.month(from: role.start),
                 end: role.end.map(Self.month(from:)),
-                achievements: role.orderedAchievements.map { achievement in
+                achievements: Self.ranked(role.orderedAchievements, by: matched) {
+                    Self.overlap(of: $0.skills, with: matched)
+                }.map { achievement, overlap in
                     let id = "a\(nextRolePointID)"
                     nextRolePointID += 1
                     byID[id] = achievement
-                    return PayloadAchievement(id: id, achievement: achievement)
+                    return PayloadAchievement(id: id, achievement: achievement, overlap: overlap)
                 }
             )
         }
 
         // Projects serialize as whole units (decisions/0007) — the model
-        // includes or omits each by its `p…` id.
+        // includes or omits each by its `p…` id — ranked like achievements.
         var projectsByID: [String: Project] = [:]
         var nextProjectID = 1
-        let payloadProjects = profile.orderedProjects.map { project in
+        let payloadProjects = Self.ranked(profile.orderedProjects, by: matched) {
+            Self.overlap(of: $0.skills, with: matched)
+        }.map { project, overlap -> PayloadProject in
             let id = "p\(nextProjectID)"
             nextProjectID += 1
             projectsByID[id] = project
@@ -58,7 +71,8 @@ struct TailorPayload {
                 link: project.link.isEmpty ? nil : project.link,
                 summary: project.summary.isEmpty ? nil : project.summary,
                 description: project.details.isEmpty ? nil : project.details,
-                tags: project.skills.map(\.name).sorted()
+                tags: project.skills.map(\.name).sorted(),
+                overlap: overlap
             )
         }
 
@@ -85,7 +99,12 @@ struct TailorPayload {
                 company: details.company,
                 roleTitle: details.roleTitle,
                 description: details.jobDescription
-            )
+            ),
+            // Encoded only when history qualifies — an absent budget is no
+            // key at all, never zeros ([TAILOR-57], [TAILOR-58]).
+            budget: budget.map {
+                PayloadBudget(bullets: $0.bullets, projects: $0.projects, characters: $0.characters)
+            }
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
@@ -102,11 +121,51 @@ struct TailorPayload {
         formatter.dateFormat = "yyyy-MM"
         return formatter.string(from: date)
     }
+
+    /// The deterministic per-point annotation ([TAILOR-52]): the point's own
+    /// Tags intersected with the Match's matched Tags, computed in Swift —
+    /// never by the model. Always present; a zero-overlap point carries an
+    /// empty list and 0, so absence never reads as "not computed".
+    @MainActor
+    private static func overlap(of skills: [SkillTag], with matched: Set<String>) -> PayloadOverlap {
+        let tags = skills.map(\.name).filter { matched.contains($0.lowercased()) }.sorted()
+        return PayloadOverlap(count: tags.count, tags: tags)
+    }
+
+    /// Descending overlap count, ties keeping the incoming order — an
+    /// explicitly stable sort ([TAILOR-53]).
+    private static func ranked<Point>(
+        _ points: [Point], by matched: Set<String>, overlap: (Point) -> PayloadOverlap
+    ) -> [(Point, PayloadOverlap)] {
+        points.enumerated()
+            .map { (index: $0.offset, point: $0.element, overlap: overlap($0.element)) }
+            .sorted {
+                $0.overlap.count != $1.overlap.count
+                    ? $0.overlap.count > $1.overlap.count
+                    : $0.index < $1.index
+            }
+            .map { ($0.point, $0.overlap) }
+    }
+}
+
+/// The [TAILOR-52] annotation: the overlapping primary names, sorted, and
+/// their count.
+struct PayloadOverlap: Encodable {
+    var count: Int
+    var tags: [String]
 }
 
 private struct PayloadBody: Encodable {
     var profile: PayloadProfile
     var job: PayloadJob
+    var budget: PayloadBudget?
+}
+
+/// The advisory aim-for line (decisions/0016) — [TAILOR-57].
+private struct PayloadBudget: Encodable {
+    var bullets: Int
+    var projects: Int
+    var characters: Int
 }
 
 private struct PayloadProfile: Encodable {
@@ -133,6 +192,7 @@ private struct PayloadProject: Encodable {
     var summary: String?
     var description: String?
     var tags: [String]
+    var overlap: PayloadOverlap
 }
 
 private struct PayloadEducation: Encodable {
@@ -149,14 +209,16 @@ private struct PayloadAchievement: Encodable {
     var impactMetric: String?
     var tags: [String]
     var strengthNotes: String?
+    var overlap: PayloadOverlap
 
     @MainActor
-    init(id: String, achievement: Achievement) {
+    init(id: String, achievement: Achievement, overlap: PayloadOverlap) {
         self.id = id
         text = achievement.text
         impactMetric = achievement.impactMetric
         tags = achievement.skills.map(\.name).sorted()
         strengthNotes = achievement.strengthNotes
+        self.overlap = overlap
     }
 }
 

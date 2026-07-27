@@ -10,8 +10,11 @@ import Testing
 @MainActor
 struct JDScanFlowTests {
     /// One context holding everything the scan reads: a Profile whose pool
-    /// is Swift, Kubernetes (alias "k8s"), SwiftUI — the shape the canned
-    /// fixture response speaks to — and an Application carrying a JD.
+    /// is Swift, Kubernetes (alias "k8s"), SwiftUI, Leadership — the shape
+    /// the canned fixture response speaks to — and an Application carrying a
+    /// JD. "Team leadership" stays a gap despite the Leadership Tag: nothing
+    /// resolves it lexically, which is the resolving-alias story the fixture
+    /// tells ([TAILOR-51]).
     private func makeWorld() throws -> (context: ModelContext, application: Application) {
         let container = try ProfileStore.container(inMemory: true)
         let context = ModelContext(container)
@@ -19,7 +22,10 @@ struct JDScanFlowTests {
         context.insert(profile)
         let kubernetes = SkillTag(name: "Kubernetes")
         kubernetes.aliases = ["k8s"]
-        profile.skills = [SkillTag(name: "Swift"), kubernetes, SkillTag(name: "SwiftUI")]
+        profile.skills = [
+            SkillTag(name: "Swift"), kubernetes, SkillTag(name: "SwiftUI"),
+            SkillTag(name: "Leadership"),
+        ]
         let application = Application(
             company: "Acme",
             roleTitle: "iOS Engineer",
@@ -55,7 +61,9 @@ struct JDScanFlowTests {
             "the fixture's \"k8s\" and \"kubernetes\" both resolve to the one Kubernetes Tag — one reference")
         #expect(match.vocabularyGaps == ["GraphQL", "Team leadership"], "gaps land verbatim as strings")
         let pool = Set((try #require(try context.fetch(FetchDescriptor<Profile>()).first)).skills.map(\.name))
-        #expect(pool == ["Swift", "Kubernetes", "SwiftUI"], "the scan writes the Match, never the pool")
+        #expect(
+            pool == ["Swift", "Kubernetes", "SwiftUI", "Leadership"],
+            "the scan writes the Match, never the pool")
 
         // A fresh context sees the Match, so it saved.
         let fresh = ModelContext(context.container)
@@ -124,7 +132,7 @@ struct JDScanFlowTests {
 
         await store.scan(application)
 
-        #expect(store.suggestions.count == 2, "the canned fixture carries both pool-level kinds")
+        #expect(store.suggestions.count == 3, "the canned fixture carries both pool-level kinds")
         #expect(store.suggestions.first?.change == .mint(name: "GraphQL"))
         #expect(store.suggestions.last?.change == .alias("swift ui", onTagNamed: "SwiftUI"))
 
@@ -132,9 +140,11 @@ struct JDScanFlowTests {
         // pool untouched, no alias recorded, only matched/gaps/scannedAt.
         let fresh = ModelContext(context.container)
         let profile = try #require(try fresh.fetch(FetchDescriptor<Profile>()).first)
-        #expect(Set(profile.skills.map(\.name)) == ["Swift", "Kubernetes", "SwiftUI"])
+        #expect(Set(profile.skills.map(\.name)) == ["Swift", "Kubernetes", "SwiftUI", "Leadership"])
         let swiftUI = try #require(profile.skills.first { $0.name == "SwiftUI" })
         #expect(swiftUI.aliases == [], "the proposed alias never lands without confirmation")
+        let leadership = try #require(profile.skills.first { $0.name == "Leadership" })
+        #expect(leadership.aliases == [], "the proposed resolving alias never lands either")
         #expect(try fresh.fetch(FetchDescriptor<Match>()).count == 1)
     }
 
@@ -151,6 +161,59 @@ struct JDScanFlowTests {
         #expect(
             store.phase == .failed(.resultInvalid(reason: "suggestion 1 has unknown kind 'attach'")),
             "attach is a point-door kind — the scan schema rejects it (decisions/0013)")
+    }
+
+    @Test("[TAILOR-51] a scan suggestion resolving an entry absent from the gaps fails validation")
+    func resolvesOutsideGapsFailsValidation() async throws {
+        let (_, application) = try makeWorld()
+        let bad = Data(
+            #"{"matched": [], "gaps": ["GraphQL"], "suggestions": [{"kind": "mint", "name": "Rust", "resolves": "Rust"}]}"#
+                .utf8)
+        let service = FixtureIntelligenceService(returning: [bad, bad])
+        let store = makeScanStore(service: service)
+
+        await store.scan(application)
+
+        #expect(
+            store.phase
+                == .failed(.resultInvalid(reason: "suggestion 1 resolves 'Rust', which is not a gaps entry")),
+            "the model pointing at no gap fails exactly like a schema mismatch")
+        #expect(
+            await service.recordedRequests.count == 2,
+            "the referential failure feeds the single repair ([TAILOR-31])")
+        #expect(application.match == nil)
+    }
+
+    @Test("[TAILOR-51] resolves is optional and matches its gap case-insensitively after trimming")
+    func resolvesIsOptionalAndMatchesCaseInsensitively() async throws {
+        let (_, application) = try makeWorld()
+        let response = Data(
+            #"{"matched": [], "gaps": ["GraphQL", "Team leadership"], "suggestions": [{"kind": "mint", "name": "GraphQL", "resolves": "  graphql "}, {"kind": "alias", "alias": "swift ui", "tag": "SwiftUI"}]}"#
+                .utf8)
+        let service = FixtureIntelligenceService(returning: [response])
+        let store = makeScanStore(service: service)
+
+        await store.scan(application)
+
+        #expect(
+            store.phase == .scanned,
+            "a variant-cased, padded resolves still points at its gap; an absent resolves is valid")
+        #expect(await service.recordedRequests.count == 1, "no repair consumed")
+        #expect(
+            store.suggestions.first?.resolves == "GraphQL",
+            "resolves normalises to the gap entry as listed")
+        #expect(store.suggestions.last?.resolves == nil)
+    }
+
+    @Test("[TAILOR-51] the canned fixture carries a resolving mint, a resolving alias and a non-resolving alias")
+    func fixtureCarriesResolvesCoverage() async throws {
+        let (_, application) = try makeWorld()
+        let store = makeScanStore(service: FixtureIntelligenceService.jdScanFixture())
+
+        await store.scan(application)
+
+        #expect(store.suggestions.map(\.resolves) == ["GraphQL", "Team leadership", nil])
+        #expect(store.suggestions[1].change == .alias("team leadership", onTagNamed: "Leadership"))
     }
 
     @Test("[TAILOR-31] an invalid scan response gets exactly one repair request")

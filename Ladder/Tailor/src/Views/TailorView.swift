@@ -1,8 +1,10 @@
+import SwiftData
 import SwiftUI
 
 struct TailorView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var store: TailorStore
+    @State private var flow: TailorFlowStore
+    @State private var hasStarted = false
     @State private var exportStore: CVExportStore
     @State private var export: CVExportStore.Export?
     @State private var isSavingPDF = false
@@ -15,7 +17,9 @@ struct TailorView: View {
     private let makeIntelligence: ((String) -> any IntelligenceService)?
 
     /// Always presented for an application ([TAILOR-23], decisions/0008):
-    /// its stored details are the run's input — there is no input form.
+    /// its stored details are the flow's input — there is no input form.
+    /// The flow scans first, holds in the Match review, and tailors only
+    /// after confirmation ([TAILOR-43], [TAILOR-45]).
     init(
         profileStore: ProfileStore,
         application: Application,
@@ -29,41 +33,56 @@ struct TailorView: View {
         details = JobDetails(application: application)
         _exportStore = State(initialValue: CVExportStore(container: profileStore.container))
         if let makeIntelligence {
-            _store = State(initialValue: TailorStore(
-                profileStore: profileStore, keyStore: keyStore, makeIntelligence: makeIntelligence
+            _flow = State(initialValue: TailorFlowStore(
+                profileStore: profileStore, application: application, keyStore: keyStore,
+                makeIntelligence: makeIntelligence
             ))
         } else {
-            _store = State(initialValue: TailorStore(
-                profileStore: profileStore, keyStore: keyStore
+            _flow = State(initialValue: TailorFlowStore(
+                profileStore: profileStore, application: application, keyStore: keyStore
             ))
         }
     }
 
     var body: some View {
         Group {
-            switch store.phase {
-            case .idle, .running:
-                // The run starts on presentation via `.task` — idle is the
-                // instant before it kicks off.
+            switch flow.phase {
+            case .scanning:
+                progress("Scanning the job description against your tags…")
+            case .matchReview:
+                if let model = flow.matchReview {
+                    MatchReviewView(
+                        model: model,
+                        onCancel: {
+                            flow.cancelMatchReview()
+                            dismiss()
+                        },
+                        onContinue: { Task { await flow.confirmMatchReview() } }
+                    )
+                }
+            case .tailoring:
                 progress("Matching your points to the job…")
             case .review:
                 if let export {
                     FitReportView(report: export.fitReport, onDone: { dismiss() })
-                } else if let review = store.review {
+                } else if let review = flow.review {
                     TailorReviewView(
                         review: review,
-                        onCancel: { startRun() },
+                        onCancel: { retry() },
                         onDone: { dismiss() },
                         onExport: { runExport(review: review) }
                     )
                 }
-            case .failed(let error):
-                failed(error)
+            case .scanFailed(let error):
+                failed(message(for: error), needsKey: error == .apiKeyRequired)
+            case .tailorFailed(let error):
+                failed(message(for: error), needsKey: error == .apiKeyRequired)
             }
         }
         .task {
-            if store.phase == .idle {
-                await store.startRun(details)
+            if !hasStarted {
+                hasStarted = true
+                await flow.start()
             }
         }
         .frame(minWidth: 640, minHeight: 480)
@@ -82,8 +101,9 @@ struct TailorView: View {
         }
     }
 
-    private func startRun() {
-        Task { await store.startRun(details) }
+    /// Retry re-runs from the scan (decisions/0014).
+    private func retry() {
+        Task { await flow.retry() }
     }
 
     private func runExport(review: TailorReview) {
@@ -128,17 +148,17 @@ struct TailorView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func failed(_ error: TailorError) -> some View {
+    private func failed(_ message: String, needsKey: Bool) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.largeTitle)
                 .foregroundStyle(Color.clay)
-            Text(message(for: error))
+            Text(message)
                 .font(.callout)
                 .foregroundStyle(Color.ink)
                 .multilineTextAlignment(.center)
             HStack {
-                if error == .apiKeyRequired {
+                if needsKey {
                     SettingsLink {
                         Text("Open Settings…")
                     }
@@ -146,7 +166,7 @@ struct TailorView: View {
                     .tint(Color.pine)
                     Button("Close") { dismiss() }
                 } else {
-                    Button("Try again") { startRun() }
+                    Button("Try again") { retry() }
                         .buttonStyle(.borderedProminent)
                         .tint(Color.pine)
                     Button("Close") { dismiss() }
@@ -169,6 +189,23 @@ struct TailorView: View {
             "The tailor result didn't come back in a shape Ladder could read, even after one repair. Nothing was changed."
         case .requestFailed:
             "The request couldn't be completed. Check your connection and try again."
+        }
+    }
+
+    /// A failed scan fails the whole flow — no raw-JD fallback
+    /// (decisions/0014; [TAILOR-44]).
+    private func message(for error: JDScanError) -> String {
+        switch error {
+        case .jobDescriptionRequired:
+            "This application has no job description yet. Add or import one on its detail, then Create CV again."
+        case .apiKeyRequired:
+            "Tailoring needs your Anthropic API key. Add it in Settings — it's stored only in your Keychain."
+        case .requestFailed(let detail):
+            "The job description scan couldn't be completed (\(detail)). Check your connection and try again."
+        case .responseTruncated:
+            "The scan response was cut off before it finished. Try again."
+        case .resultInvalid:
+            "The scan result didn't come back in a shape Ladder could read, even after one repair. Nothing was changed."
         }
     }
 }
@@ -211,10 +248,29 @@ struct TailorReviewView: View {
                         }
                     }
                 }
+                // The overlap view's uncovered remainder ([TAILOR-55]):
+                // matched vocabulary the selection leaves unevidenced.
+                if !review.uncoveredMatchedTags.isEmpty {
+                    Section("Matched tags nothing selected covers") {
+                        ForEach(review.uncoveredMatchedTags, id: \.self) { tag in
+                            Label {
+                                Text(tag)
+                                    .font(.callout)
+                                    .foregroundStyle(Color.ink)
+                            } icon: {
+                                Image(systemName: "tag.slash")
+                                    .foregroundStyle(Color.clay)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
                 ForEach(groupedItems, id: \.label) { group in
                     Section(group.label) {
                         ForEach(group.items) { item in
-                            ReviewedBulletRow(item: item)
+                            ReviewedBulletRow(
+                                item: item,
+                                coveredTags: review.coveredMatchedTags(for: item.achievement))
                         }
                     }
                 }
@@ -232,6 +288,7 @@ struct TailorReviewView: View {
                                         .font(.caption)
                                         .foregroundStyle(Color.inkSoft)
                                 }
+                                CoveredTagsLine(tags: review.coveredMatchedTags(for: project))
                             }
                             .padding(.vertical, 2)
                         }
@@ -278,6 +335,9 @@ struct TailorReviewView: View {
 
 private struct ReviewedBulletRow: View {
     @Bindable var item: ReviewedBullet
+    /// The matched Tags this point covers — the overlap view's per-point
+    /// side ([TAILOR-54]).
+    var coveredTags: [String] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -297,8 +357,29 @@ private struct ReviewedBulletRow: View {
                     .foregroundStyle(Color.inkSoft)
             }
             .padding(.leading, 20)
+            CoveredTagsLine(tags: coveredTags)
+                .padding(.leading, 20)
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// "Covers: Kubernetes · Swift" — nothing at all when the point covers no
+/// matched Tag ([TAILOR-54]).
+struct CoveredTagsLine: View {
+    var tags: [String]
+
+    var body: some View {
+        if !tags.isEmpty {
+            HStack(alignment: .top, spacing: 4) {
+                Text("Covers:")
+                    .font(.caption)
+                    .foregroundStyle(Color.inkSoft)
+                Text(tags.joined(separator: " · "))
+                    .font(.caption)
+                    .foregroundStyle(Color.pine)
+            }
+        }
     }
 }
 
@@ -306,17 +387,32 @@ private struct ReviewedBulletRow: View {
     let profileStore = try! ProfileStore(container: ProfileStore.container(inMemory: true))
     try! profileStore.createProfile(name: "Alex Climber", headline: "Staff Engineer")
     let role = try! profileStore.addRole(company: "Acme", title: "Senior Engineer", start: .now, end: nil)
-    try! profileStore.addAchievement(to: role, text: "Cut CI build times across every product target")
+    let achievement = try! profileStore.addAchievement(
+        to: role, text: "Cut CI build times across every product target")
+    try! profileStore.tag(achievement, skillNamed: "Swift")
+    let kubernetes = try! profileStore.tag(achievement, skillNamed: "Kubernetes")
+    try! profileStore.recordAlias("k8s", on: kubernetes)
+    try! profileStore.tag(achievement, skillNamed: "SwiftUI")
+    try! profileStore.tag(achievement, skillNamed: "Leadership")
+    let context = ModelContext(profileStore.container)
     let application = Application(
         company: "Summit Labs", roleTitle: "Platform Engineer",
         jobDescription: "Own platform reliability. Kubernetes, CI at scale, incident response.",
         status: .draft
     )
+    context.insert(application)
+    try! context.save()
+    // The flow scans first — sequence the canned scan then the tailor result.
+    let scanData = try! Data(
+        contentsOf: Bundle.main.url(forResource: "jd-scan", withExtension: "json", subdirectory: "Fixtures")!)
+    let tailorData = try! Data(
+        contentsOf: Bundle.main.url(forResource: "tailor-result", withExtension: "json", subdirectory: "Fixtures")!)
+    let service = FixtureIntelligenceService(returning: [scanData, tailorData])
     return TailorView(
         profileStore: profileStore,
         application: application,
         keyStore: InMemoryAPIKeyStore(key: "sk-preview"),
-        makeIntelligence: { _ in FixtureIntelligenceService.tailorFixture() }
+        makeIntelligence: { _ in service }
     )
 }
 
@@ -340,7 +436,9 @@ private struct ReviewedBulletRow: View {
         """.utf8),
         validAchievementIDs: ["a1"]
     )
-    let review = TailorReview(result: result, achievementsByID: ["a1": achievement])
+    let review = TailorReview(
+        result: result, achievementsByID: ["a1": achievement],
+        matchedTagNames: ["Kubernetes"])
     return TailorReviewView(review: review, onCancel: {}, onDone: {})
         .frame(width: 640, height: 480)
 }

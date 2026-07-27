@@ -37,7 +37,9 @@ final class TailorStore {
         self.makeIntelligence = makeIntelligence
     }
 
-    func startRun(_ details: JobDetails) async {
+    func startRun(
+        _ details: JobDetails, matchedTagNames: [String] = [], budget: ContentBudget? = nil
+    ) async {
         guard !details.jobDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             phase = .failed(.jobDescriptionRequired)
             return
@@ -58,7 +60,9 @@ final class TailorStore {
         phase = .running
         review = nil
         do {
-            let payload = try TailorPayload(profile: profile, details: details)
+            let payload = try TailorPayload(
+                profile: profile, details: details, matchedTagNames: matchedTagNames,
+                budget: budget)
             let prompt = try TailorPrompt.text(from: bundle)
             let service = makeIntelligence(key)
             let validIDs = Set(payload.achievementsByID.keys)
@@ -94,7 +98,8 @@ final class TailorStore {
             review = TailorReview(
                 result: result,
                 achievementsByID: payload.achievementsByID,
-                projectsByID: payload.projectsByID
+                projectsByID: payload.projectsByID,
+                matchedTagNames: matchedTagNames
             )
             phase = .review
         } catch is TailorValidationFailure {

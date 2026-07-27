@@ -33,7 +33,17 @@ Match: matched Tags as live `SkillTag` references, vocabulary gaps as
 strings, refreshed by every scan (decisions/0011). The scan's Tag
 suggestions stay transient (decisions/0013), and the deterministic Match
 score derives from the Match, never stored (decisions/0012; root ADR 0005).
-The scan is headless this amendment — a store seam, no UI door.
+
+Since ticket #162 slice 3 the scan is tailoring's automatic first step:
+presenting the tailor scans, the Match review confirms the vocabulary —
+suggestions as checkboxes, the score recomputing live and offline — and only
+then does selection run, grounded in the confirmed Match; a failed scan fails
+the flow, never a raw-JD fallback (root ADR 0005; decisions/0014). A
+suggestion may name the vocabulary gap it resolves (`resolves`, jd-scan.md
+v2), and confirming one moves that gap into the matched Tags
+(decisions/0015). The tailor payload arrives annotated and ordered by each
+point's matched-Tag overlap, carries the content budget FitMetrics history
+supports (decisions/0016), and the tailor review gains the overlap view.
 
 The tailor flow itself stays transient (decisions/0001): the tailor result
 and reviewed outcome live in memory only. The Match is the slice's one
@@ -45,11 +55,10 @@ to Settings (decisions/0002); the model is pinned to the latest Sonnet
 
 Out of scope: PDF render, `Application`/`cvSnapshot` persistence, the fit
 report view (all cv-export), removing an achievement from the selection during
-review, model picker, streaming, anything under the phase gate — and, until
-the Match review arrives (ticket #162 slice 3), everything root ADR 0005
-gates behind it: the review UI with suggestion checkboxes, wiring the scan as
-the tailor run's automatic first step, selection scoring and the ranked
-payload, the overlap view, and the FitMetrics content budget.
+review, model picker, streaming, anything under the phase gate — and, with
+the Match review landed (ticket #162 slice 3), what still waits: per-point
+LLM-judged relevance stats (a later ticket, per the 2026-07-26 grill), and
+the standalone on-demand scan door on the Application detail (Baton #194).
 
 ## [TAILOR-1] Running a tailor for a job description produces a tailor result for review
 
@@ -62,8 +71,8 @@ machine end to end.
 
 Exercised with `FixtureIntelligenceService` returning a canned tailor result
 from `LadderTests/Fixtures/`. The result is transient — a tailor run
-persists nothing (decisions/0001); the Match is written by the JD scan
-alone (decisions/0011).
+persists nothing (decisions/0001); the Match is written by the JD scan and
+the Match review's confirmation alone (decisions/0011, 0015).
 
 ## [TAILOR-2] A tailor run with an empty job description is refused
 
@@ -74,8 +83,10 @@ job description is required for a run.
 ## [TAILOR-23] A tailor presented for an application starts from its stored job details
 
 decisions/0008: the run's `JobDetails` derive from the Application — company,
-role title and job description verbatim — and the tailor run starts on
-presentation with no input step; the view offers no editing of the details
+role title and job description verbatim — and the flow starts on
+presentation with no input step (since slice 3 the JD scan runs first,
+[TAILOR-43], and the tailor run follows the confirmed Match review,
+[TAILOR-45]); the view offers no editing of the details
 (the JD is corrected on the application detail, [PIPEBOARD-21..28], and
 re-tailored from there). The measurable clause is the derivation and the
 recorded fixture payload carrying the stored values verbatim; the auto-run
@@ -175,7 +186,9 @@ Rephrasings never mutate `Achievement.text` — the canon is user-owned (root
 CONTEXT.md). Exercised end to end: run, review, accept everything; the store's
 achievements, their texts, and all counts are byte-identical, and the run and
 review persist nothing (decisions/0001) — the Match is written by the JD
-scan alone (decisions/0011), and no scan runs here.
+scan and the Match review's confirmation alone (decisions/0011, 0015), and
+neither runs here. The Match review's pool writes ([TAILOR-48]) are its own
+door, exercised there — never a side effect of the run or the bullet review.
 
 ## [TAILOR-16] A saved API key round-trips through the Keychain store
 
@@ -299,14 +312,16 @@ names and Aliases; a "matched" name resolving to nothing means the model
 invented vocabulary, and the failure feeds the repair path exactly like a
 schema mismatch ([TAILOR-9] stance). Suggestions are not validated against
 the pool here: their pool consistency is enforced at confirmation, where the
-store's view is never stale ([PROFILE-34]/[PROFILE-35] precedent) — and
-confirmation arrives with the Match review, out of scope this amendment.
+store's view is never stale ([PROFILE-34]/[PROFILE-35] precedent) — the
+Match review's confirmation door, [TAILOR-48]. A suggestion's `resolves`
+reference is the exception: it points into the scan result itself, so it is
+checked at validation ([TAILOR-51]).
 
 ## [TAILOR-30] A JD scan returns its Tag suggestions without persisting them
 
 The pool-level kinds — mint and alias (root ADR 0005) — arrive in the scan
-result, held in memory for the Match review to consume (decisions/0013); the
-canned fixture carries both. Attach is a point-door kind: it grounds in a
+result, held in memory for the Match review to consume ([TAILOR-46];
+decisions/0013); the canned fixture carries both. Attach is a point-door kind: it grounds in a
 point's evidence and moves per-point stats, never the vocabulary-level Match
 score, so the scan — which reads only the JD and the vocabulary — never
 proposes it; the on-demand and import doors own it (decisions/0013). After
@@ -382,8 +397,9 @@ leans on.
 ## [TAILOR-40] Deleting a pool Tag removes it from every Match's matched Tags
 
 The relationship empties, never dangles. The ask the Tag covered is not
-resurrected as a vocabulary gap — gaps change only when a scan runs
-([TAILOR-36]); until then the Match simply matches less.
+resurrected as a vocabulary gap — gaps change only when a scan runs or a
+confirmed resolving suggestion moves one ([TAILOR-36], [TAILOR-49]); until
+then the Match simply matches less.
 
 ## [TAILOR-41] A Match derives its score from its matched and gap counts alone
 
@@ -403,3 +419,158 @@ regenerate either) travel the full migration chain and open with every
 Application carrying no Match; their existing rows stay defended by
 [PIPEBOARD-2] and the Profile migration criteria, which keep running under
 the new schema.
+
+## [TAILOR-43] A tailor presentation runs the JD scan before any tailor request
+
+The scan-first wiring (root ADR 0005: the Match review precedes selection;
+decisions/0014). Presenting the tailor for an Application starts the JD scan
+automatically — the fixture service's recorded requests open with the
+jd-scan prompt, and no tailor prompt is among them until the Match review
+confirms ([TAILOR-45]). Every presentation re-scans: the Match tracks the
+pool ([TAILOR-36]), so a persisted Match from an earlier run never
+short-circuits the scan. The existing refusals keep their semantics, all
+before any service call: empty job description ([TAILOR-2], [TAILOR-33]),
+no API key ([TAILOR-4], [TAILOR-34]), nothing selectable on the Profile
+([TAILOR-3]).
+
+## [TAILOR-44] A failed JD scan ends the tailor flow with no tailor request sent
+
+decisions/0014: a scan transport failure, truncation, or an invalid repair
+response ([TAILOR-32]) fails the whole flow — the reason surfaced, retry
+offered (retry re-runs from the scan) — and the recorded requests carry no
+tailor prompt. Selection never runs against a raw JD, and never against the
+stale persisted Match either: there is no fallback path of any kind.
+
+## [TAILOR-45] The tailor run starts only after the Match review is confirmed
+
+After a scan lands, the flow holds in the Match review ([TAILOR-46]);
+however long it sits there, the fixture service's recorded requests grow no
+tailor prompt. Confirming ([TAILOR-48]) starts the tailor run against the
+Match as confirmation left it ([TAILOR-49], [TAILOR-52]). Cancelling
+instead ends the flow with no tailor request at all ([TAILOR-50]).
+
+## [TAILOR-46] The Match review presents the Match score with its matched Tags, vocabulary gaps and Tag suggestions
+
+The second review step tailoring gained (root ADR 0005; root `CONTEXT.md`:
+Match). The score is [TAILOR-41]'s derivation — a no-asks Match shows no
+score, never a fake 100; matched Tags show by primary name; vocabulary gaps
+verbatim; and each of the scan's transient mint/alias suggestions
+([TAILOR-30]) appears as a checkbox with its rationale. Suggestions enter
+the review **unchecked**: unlike [TAILOR-12]'s bullets — rewordings of the
+user's own canon — a suggestion writes a vocabulary claim into the pool, and
+claiming a skill is opt-in, never opt-out (root ADR 0005: propose, never
+stuff). Which controls render where is visual-verify; the presented state is
+the testable surface.
+
+## [TAILOR-47] Toggling a Tag suggestion recomputes the review's score without any service request
+
+The live, offline recompute root ADR 0005 promises, from [TAILOR-41]'s
+derivation: while checked, a resolving suggestion (decisions/0015) counts
+its gap as matched — 12 matched with 6 gaps shows 67; checking a suggestion
+that resolves one gap shows 13 ÷ 18 = 72; unchecking returns to 67. A
+suggestion with no `resolves` moves the score by nothing. The fixture
+service records zero requests across any number of toggles.
+
+## [TAILOR-48] Confirming the Match review writes each accepted suggestion to the Tag pool
+
+The Match review confirmation door (root ADR 0005; the
+[PROFILE-34]/[PROFILE-35] semantics, stale-view safe): an accepted mint
+resolves alias-aware first and creates the Tag in its curated casing only
+when nothing resolves — never a duplicate; an accepted alias lands
+lowercase on its resolved Tag, and a colliding alias refuses exactly as a
+manual one ([PROFILE-27] stance) without derailing the other accepted
+suggestions — each applies independently ([PROFILE-36]'s per-proposal
+stance). Unchecked suggestions land nothing and die with the flow
+(decisions/0013).
+
+## [TAILOR-49] A confirmed resolving suggestion moves its gap into the Match's matched Tags
+
+decisions/0015: on confirmation the gap string leaves `vocabularyGaps` and
+the resolved Tag — the minted Tag, or the alias's Tag — joins the matched
+Tags; a Tag already matched lands no second reference ([TAILOR-27]'s
+dedup), the gap just goes. A store reopen shows the moved state, and the
+derived score ([TAILOR-41]) then equals what the review displayed at
+confirm. This is the one door besides a scan that changes a Match
+([TAILOR-40]'s amended stance); `scannedAt` does not move — no scan ran.
+
+## [TAILOR-50] Cancelling the Match review leaves the pool and Match unchanged
+
+No write of any kind: pool Tag count, every Tag's name and aliases, the
+Match's matched Tags, vocabulary gaps, and `scannedAt` all exactly as the
+scan left them — checked checkboxes included; only confirmation writes
+([TAILOR-48]). The suggestions die with the flow (decisions/0013), and no
+tailor request was sent ([TAILOR-45]).
+
+## [TAILOR-51] A scan suggestion resolving an entry absent from the gaps fails validation
+
+jd-scan.md bumps to v2 (decisions/0015): a suggestion may carry `resolves` —
+the gap entry it dissolves, compared case-insensitively after trimming
+against the scan's own `gaps` array. A `resolves` matching no gap entry is
+the model pointing at nothing, and it feeds the single repair exactly like a
+schema mismatch ([TAILOR-31]). `resolves` stays optional: a suggestion
+without one is valid and simply never moves the score ([TAILOR-47]). The
+canned fixture covers a resolving mint, a resolving alias, and a
+non-resolving alias.
+
+## [TAILOR-52] The tailor payload annotates each point with its overlap of the Match's matched Tags
+
+The deterministic grounding (root ADR 0005): per achievement and project,
+the intersection of its Tags with the confirmed Match's matched Tags — the
+overlapping primary names plus their count, computed in Swift, never by the
+model. A zero-overlap point carries an empty list and 0, so absence always
+reads as "nothing overlaps", never "not computed". `Prompts/tailor.md`
+version-bumps to explain the annotation; the model still selects
+([TAILOR-1]) — the annotation grounds, never dictates.
+
+## [TAILOR-53] The tailor payload orders achievements within each role and projects by descending overlap
+
+Ranking is presentation of [TAILOR-52]'s counts: within each role,
+achievements sort by descending overlap count; the projects list likewise.
+Ties keep the Profile's own order (a stable sort), and the roles themselves
+never reorder — chronology is the CV's spine. Recorded fixture payloads
+prove the order.
+
+## [TAILOR-54] The tailor review shows each selected point's covered matched Tags
+
+The overlap view, per point: beside each selected achievement and project,
+the matched Tags its own Tags cover, by primary name — the vocabulary-side
+complement of the evidence gaps the result already lists ([TAILOR-6]). A
+selected point covering nothing shows none. Derived in Swift from the
+reviewed selection and the Match — never from the model's output.
+
+## [TAILOR-55] The tailor review lists the matched Tags no selected point covers
+
+The uncovered remainder of the overlap view: matched vocabulary the
+selection leaves unevidenced, so the user can reconsider the selection
+before export. When the selection covers every matched Tag there is nothing
+to list. Recomputed from whatever the current selection is, not frozen at
+result time.
+
+## [TAILOR-56] The content budget takes each field's maximum across the exports that fit without service passes
+
+decisions/0016: a pure helper reads every Application's `fitMetrics` (each
+records its latest export, [CVEXPORT-30]) and keeps the qualifying records —
+`finalPageCount` ≤ 2 with `condensePassRun` false and `trimPassCount` 0;
+deterministic compaction and stretch are free, service passes disqualify.
+The budget is the per-field maximum across qualifiers: records of 14 bullets
++ 3 projects and 10 bullets + 5 projects → a budget of 14 bullets, 5
+projects (and the character maximum likewise) — the most volume known to
+fit. Zero qualifying records → no budget ([TAILOR-58]), never an invented
+default.
+
+## [TAILOR-57] The tailor request carries the content budget derived from FitMetrics history
+
+With qualifying history ([TAILOR-56]), the recorded fixture request carries
+the budget as an advisory aim-for line — bullets, projects, characters — in
+the version-bumped `Prompts/tailor.md`'s terms. Advisory only
+(decisions/0016): the model aims the selection at the budget; the fit loop
+stays the enforcement ([CVEXPORT-26..28] untouched, [TAILOR-25],
+[TAILOR-26] unchanged).
+
+## [TAILOR-58] A tailor run with no qualifying FitMetrics history sends no budget
+
+No qualifying export history — a fresh store, or only exports that needed
+condense or trim — means the payload carries no budget at all: no key, no
+zeros, byte-shape identical to today's payload. First-run behaviour is
+unchanged; the budget appears only once an export has proven what fits
+(decisions/0016).

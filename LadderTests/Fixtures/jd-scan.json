@@ -5,7 +5,15 @@
     {
       "kind": "mint",
       "name": "GraphQL",
+      "resolves": "GraphQL",
       "rationale": "The JD asks for GraphQL and the vocabulary has no entry for it."
+    },
+    {
+      "kind": "alias",
+      "alias": "team leadership",
+      "tag": "Leadership",
+      "resolves": "Team leadership",
+      "rationale": "The JD's 'team leadership' is the existing Leadership Tag by another name."
     },
     {
       "kind": "alias",

@@ -25,6 +25,11 @@ struct TagSuggestionProposal: Identifiable, Equatable, Sendable {
     let id: Int
     var change: Change
     var rationale: String
+    /// The vocabulary gap entry this suggestion dissolves when confirmed,
+    /// normalised to the gap as the scan listed it (jd-scan v2; Tailor
+    /// decisions/0015). Nil when the suggestion only strengthens future
+    /// matches — and always nil outside the JD scan door.
+    var resolves: String? = nil
 }
 
 enum TagsPrompt {

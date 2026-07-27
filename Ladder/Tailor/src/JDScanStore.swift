@@ -283,7 +283,25 @@ final class JDScanStore {
                     throw JDScanValidationFailure(
                         reason: "suggestion \(index + 1) has unknown kind '\(kind)'")
                 }
-            return TagSuggestionProposal(id: index, change: change, rationale: rationale)
+            // `resolves` points into the scan result itself, so it is the
+            // one suggestion field checked at validation ([TAILOR-51];
+            // decisions/0015) — and it normalises to the gap as listed, so
+            // downstream gap-moving compares by plain equality.
+            var resolves: String?
+            if let rawResolves = suggestion["resolves"] as? String {
+                let trimmed = rawResolves.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard
+                    let gap = vocabularyGaps.first(where: {
+                        $0.caseInsensitiveCompare(trimmed) == .orderedSame
+                    })
+                else {
+                    throw JDScanValidationFailure(
+                        reason: "suggestion \(index + 1) resolves '\(trimmed)', which is not a gaps entry")
+                }
+                resolves = gap
+            }
+            return TagSuggestionProposal(
+                id: index, change: change, rationale: rationale, resolves: resolves)
         }
 
         return ResolvedScan(

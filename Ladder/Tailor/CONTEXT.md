@@ -39,8 +39,39 @@ _Avoid_: rewrite, edit, improved bullet
 **Scan result**:
 The validated structure the JD scan returns — matched pool Tags, vocabulary
 gaps, and Tag suggestions. The Match is persisted from it (decisions/0011);
-the suggestions stay in memory for review (decisions/0013).
+the suggestions stay in memory for the Match review (decisions/0013).
 _Avoid_: scan response, extraction, scan output
+
+**Match review**:
+The confirmation step between scan and selection (root `CONTEXT.md`: Match):
+score, matched Tags, vocabulary gaps, and the scan's suggestions as
+checkboxes whose toggling recomputes the score live and offline. Confirming
+writes accepted suggestions to the pool and moves resolved gaps into the
+Match (decisions/0015); cancelling writes nothing.
+_Avoid_: scan review, tag review, pre-flight
+
+**Resolving suggestion**:
+A Tag suggestion carrying `resolves` — the vocabulary gap entry it
+dissolves. Checked, it counts its gap as matched in the review's live score;
+confirmed, it moves that gap into the Match's matched Tags
+(decisions/0015). A suggestion without `resolves` strengthens future
+matches only.
+_Avoid_: gap-filler, fix suggestion
+
+**Overlap**:
+The deterministic intersection of one point's Tags with the Match's matched
+Tags — primary names and a count, computed in Swift. Annotated per point in
+the tailor payload, it orders the payload and feeds the review's overlap
+view; never LLM-judged (root ADR 0005).
+_Avoid_: relevance, per-point match, fit
+
+**Content budget**:
+The advisory volume target — bullets, projects, characters — derived from
+FitMetrics history as each field's maximum across exports that fit two
+pages without service passes (decisions/0016). Carried as an aim-for line in
+the tailor prompt when history exists; absent otherwise. The fit loop stays
+the enforcement.
+_Avoid_: quota, hard limit, cap
 
 **Rationale**:
 The service's stated reasoning for its selection, surfaced verbatim for

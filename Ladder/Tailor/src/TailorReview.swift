@@ -20,11 +20,18 @@ final class TailorReview {
     /// — cv-export's skills table renders it ([CVEXPORT-23]).
     let skillCategories: [SkillCategory]
 
+    /// The Match's matched Tags by primary name, as the confirmed Match
+    /// stood when the run started — the overlap view's vocabulary side
+    /// ([TAILOR-54], [TAILOR-55]).
+    private let matchedTagNames: [String]
+
     init(
         result: TailorResult,
         achievementsByID: [String: Achievement],
-        projectsByID: [String: Project] = [:]
+        projectsByID: [String: Project] = [:],
+        matchedTagNames: [String] = []
     ) {
+        self.matchedTagNames = matchedTagNames
         // Ids were validated against the payload maps before construction,
         // so every selection resolves.
         items = result.selections.compactMap { selection in
@@ -37,6 +44,34 @@ final class TailorReview {
         summary = result.summary
         gaps = result.gaps
         rationale = result.rationale
+    }
+
+    /// The overlap view's per-point side ([TAILOR-54]): the matched Tags
+    /// this point's own Tags cover, by primary name — derived in Swift from
+    /// the selection and the Match, never from the model's output.
+    func coveredMatchedTags(for achievement: Achievement) -> [String] {
+        covered(by: achievement.skills)
+    }
+
+    func coveredMatchedTags(for project: Project) -> [String] {
+        covered(by: project.skills)
+    }
+
+    /// The uncovered remainder ([TAILOR-55]): matched vocabulary the current
+    /// selection leaves unevidenced — recomputed, never frozen at result
+    /// time.
+    var uncoveredMatchedTags: [String] {
+        let coveredNames = Set(
+            (items.flatMap { coveredMatchedTags(for: $0.achievement) }
+                + selectedProjects.flatMap { coveredMatchedTags(for: $0) })
+                .map { $0.lowercased() })
+        return matchedTagNames.filter { !coveredNames.contains($0.lowercased()) }.sorted()
+    }
+
+    private func covered(by skills: [SkillTag]) -> [String] {
+        matchedTagNames.filter { name in
+            skills.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        }.sorted()
     }
 
     /// The input cv-export consumes.
