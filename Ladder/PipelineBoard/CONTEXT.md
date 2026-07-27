@@ -1,8 +1,9 @@
 # Pipeline Board — language
 
-Slice-local terms. `Application`, `Stage`, and `Profile` are defined in the
-root `CONTEXT.md`; `CV snapshot` in `Ladder/CVExport/CONTEXT.md`. None is
-restated here. Trail vocabulary stays narrative-only (root CONTEXT.md): "next
+Slice-local terms. `Application`, `Stage`, `Profile`, `Match`, `JD scan`,
+`Tag` and `Gap` are defined in the root `CONTEXT.md`; `CV snapshot` in
+`Ladder/CVExport/CONTEXT.md`; `Match review` in `Ladder/Tailor/CONTEXT.md`.
+None is restated here. Trail vocabulary stays narrative-only (root CONTEXT.md): "next
 waypoint" and "days on trail" appear as card footer text per DESIGN.md §6,
 never as code identifiers.
 
@@ -63,6 +64,13 @@ on-device from a dropped PDF or docx file (decisions/0005) or from a pasted
 link's fetched page (decisions/0006). The text lands raw and editable — no
 LLM cleanup, no structuring.
 _Avoid_: JD upload, JD parsing, scraping
+
+**Match section**:
+The application detail's Match surface: the persisted Match's score, matched
+Tags and vocabulary gaps — or the scan prompt when no Match exists — with the
+Scan JD action, the on-demand door into the JD scan and Match review.
+Appears only while the application's job description is non-empty.
+_Avoid_: match panel, score card, fit summary
 
 **Days on trail**:
 The card's narrative label for whole days elapsed since `appliedAt ??

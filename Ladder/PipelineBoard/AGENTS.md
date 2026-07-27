@@ -5,8 +5,10 @@ of the `Application` model (migrated in place in `Ladder/CVExport/src/
 Application.swift` — decisions/0001), the transition map, the board and
 application detail views, the job-description edit and JD import on the
 detail (decisions/0005 — the shared file→text extractor lives in
-`Ladder/Shared/Services/`, not here), and the app shell's
-Profile/Applications sections.
+`Ladder/Shared/Services/`, not here), the Match section on the detail — the
+on-demand JD scan door (decisions/0009; the scan machinery and the Match
+review it presents live in `Ladder/Tailor/src/`, not here) — and the app
+shell's Profile/Applications sections.
 
 ## Commands
 

@@ -28,13 +28,20 @@ PDF or docx file's text on-device via the shared extractor — or fetches a
 pasted link and extracts the page's text the same way (decisions/0006, both
 now scoped to re-import: raw text, no LLM). The detail forms' long-text
 fields — job description, notes, prep context — collapse to indicator rows
-when set (docs/adr/0003).
+when set (docs/adr/0003). Since decisions/0009 the detail also carries the
+Match section: the persisted Match's score, matched Tags and vocabulary
+gaps, with Scan JD — the on-demand door into the JD scan and Match review
+that the tailor flow otherwise reaches first (root CONTEXT.md's "and on
+demand" promise). The scan machinery and the review's semantics stay
+Tailor-owned ([TAILOR-27]–[TAILOR-42], [TAILOR-46]–[TAILOR-51]); this slice
+owns only the door and the summary.
 
 Out of scope: calendar matching (the calendar-sync slice consumes the
 `calendarEventID` and `meetingURL` fields this slice only stores), the
 per-application timeline view, `prepPack`/`transcript`/`debrief` (Phase 3–4
 gated models that do not exist yet), and any change to cv-export or tailoring
-behaviour.
+behaviour. The CV preview's JD-alignment stats and per-point LLM-judged
+relevance stats are later tickets, not this slice.
 
 ## [PIPEBOARD-1] A Stage added to an exported Application survives an app relaunch
 
@@ -350,3 +357,60 @@ it). The offer decision is a pure helper so the rule is testable without
 views; pressing it presents the tailor for this application ([TAILOR-23])
 and the export attaches the CV to it ([CVEXPORT-22]). Button prominence and
 sheet presentation are visual-verify.
+
+## [PIPEBOARD-43] The application detail shows the Application's Match score with its matched Tags and vocabulary gaps
+
+The Match section's summary, read straight from the persisted Match
+([TAILOR-37]) — score derived live ([TAILOR-41]), matched Tag names,
+vocabulary gap strings. Display only: nothing here writes. Because the
+display derives from the persisted Match, a re-scan's replacement
+([TAILOR-36]) and a confirmed review's gap-moves ([TAILOR-49]) show without
+any refresh step. Section chrome, ordering and the scanned-at caption are
+visual-verify.
+
+## [PIPEBOARD-44] Scan JD on the application detail presents the Match review for its stored job description
+
+The on-demand door (decisions/0009): pressing Scan JD runs the JD scan
+against the stored job description — a repeat scan replaces the Match,
+[TAILOR-36] — and on success presents the same Match review the tailor flow
+uses ([TAILOR-46]–[TAILOR-51], unchanged and single-owned). While the scan
+runs the action shows progress and cannot be pressed again. The review's
+confirm copy is neutral ("Done"), never "Continue to tailoring" — this door
+ends at the detail. Sheet presentation and progress chrome are
+visual-verify.
+
+## [PIPEBOARD-45] The Match section appears only while the application's trimmed job description is non-empty
+
+The gate is the JD alone — any status, snapshot or not (deliberately unlike
+Create CV's snapshot-less gate, [PIPEBOARD-42]): the Match stays useful
+after export, and later preview stats read it. Removing the job description
+([PIPEBOARD-33]) hides the section even when a Match persists — the Match
+describes a JD no longer present; it returns when a JD does. The offer
+decision is a pure helper so the rule is testable without views (the
+[PIPEBOARD-42] stance).
+
+## [PIPEBOARD-46] A Match-less application's Match section shows the scan prompt
+
+The empty state: no score, no Tag lists, no gap rows — a line inviting the
+first scan, with Scan JD as its action ([PIPEBOARD-44]). A pre-Match store
+opens with every Match absent ([TAILOR-42]), so this is also every existing
+application's first view of the section. Prompt copy is visual-verify.
+
+## [PIPEBOARD-47] Confirming the on-demand Match review sends no tailor request
+
+Decisions/0009's delta from the tailor flow: confirm applies the review
+outcome — accepted suggestions land in the pool, resolved gaps move
+([TAILOR-48], [TAILOR-49]) — and returns to the detail, whose summary
+already reflects the change ([PIPEBOARD-43]). No tailor run follows,
+asserted via the fixture service's recorded requests (the [TAILOR-44]
+stance). Cancel likewise returns to the detail keeping the freshly scanned
+Match ([TAILOR-50]).
+
+## [PIPEBOARD-48] A failed on-demand scan shows the failure reason with a retry action
+
+Every scan failure surfaces beside the Match section with its reason — no
+API key, request failure, truncation, a response still invalid after the
+single repair ([TAILOR-31], with [TAILOR-32] keeping the persisted Match
+unchanged) — and retry re-runs the scan. An empty job description cannot
+fail here: the section is not offered without one ([PIPEBOARD-45]). Message
+chrome is visual-verify.

@@ -186,6 +186,14 @@ struct ApplicationDetailView: View {
             }
             .listRowBackground(Color.paperRaised)
 
+            // The Match section (decisions/0009): gated on the JD alone
+            // ([PIPEBOARD-45]); keyed so a selection switch never carries a
+            // stale scan flow across applications.
+            if MatchSectionModel.offersMatchSection(jobDescription: application.jobDescription) {
+                MatchSection(application: application)
+                    .id(application.persistentModelID)
+            }
+
             Section {
                 ForEach(application.orderedStages) { stage in
                     Button {

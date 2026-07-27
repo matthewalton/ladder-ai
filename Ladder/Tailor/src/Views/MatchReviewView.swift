@@ -9,6 +9,10 @@ struct MatchReviewView: View {
     @Bindable var model: MatchReviewModel
     var onCancel: () -> Void
     var onContinue: () -> Void
+    /// The tailor flow continues into the run; the application detail's
+    /// on-demand door ends here (PipelineBoard decisions/0009), so the
+    /// confirm copy is the caller's.
+    var continueLabel = "Continue to tailoring"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -71,7 +75,7 @@ struct MatchReviewView: View {
                     .foregroundStyle(Color.inkSoft)
                 Spacer()
                 Button("Cancel", action: onCancel)
-                Button("Continue to tailoring", action: onContinue)
+                Button(continueLabel, action: onContinue)
                     .buttonStyle(.borderedProminent)
                     .tint(Color.pine)
             }
