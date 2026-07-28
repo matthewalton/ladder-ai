@@ -407,7 +407,7 @@ file's content, and the recorded payload carries the posting's text.
 
 ## [PIPEBOARD-41] The import surface opens from the empty state and the shell toolbar
 
-The board's single hero action — "Create CV for new application" — replaces
+The board's single hero action — "Create Application" — replaces
 [PIPEBOARD-20]'s add form and [PIPEBOARD-34]'s standalone tailor entry in
 both hosts: one prominent affordance in the Applications shell toolbar and
 as the empty state's lead action, presenting the import sheet. The
