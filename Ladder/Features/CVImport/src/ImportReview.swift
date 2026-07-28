@@ -1,8 +1,5 @@
 import Foundation
 
-/// The mandatory per-item confirmation step between proposal and replace;
-/// every proposed item enters as included. Identity is carried, not
-/// reviewed ([CVIMPORT-23]).
 @MainActor
 @Observable
 final class ImportReview {
@@ -49,8 +46,6 @@ final class ReviewedAchievement: Identifiable {
     }
 }
 
-/// One proposed tag ([CVIMPORT-32]; root `CONTEXT.md`: Tag) — "proposed
-/// skill" was the pre-0011 name.
 @MainActor
 @Observable
 final class ReviewedTag: Identifiable {
@@ -73,8 +68,6 @@ final class ReviewedEducation: Identifiable {
     }
 }
 
-/// Excluding a project excludes it wholesale; excluding one of its proposed
-/// tags keeps the project confirmable ([CVIMPORT-28]).
 @MainActor
 @Observable
 final class ReviewedProject: Identifiable {

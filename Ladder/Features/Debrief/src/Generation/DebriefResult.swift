@@ -1,12 +1,9 @@
 import Foundation
 
-/// Carried into the repair request so the service is told what to fix.
 struct DebriefValidationFailure: Error, Equatable {
     var reason: String
 }
 
-/// The decoded, validated response — schema, grounding, and missed-ammo
-/// references all checked before anything is persisted.
 struct DebriefResult: Equatable, Sendable, Decodable {
     var questions: [DebriefResultQuestion]
     var themes: [GroundedRemark]
@@ -14,9 +11,6 @@ struct DebriefResult: Equatable, Sendable, Decodable {
     var drills: [String]
 
     init(json: Data, notesOverview: String, achievementCount: Int) throws {
-        // A whole-response fence is presentation, not content — stripped so a
-        // formatting quirk never consumes the single repair request
-        // ([DEBRIEF-17]).
         let json = FencedJSON.stripped(from: json)
         do {
             self = try JSONDecoder().decode(DebriefResult.self, from: json)
@@ -25,8 +19,6 @@ struct DebriefResult: Equatable, Sendable, Decodable {
                 reason: "The response did not match the debrief result schema: \(error)"
             )
         }
-        // Every claim quotes the notes text it is grounded in — an exact
-        // substring, no normalisation (decisions/0002).
         let quotes =
             questions.map(\.quote)
             + themes.map(\.quote)
@@ -41,7 +33,6 @@ struct DebriefResult: Equatable, Sendable, Decodable {
                     """
             )
         }
-        // Missed ammo references payload indices only (decisions/0001).
         let outOfRange = questions.flatMap(\.missedAmmo).filter {
             !(0..<achievementCount).contains($0)
         }

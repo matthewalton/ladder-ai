@@ -1,9 +1,6 @@
 import Foundation
 
-/// Flags only: it never matches and never creates.
 enum InterviewHeuristic {
-    /// Shares the kind guess's keyword table so there is no second list to
-    /// drift.
     static let vocabulary: [String] = ["interview"] + StageKindGuesser.allKeywords
 
     static func flags(_ event: CalendarEvent) -> Bool {
@@ -17,7 +14,6 @@ enum InterviewHeuristic {
         return vocabulary.contains { containsPhrase(tokenise($0), in: words) }
     }
 
-    /// Hyphens split, so "take-home" and "take home" tokenise alike.
     static func tokenise(_ text: String) -> [String] {
         String(text.lowercased().map { $0.isLetter || $0.isNumber ? $0 : " " })
             .split(separator: " ")

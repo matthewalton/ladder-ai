@@ -72,8 +72,6 @@ struct ProfileStoreTests {
         #expect(profile.interests == ["Cycling"])
         #expect(try ModelContext(container).fetchCount(FetchDescriptor<Profile>()) == 1)
 
-        // The invariant holds through the replace branch too: a second
-        // explicit create is still rejected ([PROFILE-4]).
         #expect(throws: ProfileStoreError.profileAlreadyExists) {
             try store.createProfile(name: "Somebody Else", headline: "")
         }
@@ -88,8 +86,6 @@ struct ProfileStoreTests {
         let role = try store.addRole(company: "Acme", title: "Engineer", start: .now, end: nil)
         let achievement = try store.addAchievement(to: role, text: "Cut build times")
 
-        // SkillTags are shared across the Profile, so the tag must survive
-        // the cascade.
         let tag = SkillTag(name: "Swift")
         profile.skills.append(tag)
         achievement.skills.append(tag)
@@ -111,7 +107,6 @@ struct ProfileStoreTests {
         let first = try store.addAchievement(to: role, text: "Cut build times")
         let second = try store.addAchievement(to: role, text: "Shipped sync engine")
 
-        // The surviving tag keeps the name as first entered.
         let tag = try store.tag(first, skillNamed: "Swift")
         let reused = try store.tag(second, skillNamed: "  swift ")
 
@@ -124,8 +119,6 @@ struct ProfileStoreTests {
 
     @Test("[PROFILE-10] a Profile with no roles goes straight to the editor")
     func profileWithoutRolesPresentsEditor() throws {
-        // The empty Experience section carries the add-first-role copy; there
-        // is no separate presentation state for it.
         let store = try makeStore()
         try store.createProfile(name: "Alex Climber", headline: "Staff Engineer")
         #expect(store.presentation == .editor)
@@ -303,8 +296,8 @@ struct ProfileStoreTests {
 
         try store.addInterest("climbing")
         try store.addInterest("  trail running ")
-        try store.addInterest("Climbing")  // duplicate, ignored
-        try store.addInterest("   ")  // empty, ignored
+        try store.addInterest("Climbing")
+        try store.addInterest("   ")
         #expect(profile.interests == ["climbing", "trail running"])
 
         try store.moveInterests(from: IndexSet(integer: 1), to: 0)

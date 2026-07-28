@@ -1,10 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The prep-pack section of the Stage form: Generate sits beside the inputs
-/// it draws on, the generated pack renders below, and the whole pack exports
-/// as one markdown file. Generation is an explicit user action — the only
-/// place the prep API is called.
 struct PrepPackSection: View {
     var stage: Stage
 
@@ -37,7 +33,6 @@ struct PrepPackSection: View {
         }
     }
 
-    /// Only all-three-empty leaves nothing to prep from ([PREP-5]).
     private var hasInputs: Bool {
         let jobDescription = stage.application?.jobDescription
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -57,9 +52,6 @@ struct PrepPackSection: View {
     var body: some View {
         Section("Prep pack") {
             if let pack = stage.prepPack {
-                // The content collapses to an indicator row ([PREP-20],
-                // docs/adr/0003); reading it opens the prep-pack window.
-                // Regenerate and Export Markdown stay below ([PREP-19]).
                 IndicatorRow(
                     label: "Prep pack generated — \(pack.generatedAt.formatted(date: .abbreviated, time: .omitted))",
                     icon: "list.clipboard",
@@ -124,8 +116,6 @@ struct PrepPackSection: View {
                 contentType: MarkdownFileDocument.markdownType,
                 defaultFilename: exportFilename
             ) { _ in
-                // Declining the save changes nothing — the pack stays on the
-                // Stage either way.
             }
         }
     }

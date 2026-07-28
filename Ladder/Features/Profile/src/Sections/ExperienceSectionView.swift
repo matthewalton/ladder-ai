@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// EXPERIENCE — roles inline on the page, newest first, each with its brief
-/// points. Replaces the old roles sidebar.
 struct ExperienceSectionView: View {
     @Bindable var store: ProfileStore
     let profile: Profile
@@ -105,7 +103,6 @@ private struct RoleDisclosureView: View {
     }
 
     private func deleteRole() {
-        // Focus follows deletion: clear it for the role or any of its points.
         switch focus {
         case .role(let focused) where focused == role:
             focus = nil
@@ -118,8 +115,6 @@ private struct RoleDisclosureView: View {
     }
 }
 
-/// The reorderable point list for a role's achievements. Drags carry a
-/// parent-scoped token so a drop from another list is rejected.
 struct PointListView: View {
     @Bindable var store: ProfileStore
     let points: [Achievement]

@@ -6,7 +6,6 @@ import Testing
 
 @MainActor
 struct CalendarSyncFlowTests {
-    /// A fixed instant keeps every window computation deterministic.
     static let now = Date(timeIntervalSince1970: 1_752_800_000)
 
     private func makeStores(
@@ -23,7 +22,6 @@ struct CalendarSyncFlowTests {
         return (pipeline, sync, service)
     }
 
-    /// Reloads the pipeline so matching sees the seeded Application.
     @discardableResult
     private func seedApplication(
         in pipeline: PipelineStore,
@@ -160,7 +158,6 @@ struct CalendarSyncFlowTests {
                 location: "https://meet.google.com/abc-defg-hij",
                 notes: "Backup: https://acme.zoom.us/j/999"
             ),
-            // An unrecognised link still proposes — enrichment, not a gate.
             event(id: "none", title: "Acme onsite", location: "Acme HQ", notes: "https://acme.com/directions"),
         ])
         try seedApplication(in: pipeline)
@@ -170,7 +167,6 @@ struct CalendarSyncFlowTests {
         let byID = Dictionary(uniqueKeysWithValues: sync.proposals.map { ($0.id, $0) })
         #expect(byID["zoom"]?.meetingLink == URL(string: "https://acme.zoom.us/j/123"))
         #expect(byID["teams"]?.meetingLink == URL(string: "https://teams.microsoft.com/l/meetup/xyz"))
-        // Location outranks notes.
         #expect(byID["both"]?.meetingLink == URL(string: "https://meet.google.com/abc-defg-hij"))
         #expect(byID["none"] != nil)
         #expect(byID["none"]?.meetingLink == nil)
@@ -220,7 +216,6 @@ struct CalendarSyncFlowTests {
         #expect(linked.calendarEventID == "evt-1")
         #expect(linked.meetingURL == URL(string: "https://meet.google.com/abc-defg-hij"))
         #expect(linked.scheduledAt == start)
-        // Kind and outcome untouched.
         #expect(linked.kind == .technical)
         #expect(linked.outcome == .pending)
         #expect(sync.proposals.isEmpty)
@@ -241,7 +236,6 @@ struct CalendarSyncFlowTests {
 
         await sync.scan(asOf: Self.now)
 
-        // The unlinked event at the same company keeps proposing.
         #expect(sync.proposals.map(\.id) == ["evt-2"])
     }
 
@@ -307,8 +301,6 @@ struct CalendarSyncFlowTests {
 
     @Test("[CALSYNC-15] a kind keyword in the event title pre-selects the proposal's stage kind")
     func kindKeywordPreselects() async throws {
-        // Multi-word kinds outrank single-word ones: "system design screen"
-        // guesses systemDesign, not screen.
         let (pipeline, sync, _) = try makeStores(events: [
             event(title: "Acme system design screen")
         ])
@@ -343,8 +335,6 @@ struct CalendarSyncFlowTests {
 
     @Test("[CALSYNC-21] an event matching no tracked Application whose title carries an interview keyword surfaces as a possible-interview proposal")
     func unmatchedKeywordEventBecomesPossibleInterview() async throws {
-        // A tracked application exists — the event just names a company the
-        // board has never heard of.
         let (pipeline, sync, _) = try makeStores(events: [
             event(title: "Interview with Hooli")
         ])
@@ -371,7 +361,6 @@ struct CalendarSyncFlowTests {
 
     @Test("[CALSYNC-22] an event matching no tracked Application with a recognised meeting link surfaces as a possible-interview proposal")
     func unmatchedMeetingLinkEventBecomesPossibleInterview() async throws {
-        // The title says nothing useful; the Zoom link is the signal.
         let (pipeline, sync, _) = try makeStores(events: [
             event(title: "Chat with Sarah", location: "https://hooli.zoom.us/j/9")
         ])
@@ -410,28 +399,22 @@ struct CalendarSyncFlowTests {
 
     @Test("[CALSYNC-24] the company guess takes the registrable-domain label of a non-public attendee or organizer email")
     func companyGuessFromEmailDomain() async throws {
-        // Cased from the title when the label appears there as a word.
         let openCoreOS = event(
             title: "Interview with WayneTech",
             organizerEmail: "recruiting@waynetech.com"
         )
         #expect(CompanyGuesser.guess(for: openCoreOS) == "WayneTech")
 
-        // No title occurrence → the label as-is; subdomains fall away
-        // (mail.acme.com → acme).
         let acme = event(title: "Intro call", attendees: ["jane@mail.acme.com"])
         #expect(CompanyGuesser.guess(for: acme) == "acme")
 
         // Calendar infrastructure is never company evidence:
-        // unknownorganizer@calendar.google.com must not guess "google" — it
-        // falls through to the title fallback.
+        // unknownorganizer@calendar.google.com must not guess "google".
         let synced = event(
             title: "Interview with Hooli",
             organizerEmail: "unknownorganizer@calendar.google.com"
         )
         #expect(CompanyGuesser.guess(for: synced) == "Hooli")
-        // The same domain never matches a tracked "Google" application
-        // either.
         #expect(
             !CalendarMatcher.domainMatches(
                 email: "unknownorganizer@calendar.google.com", company: "Google"
@@ -447,24 +430,20 @@ struct CalendarSyncFlowTests {
     func companyGuessFallsBackToStrippedTitle() async throws {
         #expect(CompanyGuesser.guess(for: event(title: "Interview with Hooli")) == "Hooli")
         #expect(CompanyGuesser.guess(for: event(title: "Hooli phone screen")) == "Hooli")
-        // Multi-word remainders keep their order and casing.
         #expect(
             CompanyGuesser.guess(for: event(title: "Final round at Wayne Enterprises"))
                 == "Wayne Enterprises"
         )
-        // A public mail domain falls through to the title.
         #expect(
             CompanyGuesser.guess(
                 for: event(title: "Interview with Hooli", attendees: ["me@gmail.com"])
             ) == "Hooli"
         )
-        // Nothing left after stripping → empty.
         #expect(CompanyGuesser.guess(for: event(title: "Interview")).isEmpty)
     }
 
     @Test("[CALSYNC-26] confirming a possible-interview proposal creates an applied Application and its event-linked Stage")
     func confirmCreateCreatesApplicationAndStage() async throws {
-        // A past interview — the calendar heard about it before the board.
         let start = Self.now.addingTimeInterval(-86_400)
         let (pipeline, sync, _) = try makeStores(events: [
             event(title: "Interview with Hooli", start: start, location: "https://hooli.zoom.us/j/9"),
@@ -482,9 +461,8 @@ struct CalendarSyncFlowTests {
         #expect(application.company == "Hooli")
         #expect(application.roleTitle == "Staff Engineer")
         #expect(application.source == "calendar")
-        // Applied at the event's start, then auto-advanced to active by its
-        // first Stage.
         #expect(application.appliedAt == start)
+        // Auto-advanced to active by its first Stage.
         #expect(application.status == .active)
         #expect(stage.kind == .screen)
         #expect(stage.outcome == .pending)
@@ -492,13 +470,11 @@ struct CalendarSyncFlowTests {
         #expect(stage.calendarEventID == "evt-1")
         #expect(stage.meetingURL == URL(string: "https://hooli.zoom.us/j/9"))
 
-        // A blank company refuses and creates nothing.
         let second = try #require(sync.proposals.first { $0.id == "evt-2" })
         #expect(throws: PipelineStoreError.self) {
             try sync.confirmCreate(second, company: "   ", roleTitle: "X", kind: .screen)
         }
         #expect(pipeline.applications.count == 1)
-        // The confirmed proposal left the list; the refused one stayed.
         #expect(sync.proposals.map(\.id) == ["evt-2"])
     }
 
@@ -516,13 +492,9 @@ struct CalendarSyncFlowTests {
         let application = try seedApplication(in: pipeline)
         await sync.check(asOf: Self.now)
 
-        // Proposed events never appear twice: the matched (evt-1) and
-        // flagged (evt-3) events surface as proposals; everything else is
-        // an other event, in start order.
         #expect(sync.proposals.map(\.id) == ["evt-1", "evt-3"])
         #expect(sync.otherEvents.map(\.identifier) == ["evt-2", "evt-4", "evt-5"])
 
-        // Linked and dismissed events stay excluded on a later check.
         let confirming = try #require(sync.proposals.first { $0.id == "evt-1" })
         try sync.confirm(confirming, application: application, kind: .final)
         let dismissing = try #require(sync.proposals.first { $0.id == "evt-3" })
@@ -536,14 +508,12 @@ struct CalendarSyncFlowTests {
     @Test("[CALSYNC-28] picking an other event yields a proposal for that event")
     func pickingOtherEventYieldsProposal() async throws {
         let (pipeline, sync, _) = try makeStores(events: [
-            // Unmatched and heuristic-silent — invisible to the scan.
             event(title: "Coffee with Jane"),
             event(id: "evt-2", title: "Globex catch-up", start: Self.now.addingTimeInterval(2 * 86_400)),
         ])
         await sync.check(asOf: Self.now)
         #expect(sync.proposals.isEmpty)
 
-        // Picking proposes on demand, heuristic verdict ignored.
         let picked = try #require(sync.otherEvents.first { $0.identifier == "evt-1" })
         let proposal = sync.proposal(for: picked)
         #expect(proposal.isPossibleInterview)
@@ -563,13 +533,9 @@ struct CalendarSyncFlowTests {
             event(title: "Acme interview"),
             event(id: "evt-2", title: "Dentist", start: Self.now.addingTimeInterval(2 * 86_400)),
         ])
-        // The launch-path scan populates nothing.
         await sync.scan(asOf: Self.now)
         #expect(sync.otherEvents.isEmpty)
 
-        // A check fills the list; the next automatic re-scan — the
-        // calendar-change signal's path — clears it, proposals refreshed
-        // as ever.
         await sync.check(asOf: Self.now)
         #expect(sync.otherEvents.map(\.identifier) == ["evt-2"])
         await sync.scan(asOf: Self.now)
@@ -589,7 +555,6 @@ struct CalendarSyncFlowTests {
         sync.discardOtherEvents()
 
         #expect(sync.otherEvents.isEmpty)
-        // Proposals survive the discard — the bar keeps showing them.
         #expect(sync.proposals.map(\.id) == ["evt-1"])
     }
 
@@ -614,8 +579,6 @@ struct CalendarSyncFlowTests {
     func lookBackProposesOnlyItsCompany() async throws {
         let (pipeline, sync, _) = try makeStores(events: [
             event(title: "Acme interview", start: Self.now.addingTimeInterval(-30 * 86_400)),
-            // Another tracked company's interview — out of the look-back's
-            // scope.
             event(id: "evt-2", title: "Globex interview", start: Self.now.addingTimeInterval(-30 * 86_400)),
             event(id: "evt-3", title: "Acme screen", start: Self.now.addingTimeInterval(-60 * 86_400)),
         ])
@@ -624,7 +587,6 @@ struct CalendarSyncFlowTests {
 
         await sync.lookBack(for: acme, asOf: Self.now)
 
-        // Start order, sole candidate pinned to the invoked application.
         #expect(sync.proposals.map(\.id) == ["evt-3", "evt-1"])
         #expect(
             sync.proposals.allSatisfy {
@@ -637,8 +599,6 @@ struct CalendarSyncFlowTests {
 
     @Test("[CALSYNC-19] an empty scan with no tracked Application explains that matching starts past Draft")
     func emptyScanWithoutTrackedApplicationsSignalsCaseOne() async throws {
-        // No interview keyword and no meeting link, so the heuristic stays
-        // silent and the scan is genuinely empty.
         let (pipeline, sync, _) = try makeStores(events: [event(title: "Acme catch-up")])
         // A matching company still in Draft: matching never ran.
         try seedApplication(in: pipeline, company: "Acme", status: .draft)
@@ -649,16 +609,12 @@ struct CalendarSyncFlowTests {
         #expect(sync.proposals.isEmpty)
         #expect(sync.hasTrackedApplications == false)
 
-        // Tracking an application after the scan flips the signal without a
-        // re-scan.
         try seedApplication(in: pipeline, company: "Globex", status: .applied)
         #expect(sync.hasTrackedApplications == true)
     }
 
     @Test("[CALSYNC-20] an empty scan with tracked Applications explains that no event matched")
     func emptyScanWithTrackedApplicationsSignalsCaseTwo() async throws {
-        // No event names the tracked company — exact matching drops
-        // everything.
         let (pipeline, sync, _) = try makeStores(events: [event(title: "Globex catch-up")])
         try seedApplication(in: pipeline, company: "Acme", status: .applied)
 
@@ -682,10 +638,8 @@ struct CalendarSyncFlowTests {
 
         #expect(sync.scanState == .denied)
         #expect(sync.proposals.isEmpty)
-        // The rest of the app is untouched — the board still has its data.
         #expect(pipeline.applications.count == 1)
 
-        // A refused access request lands in the same denied state.
         let (pipeline2, sync2, _) = try makeStores(
             events: [], state: .notDetermined, accessRequestResult: .denied
         )

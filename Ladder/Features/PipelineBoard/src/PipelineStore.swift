@@ -6,7 +6,6 @@ enum PipelineStoreError: Error, Equatable {
     case blankField
 }
 
-/// Every mutation saves immediately.
 @MainActor
 @Observable
 final class PipelineStore {
@@ -20,8 +19,8 @@ final class PipelineStore {
         context = ModelContext(container)
     }
 
-    /// Backfills applied dates for Phase 1 rows, which went straight to
-    /// applied with none recorded — their export moment was their creation moment.
+    /// Phase 1 rows went straight to applied with no date recorded — their
+    /// export moment was their creation moment, so load backfills it.
     func load() throws {
         let fetched = try context.fetch(FetchDescriptor<Application>())
         var backfilled = false
@@ -40,10 +39,8 @@ final class PipelineStore {
         applications.filter { $0.status == status }
     }
 
-    /// The shared creation seam ([PIPEBOARD-35], calendar-sync's
-    /// confirmCreate): creates without CV fields — export stays the only
-    /// path that attaches one. Duplicate company/role pairs are allowed by
-    /// design.
+    /// Duplicate company/role pairs are allowed by design; export stays the
+    /// only path that attaches a CV.
     @discardableResult
     func createApplication(
         company: String, roleTitle: String,
@@ -93,8 +90,6 @@ final class PipelineStore {
         try context.save()
     }
 
-    /// The store's only auto-advance: a first Stage on an applied
-    /// Application sets it active.
     @discardableResult
     func addStage(
         to application: Application,
@@ -136,16 +131,12 @@ final class PipelineStore {
         try context.save()
     }
 
-    /// The JD import (decisions/0005): the file's extracted text lands raw
-    /// as the job description — no LLM cleanup, no structuring. Throws
-    /// `TextExtractionError` with the job description untouched.
     func importJobDescription(from url: URL, into application: Application) throws {
         application.jobDescription = try FileTextExtractor.extractText(from: url)
         try context.save()
     }
 
-    /// Injected so link-import criteria run offline; the default is a plain
-    /// GET accepting only 2xx.
+    /// Injected so link-import tests run offline.
     var fetchLinkData: (URL) async throws -> Data = PipelineStore.fetchOverHTTP
 
     /// Internal, not private: the job import's default fetch too.
@@ -157,10 +148,6 @@ final class PipelineStore {
         return data
     }
 
-    /// The link path of the JD import (decisions/0006): fetch the pasted
-    /// URL, extract on-device, land the text raw. The link is not stored.
-    /// A JobPosting structured-data block wins over whole-page text — it is
-    /// the posting without the nav and footer ([PIPEBOARD-28]).
     func importJobDescription(fromLink url: URL, into application: Application) async throws {
         let data = try await fetchLinkData(url)
         application.jobDescription =
@@ -185,10 +172,6 @@ final class PipelineStore {
         return (try? context.fetch(descriptor))?.first
     }
 
-    /// The confirmed removes of the docs/adr/0003 pattern ([PIPEBOARD-33]):
-    /// each clears exactly one long-text field, leaving every other field
-    /// untouched. The confirmation dialog is the view's; the store just
-    /// clears.
     func clearJobDescription(of application: Application) throws {
         application.jobDescription = ""
         try context.save()

@@ -5,9 +5,6 @@ import Testing
 
 @testable import Ladder
 
-/// The docs/adr/0003 collapsed-content pattern on the debrief: indicator
-/// row, content window, and the confirmed remove. Row and dialog chrome are
-/// on the visual-verify list.
 @MainActor
 struct DebriefCollapseTests {
     private func makeStageWithDebrief() throws -> (ModelContainer, Stage, Debrief, Achievement) {
@@ -38,8 +35,8 @@ struct DebriefCollapseTests {
     @Test("[DEBRIEF-18] a Stage's debrief collapses to an indicator row in the Stage form")
     func debriefCollapsesToIndicatorRow() throws {
         let (container, stage, _, _) = try makeStageWithDebrief()
-        // Render-smoke: the section renders in its collapsed state — the
-        // content moved behind Open; row chrome is visual-verify.
+        // Render-smoke: the section renders in its collapsed state; row
+        // chrome is visual-verify.
         let section = ImageRenderer(
             content: Form {
                 DebriefSection(

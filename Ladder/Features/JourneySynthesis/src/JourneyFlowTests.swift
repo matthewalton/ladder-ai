@@ -5,15 +5,12 @@ import Testing
 @testable import Ladder
 
 /// The canned journey result loads from the app bundle's Fixtures folder
-/// (tests run in the app host). No network anywhere.
+/// (tests run in the app host).
 @MainActor
 struct JourneyFlowTests {
-    /// The narrative text inside the bundled journey-result fixture.
     static let fixtureNarrativeOpening =
         "The Summit Labs climb opened quietly"
 
-    /// An Application at `.offer` with a two-Stage chain, the first Stage
-    /// debriefed — the thinnest realistic chain to synthesise over.
     private func makeOfferApplication(
         in container: ModelContainer,
         status: ApplicationStatus = .offer
@@ -102,7 +99,6 @@ struct JourneyFlowTests {
             "the fixture narrative rode through persistence intact")
     }
 
-    /// The valid fixture bytes, for invalid-then-valid repair sequences.
     private var validJSON: Data {
         get throws {
             try Data(contentsOf: #require(
@@ -112,19 +108,16 @@ struct JourneyFlowTests {
         }
     }
 
-    /// The fixture's narrative string, decoded — the verbatim reference.
     private var fixtureNarrative: String {
         get throws {
             try JSONDecoder().decode(JourneyResult.self, from: validJSON).narrative
         }
     }
 
-    /// Parses right off the wire but fails the schema check.
     private var wrongShapeResponse: Data {
         Data(#"{"story": "a field the schema does not have"}"#.utf8)
     }
 
-    /// Schema-shaped but empty — fails the non-empty check.
     private var emptyNarrativeResponse: Data {
         Data(#"{"narrative": "  \n "}"#.utf8)
     }
@@ -200,8 +193,6 @@ struct JourneyFlowTests {
         let service = FixtureIntelligenceService.journeyFixture()
         let store = makeJourneyStore(container: container, service: service)
         let application = try makeOfferApplication(in: container)
-        // A third, undebriefed stage after the chain the helper builds —
-        // inserted out of order to prove sortIndex, not insert order, rules.
         let context = try #require(application.modelContext)
         let final = Stage(kind: .final, outcome: .passed, sortIndex: 2)
         context.insert(final)
@@ -275,7 +266,6 @@ struct JourneyFlowTests {
             repair.payload.contains(original.payload),
             "the repair request carries the original request content")
 
-        // An empty narrative is invalid too, and repairs the same way.
         let second = try ProfileStore.container(inMemory: true)
         let emptyService = FixtureIntelligenceService(
             returning: [emptyNarrativeResponse, try validJSON])
@@ -294,7 +284,6 @@ struct JourneyFlowTests {
             returning: [wrongShapeResponse, emptyNarrativeResponse])
         let store = makeJourneyStore(container: container, service: service)
         let application = try makeOfferApplication(in: container)
-        // A narrative already on the Application stays exactly as it was.
         let context = try #require(application.modelContext)
         let existing = JourneyNarrative(
             text: "The climb as first told.",

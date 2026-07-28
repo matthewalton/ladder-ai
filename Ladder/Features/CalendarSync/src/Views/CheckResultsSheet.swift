@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// The check's results, shown once per check (decisions/0008): proposals
-/// prominent on top, everything else behind the collapsed disclosure.
-/// Reviewing never writes — confirmation stays the only write gesture —
-/// and closing discards the other events.
+/// Reviewing never writes — confirmation stays the only write gesture;
+/// closing discards the other events.
 struct CheckResultsSheet: View {
     @Bindable var store: CalendarSyncStore
     @State private var reviewing: StageProposal?
@@ -98,7 +96,6 @@ struct CheckResultsSheet: View {
     }
 }
 
-/// One proposal, the same row on the bar and in the check-results sheet.
 struct ProposalRow: View {
     let proposal: StageProposal
     let onReview: () -> Void

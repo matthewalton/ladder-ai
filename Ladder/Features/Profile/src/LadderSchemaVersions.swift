@@ -1,14 +1,12 @@
 import Foundation
 import SwiftData
 
-// The app's versioned schemas (decisions/0011). Versioning began at the first
-// destructive change — dropping `Achievement.tech` — exactly as PipelineBoard
-// decisions/0001 recorded it would. V1 is a frozen, verbatim copy of the
-// schema as it stood the day before that change: stored attributes and
-// relationships only (computed conveniences live on the live classes). Shared
-// value types (ContactInfo, FitMetrics, GroundedRemark, MockTask, Segment and
-// the raw-value enums) are not versioned — they are storage-stable Codable
-// values.
+// V1 is a frozen, verbatim copy of the schema as it stood the day before the
+// destructive change that began versioning — dropping `Achievement.tech`:
+// stored attributes and relationships only (computed conveniences live on the
+// live classes). Shared value types (ContactInfo, FitMetrics, GroundedRemark,
+// MockTask, Segment and the raw-value enums) are not versioned — they are
+// storage-stable Codable values.
 //
 // Entity names come from the unqualified class names, so the nested V1
 // classes address the same on-disk entities as the live top-level classes
@@ -128,7 +126,6 @@ enum LadderSchemaV1: VersionedSchema {
         var title: String?
         var text: String
         var impactMetric: String?
-        /// The reason V1 exists: the last schema that stored `tech`.
         var tech: [String]
         var strengthNotes: String?
         var sortIndex: Int
@@ -339,10 +336,8 @@ enum LadderSchemaV1: VersionedSchema {
     }
 }
 
-/// Frozen the day the Match arrived (Tailor decisions/0011), exactly as V1
-/// was frozen for the tech fold: `tech` is gone from Achievement, `aliases`
-/// is on SkillTag, and there is no `Match` yet. Verbatim stored attributes
-/// and relationships only.
+/// Frozen the day the Match arrived (Tailor decisions/0011): `tech` is gone
+/// from Achievement, `aliases` is on SkillTag, and there is no `Match` yet.
 enum LadderSchemaV2: VersionedSchema {
     static var versionIdentifier: Schema.Version { .init(2, 0, 0) }
 
@@ -477,8 +472,6 @@ enum LadderSchemaV2: VersionedSchema {
     @Model
     final class SkillTag {
         var name: String
-        /// The reason V2 exists as a checkpoint: the first schema with
-        /// Aliases, the last without `Match`.
         var aliases: [String] = []
         var profile: Profile?
 
@@ -669,9 +662,8 @@ enum LadderSchemaV2: VersionedSchema {
     }
 }
 
-/// The live schema: the top-level model classes as they stand. `Match`
-/// arrives, one-to-one from Application with live SkillTag references
-/// (Tailor decisions/0011).
+/// The live schema — the top-level model classes as they stand; `Match`
+/// arrives (Tailor decisions/0011).
 enum LadderSchemaV3: VersionedSchema {
     static var versionIdentifier: Schema.Version { .init(3, 0, 0) }
 
@@ -693,18 +685,13 @@ enum LadderMigrationPlan: SchemaMigrationPlan {
 
     static var stages: [MigrationStage] { [migrateV1toV2, migrateV2toV3] }
 
-    /// [TAILOR-37]/[TAILOR-42]: a new model and a new optional relationship,
-    /// nothing folded — lightweight is exactly enough, and a pre-Match
-    /// store's Applications simply carry no Match.
     private static let migrateV2toV3 = MigrationStage.lightweight(
         fromVersion: LadderSchemaV2.self,
         toVersion: LadderSchemaV3.self
     )
 
-    /// [PROFILE-24]: fold each achievement's tech strings into the shared
-    /// Tag pool by the [PROFILE-8] rule — trimmed, case-insensitive, first
-    /// casing wins — while both `tech` and `skills` still exist (V1), then
-    /// let the transition to V2 drop the attribute.
+    /// The fold runs in willMigrate, while both `tech` and `skills` still
+    /// exist (V1); the transition to V2 then drops the attribute.
     private static let migrateV1toV2 = MigrationStage.custom(
         fromVersion: LadderSchemaV1.self,
         toVersion: LadderSchemaV2.self,
@@ -728,8 +715,7 @@ enum LadderMigrationPlan: SchemaMigrationPlan {
                 return tag
             }
 
-            // Deterministic fold order (sortIndex) so first casing wins
-            // reproducibly; orphan achievements (role == nil) fold too.
+            // Deterministic fold order so first casing wins reproducibly.
             let achievements = try context.fetch(
                 FetchDescriptor<LadderSchemaV1.Achievement>(
                     sortBy: [SortDescriptor(\.sortIndex)])

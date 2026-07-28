@@ -1,8 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The separate window showing a Stage's full debrief — the Stage form only
-/// indicates one exists ([DEBRIEF-18], [DEBRIEF-19]; docs/adr/0003).
 struct DebriefWindow: View {
     static let windowID = "debrief"
 

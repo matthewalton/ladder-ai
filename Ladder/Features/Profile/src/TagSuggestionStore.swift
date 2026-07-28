@@ -1,7 +1,5 @@
 import Foundation
 
-/// The suggestion run's failure states — fail-fast with the reason surfaced
-/// (CVImport decisions/0004's stance, adopted by decisions/0012).
 enum TagSuggestionError: Error, Equatable {
     case apiKeyRequired
     case requestFailed(detail: String)
@@ -9,26 +7,19 @@ enum TagSuggestionError: Error, Equatable {
     case responseInvalid(reason: String)
 }
 
-/// One LLM-proposed change to the Tag vocabulary (root `CONTEXT.md`: Tag
-/// suggestion), held for review. The LLM proposes; only the user writes
-/// (root ADR 0005).
 struct TagSuggestionProposal: Identifiable, Equatable, Sendable {
     enum Change: Equatable, Sendable {
-        /// Link an existing Tag, named by its primary name ([PROFILE-33]).
         case attach(tagName: String)
-        /// Create a new Tag with this curated casing ([PROFILE-34]).
         case mint(name: String)
-        /// Record a lowercase Alias on the named Tag ([PROFILE-35]).
         case alias(String, onTagNamed: String)
     }
 
     let id: Int
     var change: Change
     var rationale: String
-    /// The vocabulary gap entry this suggestion dissolves when confirmed,
-    /// normalised to the gap as the scan listed it (jd-scan v2; Tailor
-    /// decisions/0015). Nil when the suggestion only strengthens future
-    /// matches — and always nil outside the JD scan door.
+    /// The JD-scan vocabulary gap this suggestion dissolves when confirmed,
+    /// normalised to the gap as the scan listed it (Tailor decisions/0015);
+    /// always nil outside the JD scan door.
     var resolves: String? = nil
 }
 
@@ -41,14 +32,12 @@ enum TagsPrompt {
     }
 }
 
-/// One suggestion run at a time, for one point or Project (decisions/0012).
 @MainActor
 @Observable
 final class TagSuggestionStore {
     enum Phase: Equatable {
         case idle
         case requesting
-        /// Proposals are held for review — nothing persisted yet.
         case review
         case failed(TagSuggestionError)
     }
@@ -67,8 +56,6 @@ final class TagSuggestionStore {
     private let bundle: Bundle
     private let makeIntelligence: (String) -> any IntelligenceService
 
-    /// `makeIntelligence` receives the stored API key — the live service in
-    /// production, a fixture in tests and previews ([PROFILE-38]).
     init(
         profileStore: ProfileStore,
         keyStore: any APIKeyStore,
@@ -92,8 +79,6 @@ final class TagSuggestionStore {
     }
 
     private func run(as subject: Subject, payload: String) async {
-        // No stored key means no live run — never a fixture fallback
-        // ([PROFILE-37]; Tailor decisions/0002).
         guard let key = try? keyStore.readKey(), !key.isEmpty else {
             phase = .failed(.apiKeyRequired)
             return
@@ -109,7 +94,6 @@ final class TagSuggestionStore {
                 response = try await service.complete(
                     IntelligenceRequest(prompt: prompt, payload: payload))
             } catch AnthropicIntelligenceService.LiveServiceError.truncated {
-                // A length problem, not a transport one ([CVIMPORT-19]'s rule).
                 throw TagSuggestionError.responseTruncated
             } catch {
                 throw TagSuggestionError.requestFailed(detail: Self.requestFailureDetail(for: error))
@@ -117,8 +101,6 @@ final class TagSuggestionStore {
             proposals = try Self.proposals(from: response)
             phase = .review
         } catch {
-            // Only a missing bundled prompt reaches the fallback — a
-            // packaging bug; every other failure is a TagSuggestionError.
             phase = .failed(
                 (error as? TagSuggestionError)
                     ?? .responseInvalid(reason: "the tags prompt could not be loaded from the app bundle"))
@@ -127,12 +109,8 @@ final class TagSuggestionStore {
 
     // MARK: - Review
 
-    /// Applies one confirmed proposal through the ProfileStore's own
-    /// pathways — the only writer ([PROFILE-33] through [PROFILE-35]).
-    /// Attach and mint resolve alias-aware at confirm time, so a stale
-    /// pool view in the model's response never duplicates a Tag
-    /// ([PROFILE-34]). A colliding alias throws exactly as a manual one
-    /// does ([PROFILE-27]); the proposal stays for the review to surface.
+    /// Attach and mint both resolve alias-aware at confirm time, so a stale
+    /// pool view in the model's response never duplicates a Tag.
     func confirm(_ proposal: TagSuggestionProposal) throws {
         guard let subject else { return }
         switch proposal.change {
@@ -153,8 +131,6 @@ final class TagSuggestionStore {
         proposals.removeAll { $0.id == proposal.id }
     }
 
-    /// Declining lands nothing — per proposal, never all-or-nothing
-    /// ([PROFILE-36]; root ADR 0005).
     func decline(_ proposal: TagSuggestionProposal) {
         proposals.removeAll { $0.id == proposal.id }
     }
@@ -203,9 +179,6 @@ final class TagSuggestionStore {
         var vocabulary: [PayloadTag]
     }
 
-    /// The request carries the point's own evidence and the whole
-    /// vocabulary — primary names with Aliases — so the model attaches or
-    /// aliases before it mints ([PROFILE-31], decisions/0012).
     private func payload(for subject: Subject) -> String {
         let vocabulary = (profileStore.profile?.skills ?? [])
             .map { PayloadTag(name: $0.name, aliases: $0.aliases) }
@@ -240,9 +213,6 @@ final class TagSuggestionStore {
 
     // MARK: - Parsing
 
-    /// Validates the service's JSON into proposals, fail-fast with the part
-    /// that was rejected ([PROFILE-39]). A fenced-but-valid response parses
-    /// exactly as a bare one — the [CVIMPORT-18] tolerance.
     static func proposals(from raw: Data) throws -> [TagSuggestionProposal] {
         let data = FencedJSON.stripped(from: raw)
         let object: Any

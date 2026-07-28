@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// The CV's identity block — name, headline, contact — edited in place.
-/// Fields commit on submit or focus loss.
 struct ProfileHeaderView: View {
     @Bindable var store: ProfileStore
     let profile: Profile

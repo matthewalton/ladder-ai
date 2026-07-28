@@ -4,10 +4,8 @@ import Testing
 
 @testable import Ladder
 
-/// The automatic fit loop (decisions/0008): lazy ladder of compaction →
-/// condense → trim, plus the underflow stretch. Service passes run through
-/// `FixtureIntelligenceService` — bullet ids follow the loop's "b<role>-<n>"
-/// scheme, so responses are constructible in advance.
+/// Bullet ids follow the loop's "b<role>-<n>" scheme, so fixture responses
+/// are constructible in advance.
 @MainActor
 struct CVFitLoopTests {
     private func makeDocument(roles: Int, bulletsPerRole: Int) -> CVDocument {
@@ -59,7 +57,6 @@ struct CVFitLoopTests {
         #expect(outcome.pageCount <= 2, "the hard cap")
         #expect(outcome.fitMetrics.naturalPageCount > 2)
         #expect(outcome.fitMetrics.finalPageCount == outcome.pageCount)
-        // The rendered PDF honours the cap too.
         let pdfData = CVRenderer.pdfData(for: outcome.document, metrics: outcome.metrics)
         let pageCount = try #require(PDFPageCounter.count(of: pdfData))
         #expect(pageCount <= 2)
@@ -148,7 +145,6 @@ struct CVFitLoopTests {
 
     // MARK: - Fixture plumbing
 
-    /// The loop's deterministic bullet id scheme.
     private static func bulletIDs(of document: CVDocument) -> [String] {
         document.roles.enumerated().flatMap { roleIndex, role in
             role.bullets.indices.map { "b\(roleIndex)-\($0)" }
@@ -166,7 +162,6 @@ struct CVFitLoopTests {
     }
 }
 
-/// PDF page counting without PDFKit imports sprinkled through the tests.
 enum PDFPageCounter {
     static func count(of data: Data) -> Int? {
         guard let provider = CGDataProvider(data: data as CFData),

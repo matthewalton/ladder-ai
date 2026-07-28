@@ -63,7 +63,6 @@ struct PipelineFlowTests {
         try store.move(application, to: .active)
 
         #expect(store.applications(in: .active).map(\.company) == ["Summit Labs"])
-        // A fresh context sees the saved status — the mutation persisted.
         let fresh = ModelContext(store.container)
         let persisted = try #require(try fresh.fetch(FetchDescriptor<Application>()).first)
         #expect(persisted.status == .active)
@@ -162,13 +161,11 @@ struct PipelineFlowTests {
         try store.addStage(to: application, kind: .technical)
         try store.addStage(to: application, kind: .final)
 
-        // First act: deleting a single Stage removes just that Stage.
         try store.deleteStage(first)
         let context = ModelContext(store.container)
         #expect(try context.fetch(FetchDescriptor<Stage>()).count == 2)
         #expect(application.orderedStages.map(\.kind) == [.technical, .final])
 
-        // Then the cascade: no orphaned Stages survive their Application.
         try store.deleteApplication(application)
         #expect(try context.fetch(FetchDescriptor<Application>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<Stage>()).isEmpty, "no orphans")

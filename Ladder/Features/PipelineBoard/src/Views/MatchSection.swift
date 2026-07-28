@@ -1,11 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// The Match section (CONTEXT.md; decisions/0009): the persisted Match's
-/// summary ([PIPEBOARD-43]) — or the scan prompt ([PIPEBOARD-46]) — with
-/// Scan JD, the on-demand door into the JD scan and Match review
-/// ([PIPEBOARD-44]). The caller gates on the job description
-/// ([PIPEBOARD-45]).
+/// The caller gates on the job description ([PIPEBOARD-45]).
 struct MatchSection: View {
     @State private var model: MatchSectionModel
 
@@ -59,9 +55,6 @@ struct MatchSection: View {
                 }
             }
             .padding(.vertical, 2)
-            // The review sheet — the same review the tailor flow presents
-            // ([TAILOR-46]–[TAILOR-51]); this door ends at the detail, so
-            // the confirm copy is a neutral Done (decisions/0009).
             .sheet(isPresented: reviewPresented) {
                 if let review = model.matchReview {
                     MatchReviewView(
@@ -89,8 +82,6 @@ struct MatchSection: View {
         .listRowBackground(Color.paperRaised)
     }
 
-    /// Dismissing the sheet is cancel — pool and Match stay as the scan
-    /// left them ([TAILOR-50]).
     private var reviewPresented: Binding<Bool> {
         Binding(
             get: { model.matchReview != nil },

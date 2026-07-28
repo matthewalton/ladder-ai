@@ -1,8 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// A thin wrapper around the export's PDF bytes — it never re-renders; the
-/// bytes it writes are the bytes on the Application's snapshot.
 struct PDFFileDocument: FileDocument {
     static let readableContentTypes: [UTType] = [.pdf]
 

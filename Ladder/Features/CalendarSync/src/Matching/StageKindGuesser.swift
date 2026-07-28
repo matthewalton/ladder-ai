@@ -1,8 +1,7 @@
 import Foundation
 
 /// First hit in priority order, so multi-word kinds outrank single-word
-/// ones ("system design screen" → systemDesign). No hit → nil, never a
-/// default; the guess only ever pre-selects.
+/// ones ("system design screen" → systemDesign).
 enum StageKindGuesser {
     private static let keywordMap: [(keywords: [String], kind: StageKind)] = [
         (["system design", "architecture"], .systemDesign),

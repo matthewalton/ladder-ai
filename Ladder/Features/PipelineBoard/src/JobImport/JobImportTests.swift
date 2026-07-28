@@ -5,9 +5,8 @@ import Testing
 
 @testable import Ladder
 
-/// Fixture files load from the app bundle's Fixtures folder (tests run in
-/// the app host). The sample-cv fixture doubles as the posting PDF — the
-/// import never inspects what the text says, only that it extracts.
+/// The sample-cv fixture doubles as the posting PDF — the import never
+/// inspects what the text says, only that it extracts.
 @MainActor
 struct JobImportTests {
     private func fixtureURL(_ name: String, _ ext: String) throws -> URL {
@@ -64,18 +63,15 @@ struct JobImportTests {
         #expect(created.cvSnapshot == nil, "export stays the only path that attaches a CV")
         #expect(created.cvSelectionRationale == nil)
         #expect(pipeline.applications.map(\.company) == ["Summit Labs"], "the board sees the row without a reload")
-        // A fresh context sees the saved row — creation persisted.
         let fresh = ModelContext(pipeline.container)
         let persisted = try #require(try fresh.fetch(FetchDescriptor<Application>()).first)
         #expect(persisted.status == .draft)
 
-        // No dedup: importing the same posting twice is two Applications.
+        // No dedup by design: importing the same posting twice is two Applications.
         store.reset()
         await store.importPosting(fromLink: link)
         #expect(pipeline.applications.count == 2)
 
-        // The creation seam still refuses blank fields — [PIPEBOARD-19]'s
-        // guarantee lives on here; whitespace-only counts as blank.
         #expect(throws: PipelineStoreError.blankField) {
             try pipeline.createApplication(
                 company: "   ", roleTitle: "Engineer", source: nil, notes: "", appliedAt: nil)
@@ -133,7 +129,6 @@ struct JobImportTests {
     func failedImportCreatesNoApplication() async throws {
         let link = try #require(URL(string: "https://jobs.example.com/gone"))
 
-        // The link cannot be fetched.
         do {
             let (pipeline, store) = try makeStores(service: FixtureIntelligenceService.jobDetailsFixture())
             store.fetchLinkData = { _ in throw URLError(.notConnectedToInternet) }
@@ -142,7 +137,6 @@ struct JobImportTests {
             #expect(pipeline.applications.isEmpty)
         }
 
-        // The page fetches but its text extracts to nothing.
         do {
             let (pipeline, store) = try makeStores(service: FixtureIntelligenceService.jobDetailsFixture())
             store.fetchLinkData = { _ in Data("<html><body></body></html>".utf8) }
@@ -151,7 +145,6 @@ struct JobImportTests {
             #expect(pipeline.applications.isEmpty)
         }
 
-        // A file with no extractable text (an image-only PDF).
         do {
             let (pipeline, store) = try makeStores(service: FixtureIntelligenceService.jobDetailsFixture())
             await store.importPosting(fromFile: try fixtureURL("image-only", "pdf"))
@@ -159,8 +152,6 @@ struct JobImportTests {
             #expect(pipeline.applications.isEmpty)
         }
 
-        // No API key: refused before any fetch or service call (the
-        // [TAILOR-4] stance).
         do {
             let service = FixtureIntelligenceService.jobDetailsFixture()
             var fetchCount = 0
@@ -176,8 +167,6 @@ struct JobImportTests {
             #expect(pipeline.applications.isEmpty)
         }
 
-        // A link that is not http(s) never reaches the store — the sheet's
-        // pure helper refuses it.
         #expect(JobImportSheet.postingURL(from: "not a url") == nil)
         #expect(JobImportSheet.postingURL(from: "ftp://jobs.example.com/role") == nil)
         #expect(JobImportSheet.postingURL(from: "  https://jobs.example.com/role  ") != nil)
@@ -189,8 +178,6 @@ struct JobImportTests {
         let invalid = Data(#"{"company":""}"#.utf8)
         let link = try #require(URL(string: "https://jobs.example.com/platform-engineer"))
 
-        // Invalid then valid: two requests, never three, and the repair
-        // carries the failure and the original payload.
         do {
             let service = FixtureIntelligenceService(returning: [invalid, valid])
             let (pipeline, store) = try makeStores(service: service)
@@ -205,8 +192,6 @@ struct JobImportTests {
             #expect(pipeline.applications.count == 1)
         }
 
-        // A repair response failing validation fails the import — nothing
-        // created, no third request.
         do {
             let service = FixtureIntelligenceService(returning: [invalid, invalid])
             let (pipeline, store) = try makeStores(service: service)
@@ -235,9 +220,8 @@ struct JobImportTests {
 
     @Test("[PIPEBOARD-41] the import surface opens from the empty state and the shell toolbar")
     func importSurfaceRendersFromBothHosts() throws {
-        // Render-smoke only, the retired [PIPEBOARD-20]/[PIPEBOARD-34]
-        // stance: chrome and sheet presentation are on the visual-verify
-        // list.
+        // Render-smoke only — chrome and sheet presentation are on the
+        // visual-verify list.
         let emptyStore = try PipelineStore(container: ProfileStore.container(inMemory: true))
         try emptyStore.load()
         let emptyRoot = ImageRenderer(
@@ -267,7 +251,6 @@ struct JobImportTests {
 
     @Test("[PIPEBOARD-42] Create CV on a snapshot-less application presents tailoring against its stored job description")
     func createCVOfferGatesOnSnapshotAndJobDescription() throws {
-        // The offer decision is the measurable clause — a pure helper.
         #expect(ApplicationDetailView.offersCreateCV(cvSnapshot: nil, jobDescription: "Own it."))
         #expect(
             !ApplicationDetailView.offersCreateCV(cvSnapshot: Data([1]), jobDescription: "Own it."),
@@ -279,8 +262,7 @@ struct JobImportTests {
             !ApplicationDetailView.offersCreateCV(cvSnapshot: nil, jobDescription: " \n"),
             "whitespace-only counts as empty")
 
-        // The detail hosting the affordance renders; button prominence and
-        // the tailor presentation are visual-verify.
+        // Button prominence and the tailor presentation are visual-verify.
         let store = try PipelineStore(container: ProfileStore.container(inMemory: true))
         let application = Application(
             company: "Summit Labs", roleTitle: "Platform Engineer",

@@ -16,10 +16,6 @@ struct TailorView: View {
     private let keyStore: any APIKeyStore
     private let makeIntelligence: ((String) -> any IntelligenceService)?
 
-    /// Always presented for an application ([TAILOR-23], decisions/0008):
-    /// its stored details are the flow's input — there is no input form.
-    /// The flow scans first, holds in the Match review, and tailors only
-    /// after confirmation ([TAILOR-43], [TAILOR-45]).
     init(
         profileStore: ProfileStore,
         application: Application,
@@ -101,7 +97,6 @@ struct TailorView: View {
         }
     }
 
-    /// Retry re-runs from the scan (decisions/0014).
     private func retry() {
         Task { await flow.retry() }
     }
@@ -110,10 +105,6 @@ struct TailorView: View {
         guard let profile = profileStore.profile else { return }
         Task {
             do {
-                // Into this application ([CVEXPORT-22]) — the CV attaches
-                // where the run started. The fit loop may need the condense
-                // or trim pass (decisions/0008), built on the same service
-                // the run used.
                 export = try await exportStore.export(
                     profile: profile, review: review,
                     into: application.persistentModelID,
@@ -248,8 +239,6 @@ struct TailorReviewView: View {
                         }
                     }
                 }
-                // The overlap view's uncovered remainder ([TAILOR-55]):
-                // matched vocabulary the selection leaves unevidenced.
                 if !review.uncoveredMatchedTags.isEmpty {
                     Section("Matched tags nothing selected covers") {
                         ForEach(review.uncoveredMatchedTags, id: \.self) { tag in
@@ -275,8 +264,6 @@ struct TailorReviewView: View {
                     }
                 }
                 if !review.selectedProjects.isEmpty {
-                    // Whole units, as they stand on the Profile — nothing to
-                    // accept or reject per project (decisions/0007).
                     Section("Projects on this CV") {
                         ForEach(review.selectedProjects, id: \.persistentModelID) { project in
                             VStack(alignment: .leading, spacing: 2) {
@@ -315,8 +302,6 @@ struct TailorReviewView: View {
         }
     }
 
-    /// Review items grouped under the role the point belongs to, in
-    /// selection order; selected projects list as whole units beneath.
     private var groupedItems: [(label: String, items: [ReviewedBullet])] {
         var order: [String] = []
         var groups: [String: [ReviewedBullet]] = [:]
@@ -336,8 +321,6 @@ struct TailorReviewView: View {
 
 private struct ReviewedBulletRow: View {
     @Bindable var item: ReviewedBullet
-    /// The matched Tags this point covers — the overlap view's per-point
-    /// side ([TAILOR-54]).
     var coveredTags: [String] = []
 
     var body: some View {
@@ -367,8 +350,6 @@ private struct ReviewedBulletRow: View {
     }
 }
 
-/// "Covers: Kubernetes · Swift" — nothing at all when the point covers no
-/// matched Tag ([TAILOR-54]).
 struct CoveredTagsLine: View {
     var tags: [String]
 
@@ -386,10 +367,6 @@ struct CoveredTagsLine: View {
     }
 }
 
-/// "Relevance: 3.5 — tech 5 · domain 4 · seniority 3 · impact 2" — the
-/// judged complement of the covered-Tags line ([TAILOR-62]): the Swift mean
-/// with every sub-score visible beside it (decisions/0017). Nothing at all
-/// when the point carries no stats.
 struct RelevanceLine: View {
     var stats: RelevanceStats?
 
@@ -429,7 +406,6 @@ struct RelevanceLine: View {
     )
     context.insert(application)
     try! context.save()
-    // The flow scans first — sequence the canned scan then the tailor result.
     let scanData = try! Data(
         contentsOf: Bundle.main.url(forResource: "jd-scan", withExtension: "json", subdirectory: "Fixtures")!)
     let tailorData = try! Data(

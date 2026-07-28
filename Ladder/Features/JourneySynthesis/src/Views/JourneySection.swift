@@ -1,11 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The journey section of the Application detail: the offer-time generate
-/// action and the narrative as modest plain text, inline — no window, no
-/// illustration (decisions/0001; the celebration view stays Phase 5).
-/// Generation is an explicit user action — the only place the journey API
-/// is called.
 struct JourneySection: View {
     var application: Application
 
@@ -34,14 +29,10 @@ struct JourneySection: View {
         }
     }
 
-    /// The section renders only when the Application carries a narrative or
-    /// is at offer; display itself is never status-gated ([JOURNEY-15]).
     static func appears(status: ApplicationStatus, hasNarrative: Bool) -> Bool {
         hasNarrative || status == .offer
     }
 
-    /// The UI face of the offer-time gate ([JOURNEY-14]); [JOURNEY-5] is
-    /// the store backstop.
     static func showsGenerate(for status: ApplicationStatus) -> Bool {
         status == .offer
     }

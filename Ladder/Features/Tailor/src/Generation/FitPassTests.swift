@@ -3,8 +3,6 @@ import Testing
 
 @testable import Ladder
 
-/// The condense and trim passes (decisions/0010) — tailor-owned service
-/// calls the cv-export fit loop invokes. No network anywhere.
 @MainActor
 struct FitPassTests {
     private var items: [FitPassItem] {
@@ -40,8 +38,6 @@ struct FitPassTests {
             "Shipped the offline sync engine, zero data loss in a year",
             "Led incident response for a payments outage",
         ])
-        // The versioned prompt travels with the request; the payload carries
-        // the current texts.
         let request = try #require(await service.recordedRequests.first)
         #expect(request.prompt == (try FitPassPrompts.condense()))
         #expect(request.payload.contains("tightening the platform feedback loop"))
@@ -92,8 +88,6 @@ struct FitPassTests {
 
     @Test("[TAILOR-26] a trim keeping everything or nothing feeds the repair path")
     func trimNonSubsetFeedsRepair() async throws {
-        // Keeping the whole selection trims nothing — invalid; the repair
-        // returns a genuine strict subset.
         let everything = Data(#"{"keep": ["b1", "b2", "b3"]}"#.utf8)
         let valid = Data(#"{"keep": ["b3"]}"#.utf8)
         let service = FixtureIntelligenceService(returning: [everything, valid])
@@ -104,8 +98,7 @@ struct FitPassTests {
         #expect(await service.recordedRequests.count == 2)
         #expect(kept == ["b3"])
 
-        // An empty keep would drop the whole CV — equally invalid, and a
-        // second failure surfaces the reason ([TAILOR-26] body).
+        // An empty keep would drop the whole CV — equally invalid.
         let empty = Data(#"{"keep": []}"#.utf8)
         let failing = FixtureIntelligenceService(returning: [empty, empty])
         let failingRunner = FitPassRunner(service: failing)

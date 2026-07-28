@@ -1,6 +1,5 @@
 import Foundation
 
-/// One import runs at a time.
 @MainActor
 @Observable
 final class ImportStore {
@@ -22,8 +21,6 @@ final class ImportStore {
     private let bundle: Bundle
     private let makeIntelligence: (String) -> any IntelligenceService
 
-    /// `makeIntelligence` receives the stored API key — the live service in
-    /// production, a fixture in tests and previews.
     init(
         profileStore: ProfileStore,
         keyStore: any APIKeyStore,
@@ -38,16 +35,13 @@ final class ImportStore {
         self.makeIntelligence = makeIntelligence
     }
 
-    /// Import is a hard refresh (decisions/0007): onto an existing Profile
-    /// the run must be confirmed before it starts — before extraction and
-    /// before any paid service call. The view gates on this and shows the
-    /// dialog; declining simply never calls `startImport`.
+    /// The view gates on this and shows the dialog; declining simply never
+    /// calls `startImport`.
     var needsReplaceConfirmation: Bool {
         profileStore.profile != nil
     }
 
     func startImport(of url: URL) async {
-        // No stored key means no live run — never a fixture fallback.
         guard let key = try? keyStore.readKey(), !key.isEmpty else {
             phase = .failed(.apiKeyRequired)
             return
@@ -71,14 +65,11 @@ final class ImportStore {
                     IntelligenceRequest(prompt: prompt, payload: text)
                 )
             } catch AnthropicIntelligenceService.LiveServiceError.truncated {
-                // A length problem, not a transport one — retrying truncates again.
                 throw ImportError.responseTruncated
             } catch {
                 throw ImportError.requestFailed(detail: Self.requestFailureDetail(for: error))
             }
             var proposal = try ImportProposal(json: response)
-            // Contact detection (decisions/0009): detected email/phone/link
-            // override the model's proposal before the review is shown.
             let detected = DetectedContact.detect(in: text, fileURL: url)
             proposal.identity.contact = detected.overriding(proposal.identity.contact)
             review = ImportReview(proposal: proposal)
@@ -104,10 +95,6 @@ final class ImportStore {
         }
     }
 
-    /// The hard refresh ([CVIMPORT-20], [CVIMPORT-21]): the included items
-    /// become the Profile's entire content through the replace pathway —
-    /// creating the Profile when none exists. Nothing lands before this
-    /// confirmation; not-imported sections are never written anywhere.
     func confirmReview() {
         guard phase == .review, let review else { return }
         phase = .replacing

@@ -1,7 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// Read-only: every date shown is persisted by pipeline-board or calendar-sync.
 struct ApplicationTimelineView: View {
     var application: Application
     var asOf: Date = .now
@@ -61,9 +60,6 @@ struct ApplicationTimelineView: View {
         }
     }
 
-    /// Stage-kind accent on the node only (DESIGN.md §2): summit gold for the
-    /// offer, desaturated "closed trail" for rejected/withdrawn, pine
-    /// otherwise.
     private func tint(for entry: TimelineEntry) -> Color {
         switch entry.kind {
         case .stage(let kind): kind.accent

@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// INTERESTS — a light chip row; the one section with no depth to edit.
 struct InterestsSectionView: View {
     @Bindable var store: ProfileStore
     let profile: Profile
@@ -32,7 +31,6 @@ struct InterestsSectionView: View {
     }
 }
 
-/// One interest chip; hovering reveals its remove control.
 private struct InterestChipView: View {
     let name: String
     let onRemove: () -> Void

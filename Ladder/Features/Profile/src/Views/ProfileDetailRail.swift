@@ -1,13 +1,8 @@
 import SwiftUI
 
-/// The slim persistent rail beside the CV page. Shows and edits the focused
-/// item's depth — the STAR context that feeds the LLM but never shows on a
-/// rendered CV.
 struct ProfileDetailRail: View {
     @Bindable var store: ProfileStore
     @Binding var focus: ProfileFocus?
-    /// Tag suggestions are the slice's one live-LLM flow (decisions/0012);
-    /// previews and tests inject fakes, production reads the Keychain.
     var keyStore: any APIKeyStore = KeychainAPIKeyStore()
     var makeIntelligence: (String) -> any IntelligenceService = {
         AnthropicIntelligenceService(apiKey: $0)
@@ -43,8 +38,6 @@ struct ProfileDetailRail: View {
         }
     }
 
-    /// The rail's visible delete affordance for whatever is focused — the
-    /// discoverable sibling of the rows' hover and context-menu deletes.
     private var deleteBar: some View {
         VStack(spacing: 0) {
             Divider()
@@ -112,7 +105,6 @@ struct ProfileDetailRail: View {
 
 // MARK: - Rail building blocks
 
-/// The rail's scrollable pane chrome shared by every focused editor.
 private struct RailPane<Content: View>: View {
     @ViewBuilder let content: Content
 
@@ -128,7 +120,6 @@ private struct RailPane<Content: View>: View {
     }
 }
 
-/// A rail section: uppercase header above its fields.
 private struct RailSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
@@ -141,8 +132,6 @@ private struct RailSection<Content: View>: View {
     }
 }
 
-/// A labelled rail input: caption label above the field, never beside it —
-/// the rail is too narrow for label/value columns.
 private struct RailField<Input: View>: View {
     let label: String
     @ViewBuilder let input: Input
@@ -157,8 +146,6 @@ private struct RailField<Input: View>: View {
     }
 }
 
-/// The rail's input chrome: a visibly bordered, clickable field that shows a
-/// Pine ring while focused.
 private struct RailInputChrome: ViewModifier {
     @FocusState private var isFocused: Bool
 
@@ -185,7 +172,6 @@ extension View {
     }
 }
 
-/// The small save affordance shown while a rail section has unsaved edits.
 private struct RailSaveButton: View {
     let title: String
     let action: () -> Void
@@ -200,8 +186,6 @@ private struct RailSaveButton: View {
 
 // MARK: - Panes
 
-/// Depth editor for a point (role or project): wording, Tags, impact,
-/// strength notes (`tech` retired — decisions/0011).
 private struct PointDetailPane: View {
     @Bindable var store: ProfileStore
     let achievement: Achievement
@@ -302,8 +286,7 @@ private struct PointDetailPane: View {
         text = achievement.text
     }
 
-    /// Unlike the text, clearing the title is a valid edit — it returns the
-    /// bullet to plain rendering (decisions/0010).
+    /// Unlike the text, clearing the title is a valid edit (decisions/0010).
     private func commitTitle() {
         try? store.updateAchievementTitle(achievement, to: title)
         title = achievement.title ?? ""
@@ -592,9 +575,6 @@ private struct ProjectDetailPane: View {
     }
 }
 
-/// The on-demand Tag suggestion review (decisions/0012; root ADR 0005): the
-/// LLM proposes attach, mint and alias changes; each is confirmed or
-/// declined individually, and nothing lands silently.
 private struct SuggestTagsSection: View {
     let suggestions: TagSuggestionStore
     let request: () async -> Void

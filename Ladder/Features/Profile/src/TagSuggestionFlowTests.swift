@@ -4,9 +4,6 @@ import Testing
 
 @testable import Ladder
 
-/// The on-demand Tag suggestion flow (decisions/0012; root ADR 0005): the
-/// LLM proposes, only the user writes. Tests inject the fixture service and
-/// fake key stores — no network.
 @MainActor
 struct TagSuggestionFlowTests {
     private func makeProfileStore() throws -> ProfileStore {
@@ -80,7 +77,6 @@ struct TagSuggestionFlowTests {
         #expect(store.proposals.dropFirst().first?.change == .mint(name: "Incident response"))
         #expect(store.proposals.last?.change == .alias("k8s", onTagNamed: "Kubernetes"))
 
-        // Nothing is persisted by the run itself — proposals wait for review.
         #expect(profileStore.profile?.skills.count == 1)
         #expect(achievement.skills.map(\.name) == ["Kubernetes"])
         let kubernetes = try #require(profileStore.profile?.skills.first)
@@ -293,7 +289,6 @@ struct TagSuggestionFlowTests {
             unknownKind.phase
                 == .failed(.responseInvalid(reason: "suggestion 1 has unknown kind 'merge'")))
 
-        // A failed run proposes nothing and the pool is unchanged.
         #expect(unknownKind.proposals.isEmpty)
         #expect(profileStore.profile?.skills.count == 1)
     }
@@ -353,7 +348,6 @@ struct TagSuggestionFlowTests {
     }
 }
 
-/// Fails every request the way the live service does.
 private struct ThrowingSuggestionService: IntelligenceService {
     var error: AnthropicIntelligenceService.LiveServiceError
 

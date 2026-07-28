@@ -6,8 +6,6 @@ import Testing
 
 @MainActor
 struct PrepPackPersistenceTests {
-    /// A Stage on an Application plus one Achievement to map from a talking
-    /// point.
     private func makeStage(in context: ModelContext) throws -> (Stage, Achievement) {
         let profile = Profile(name: "Alex Climber", headline: "Staff Engineer")
         context.insert(profile)
@@ -121,9 +119,6 @@ struct PrepPackPersistenceTests {
 
     @Test("[PREP-3] deleting a mapped Achievement leaves no dangling talking-point link")
     func deletingAchievementDropsItFromTalkingPoints() throws {
-        // The other direction of the relationship's integrity
-        // (decisions/0001): the canon is deletable without the pack holding
-        // a dangling reference.
         let container = try ProfileStore.container(inMemory: true)
         let context = ModelContext(container)
         let (stage, mapped) = try makeStage(in: context)

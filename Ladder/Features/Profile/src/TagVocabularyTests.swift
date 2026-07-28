@@ -4,9 +4,6 @@ import Testing
 
 @testable import Ladder
 
-/// The Tag vocabulary's Alias and curation behaviour (decisions/0011..0013).
-/// Persistence criteria reopen a file-backed container at the same URL, as
-/// the slice's other tests do.
 @MainActor
 struct TagVocabularyTests {
     @Test("[PROFILE-27] recording an Alias that matches an existing primary name or alias is refused")
@@ -58,7 +55,6 @@ struct TagVocabularyTests {
         #expect(kubernetes.aliases == [], "the removal survived the reopen")
         #expect(kubernetes.achievements.count == 1, "the Tag and its links are untouched")
 
-        // The name has stopped resolving: tagging by it mints a fresh Tag.
         let achievement = try #require(kubernetes.achievements.first)
         let minted = try reopened.tag(achievement, skillNamed: "k8s")
         #expect(minted.name == "k8s")

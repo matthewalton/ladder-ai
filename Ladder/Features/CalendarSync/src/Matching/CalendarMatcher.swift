@@ -1,6 +1,5 @@
 import Foundation
 
-/// Matching is exact after normalisation — no edit-distance, by design.
 enum CalendarMatcher {
     private static let corporateSuffixes: Set<String> = [
         "corp", "corporation", "inc", "ltd", "llc", "gmbh", "plc", "co",
@@ -44,8 +43,6 @@ enum CalendarMatcher {
         }
     }
 
-    /// `jane@mail.acme.com` → `acme`; nil for a malformed address or a
-    /// denied domain.
     static func companyLabel(ofEmail email: String) -> String? {
         let parts = email.lowercased().split(separator: "@")
         guard parts.count == 2 else { return nil }

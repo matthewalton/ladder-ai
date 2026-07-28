@@ -4,13 +4,8 @@ import Testing
 
 @testable import Ladder
 
-/// The Match model's persistence contract (decisions/0011, 0012): live pool
-/// references, cascade with the Application, derived score, migration
-/// safety.
 @MainActor
 struct MatchPersistenceTests {
-    /// Profile with a pool, an Application, and a fully-populated Match —
-    /// all in one context on the given container.
     @discardableResult
     private func populate(_ container: ModelContainer, scannedAt: Date = .now) throws -> ModelContext {
         let context = ModelContext(container)
@@ -71,8 +66,6 @@ struct MatchPersistenceTests {
         let container = try ProfileStore.container(inMemory: true)
         try populate(container)
 
-        // The manage sheet's pathway ([PROFILE-29]): recase through the
-        // ProfileStore on the same container.
         let profileStore = ProfileStore(container: container)
         try profileStore.load()
         let swift = try #require(profileStore.profile?.skills.first { $0.name == "Swift" })

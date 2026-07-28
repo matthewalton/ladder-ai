@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// DESIGN.md §2 stage-kind accent mapping — icon + chip tint only, never
-/// full-card fills. The color lives in the blaze and the fill; chip text
+/// DESIGN.md §2: icon + chip tint only, never full-card fills; chip text
 /// stays `ink` so every pairing clears contrast.
 extension StageKind {
     var accent: Color {
@@ -13,7 +12,6 @@ extension StageKind {
         }
     }
 
-    /// The wash behind an accent-tinted chip.
     var accentTint: Color {
         switch self {
         case .screen, .recruiter: Color.skyline.opacity(0.16)
@@ -24,8 +22,7 @@ extension StageKind {
     }
 }
 
-/// Status chips share the same language: pine while the trail is open,
-/// gold at the summit, `mist`/`inkSoft` for a closed trail — never red.
+/// `mist`/`inkSoft` for a closed trail — never red.
 extension ApplicationStatus {
     var chipForeground: Color {
         switch self {
@@ -44,9 +41,6 @@ extension ApplicationStatus {
     }
 }
 
-/// A stage-kind chip: the kind's blaze in its accent color beside the label.
-/// Used on board cards, stage rows, and calendar proposals so one icon
-/// language runs from tracking through to celebration (DESIGN.md §5).
 struct StageKindChip: View {
     var kind: StageKind
 

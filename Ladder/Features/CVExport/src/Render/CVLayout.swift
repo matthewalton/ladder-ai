@@ -1,15 +1,11 @@
 import AppKit
 import Foundation
 
-/// One indivisible unit of the rendered CV. A page break may fall only
-/// between blocks ([CVEXPORT-24]) — never inside one, so no text line is
-/// ever cut at the A4 boundary.
 struct CVBlock: Equatable {
     enum Kind: Equatable {
         case identityHeader
         case summary
         case sectionHeader(String)
-        /// Role line plus its optional grey subline.
         case roleHeader(role: Int)
         case bullet(role: Int, bullet: Int)
         case project(Int)
@@ -19,23 +15,15 @@ struct CVBlock: Equatable {
     }
 
     var kind: Kind
-    /// Measured with the template's own faces at the template's widths.
     var height: CGFloat
-    /// Scaled gap above this block within the flow; dropped at a page top.
     var gapAbove: CGFloat = 0
-    /// A section header never ends a page — it travels with the next block.
     var keepWithNext: Bool = false
 }
 
-/// Measures a `CVDocument` into blocks and assigns them to A4 pages —
-/// the block-aware pagination that replaced tall-view slicing
-/// (decisions/0008, [CVEXPORT-24]).
 @MainActor
 struct CVLayout {
     let blocks: [CVBlock]
     let pages: [[CVBlock]]
-    /// Total flowed height (page-top gaps included) — the fit loop's
-    /// natural-fill measure ([CVEXPORT-29]).
     let flowedHeight: CGFloat
 
     init(document: CVDocument, metrics: CVMetrics) {
@@ -48,9 +36,7 @@ struct CVLayout {
 
     // MARK: - Pagination
 
-    /// Pure assignment: blocks in order, `keepWithNext` chains placed
-    /// atomically, gap collapsed at each page top. A unit taller than a
-    /// page is placed alone rather than dropped.
+    /// A unit taller than a page is placed alone rather than dropped.
     static func paginate(_ blocks: [CVBlock], contentHeight: CGFloat) -> [[CVBlock]] {
         var units: [[CVBlock]] = []
         var current: [CVBlock] = []
@@ -171,9 +157,6 @@ struct CVLayout {
         )
     }
 
-    /// Text heights via NSAttributedString with the same registered faces
-    /// the view sets, plus a small per-block safety margin so SwiftUI's
-    /// layout can never exceed the measured box.
     private struct Measurer {
         let metrics: CVMetrics
         /// Per-text-run safety margin (line-height rounding differences

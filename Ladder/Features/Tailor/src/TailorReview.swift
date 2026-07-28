@@ -1,32 +1,19 @@
 import Foundation
 
-/// Judges expanded bullets only — a review never adds or removes achievements
-/// from the selection.
 @MainActor
 @Observable
 final class TailorReview {
     let items: [ReviewedBullet]
-    /// Carried verbatim into the outcome — generated per application, never
-    /// stored (decisions/0006).
     let summary: String
     let gaps: [String]
     let rationale: String
 
-    /// Whole projects the result selected, in selection order — carried
-    /// as-is, never expanded (decisions/0007).
     let selectedProjects: [Project]
 
-    /// The per-CV skill grouping, verbatim from the result (decisions/0009)
-    /// — cv-export's skills table renders it ([CVEXPORT-23]).
     let skillCategories: [SkillCategory]
 
-    /// The Match's matched Tags by primary name, as the confirmed Match
-    /// stood when the run started — the overlap view's vocabulary side
-    /// ([TAILOR-54], [TAILOR-55]).
     private let matchedTagNames: [String]
 
-    /// Selected projects' relevance stats ([TAILOR-59]) — keyed by the
-    /// model object, since the payload id stays behind in the result.
     private let projectRelevance: [ObjectIdentifier: RelevanceStats]
 
     init(
@@ -58,15 +45,10 @@ final class TailorReview {
         rationale = result.rationale
     }
 
-    /// The judged complement of the overlap view ([TAILOR-62]): a selected
-    /// project's relevance stats, verbatim from the result.
     func relevanceStats(for project: Project) -> RelevanceStats? {
         projectRelevance[ObjectIdentifier(project)]
     }
 
-    /// The overlap view's per-point side ([TAILOR-54]): the matched Tags
-    /// this point's own Tags cover, by primary name — derived in Swift from
-    /// the selection and the Match, never from the model's output.
     func coveredMatchedTags(for achievement: Achievement) -> [String] {
         covered(by: achievement.skills)
     }
@@ -75,9 +57,6 @@ final class TailorReview {
         covered(by: project.skills)
     }
 
-    /// The uncovered remainder ([TAILOR-55]): matched vocabulary the current
-    /// selection leaves unevidenced — recomputed, never frozen at result
-    /// time.
     var uncoveredMatchedTags: [String] {
         let coveredNames = Set(
             (items.flatMap { coveredMatchedTags(for: $0.achievement) }
@@ -92,7 +71,6 @@ final class TailorReview {
         }.sorted()
     }
 
-    /// The input cv-export consumes.
     var outcome: ReviewedOutcome {
         ReviewedOutcome(
             items: items.map {
@@ -117,16 +95,12 @@ final class TailorReview {
     }
 }
 
-/// Plain values — holding one never retains the SwiftData models it was
-/// derived from.
 struct ReviewedOutcome: Equatable, Sendable {
     struct Item: Equatable, Sendable {
         var canonicalText: String
         var text: String
     }
 
-    /// A selected whole project — description and Tags verbatim from the
-    /// Profile (decisions/0007).
     struct Project: Equatable, Sendable {
         var name: String
         var link: String = ""
@@ -136,7 +110,6 @@ struct ReviewedOutcome: Equatable, Sendable {
 
     var items: [Item]
     var projects: [Project] = []
-    /// The grouping cv-export's skills table renders (decisions/0009).
     var skillCategories: [SkillCategory] = []
     var summary: String = ""
     var gaps: [String]
@@ -147,11 +120,7 @@ struct ReviewedOutcome: Equatable, Sendable {
 @Observable
 final class ReviewedBullet: Identifiable {
     let achievement: Achievement
-    /// Rejecting keeps the selection; the CV falls back to the brief
-    /// canonical point — the canon stays the user's.
     let bullet: String
-    /// The point's judged relevance stats, verbatim from the result
-    /// ([TAILOR-59]) — review display only, never persisted.
     let relevance: RelevanceStats?
     var accepted = true
 

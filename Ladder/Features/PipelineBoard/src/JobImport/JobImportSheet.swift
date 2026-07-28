@@ -1,8 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The board's one creation door ([PIPEBOARD-41]): a posting link or PDF
-/// in, a draft Application out — no typing.
 struct JobImportSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var store: JobImportStore
@@ -61,7 +59,6 @@ struct JobImportSheet: View {
         }
     }
 
-    /// http(s) only, refused before any store call ([PIPEBOARD-38]).
     static func postingURL(from text: String) -> URL? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: trimmed), url.scheme?.hasPrefix("http") == true else {

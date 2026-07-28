@@ -7,8 +7,6 @@ struct JobDetails: Equatable, Sendable {
 }
 
 extension JobDetails {
-    /// The run's details derive from the Application, verbatim
-    /// ([TAILOR-23], decisions/0008) — the tailor collects nothing by hand.
     @MainActor
     init(application: Application) {
         self.init(

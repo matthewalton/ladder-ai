@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// What the detail rail is editing. Focus is transient view state — the
-/// sections set it, the rail renders it.
 enum ProfileFocus: Hashable {
     case role(Role)
     case point(Achievement)
@@ -9,8 +7,6 @@ enum ProfileFocus: Hashable {
     case project(Project)
 }
 
-/// The Profile editor: a single scrollable CV-style page beside a slim,
-/// persistent detail rail.
 struct ProfilePageView: View {
     @Bindable var store: ProfileStore
 
@@ -34,9 +30,8 @@ struct ProfilePageView: View {
                 }
             }
             .background(Color.paper)
-            // Clicking empty page space (or pressing Escape) drops focus and
-            // returns the rail to its placeholder. Row taps win because the
-            // deeper gesture takes precedence.
+            // Row taps win over this page-level tap — the deeper gesture
+            // takes precedence.
             .contentShape(Rectangle())
             .onTapGesture { focus = nil }
             .onExitCommand { focus = nil }
@@ -54,8 +49,6 @@ struct ProfilePageView: View {
                     isImportingCV = true
                 }
             }
-            // Tailoring lives in the Applications section (PipelineBoard
-            // decisions/0007) — the Profile is curated here, trimmed there.
         }
         .sheet(isPresented: $isImportingCV) {
             ImportCVView(profileStore: store)
@@ -63,7 +56,6 @@ struct ProfilePageView: View {
     }
 }
 
-/// The CV-style section label shared by every page section.
 struct ProfileSectionHeader: View {
     let title: String
 
@@ -77,8 +69,6 @@ struct ProfileSectionHeader: View {
     }
 }
 
-/// The page's inline "add" inputs — bordered just enough to read as a field
-/// you can click, without shouting over the CV content.
 struct PageAddField: View {
     let prompt: String
     @Binding var text: String
@@ -109,7 +99,6 @@ struct PageAddField: View {
     }
 }
 
-/// Month-resolution range for roles and education rows.
 func profileDateRange(start: Date, end: Date?) -> String {
     let style = Date.FormatStyle().month(.abbreviated).year()
     return "\(start.formatted(style)) – \(end?.formatted(style) ?? "Present")"

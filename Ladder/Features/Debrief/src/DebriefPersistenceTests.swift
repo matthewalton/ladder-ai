@@ -6,7 +6,6 @@ import Testing
 
 @MainActor
 struct DebriefPersistenceTests {
-    /// A Stage on an Application plus one Achievement to link as missed ammo.
     private func makeStage(in context: ModelContext) throws -> (Stage, Achievement) {
         let profile = Profile(name: "Alex Climber", headline: "Staff Engineer")
         context.insert(profile)
@@ -132,9 +131,6 @@ struct DebriefPersistenceTests {
 
     @Test("[DEBRIEF-3] deleting a linked Achievement leaves no dangling missed ammo")
     func deletingAchievementDropsItFromMissedAmmo() throws {
-        // The other direction of the relationship's integrity
-        // (decisions/0001): the canon is deletable without the debrief
-        // holding a dangling reference.
         let container = try ProfileStore.container(inMemory: true)
         let context = ModelContext(container)
         let (stage, ammo) = try makeStage(in: context)

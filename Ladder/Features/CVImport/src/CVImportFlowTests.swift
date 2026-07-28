@@ -24,8 +24,6 @@ struct CVImportFlowTests {
         )
     }
 
-    /// A fake key store holding a key keeps the live-wiring guards out of
-    /// the way of criteria that aren't about them.
     private func makeImportStore(
         profileStore: ProfileStore,
         service: FixtureIntelligenceService,
@@ -55,7 +53,6 @@ struct CVImportFlowTests {
             "Cut CI build times across every product target",
             "Shipped the offline sync engine",
         ])
-        // The proposal is transient — nothing lands before the merge.
         #expect(profileStore.profile?.roles.isEmpty == true)
     }
 
@@ -78,7 +75,6 @@ struct CVImportFlowTests {
             "Shipped the offline sync engine",
         ])
 
-        // Confirmed titles land through the replace pathway ([PROFILE-17]).
         store.confirmReview()
         let landed = try #require(profileStore.profile?.roles
             .first { $0.company == "Acme" }?.orderedAchievements)
@@ -124,8 +120,6 @@ struct CVImportFlowTests {
 
     @Test("[CVIMPORT-22] starting an import onto an existing Profile requires confirmation before the run begins")
     func importOntoExistingProfileNeedsConfirmation() async throws {
-        // The needs-confirmation decision is a pure helper — the dialog
-        // chrome gates on it; declining never calls startImport.
         let service = FixtureIntelligenceService.importFixture()
         let withProfile = makeImportStore(profileStore: try makeProfileStore(), service: service)
         #expect(withProfile.needsReplaceConfirmation)
@@ -178,7 +172,6 @@ struct CVImportFlowTests {
     @Test("[CVIMPORT-20] confirming the review replaces the Profile's content with the included items")
     func confirmReplacesProfileContent() async throws {
         let profileStore = try makeProfileStore()
-        // Curated content that must be gone after the hard refresh.
         let oldRole = try profileStore.addRole(
             company: "OldCo", title: "Old Engineer", start: .now, end: nil
         )
@@ -221,8 +214,6 @@ struct CVImportFlowTests {
         #expect(initech.start == monthDate(2018, 9))
         #expect(initech.end == monthDate(2021, 3))
 
-        // The Tag pool is rebuilt from the replacement alone; "Swift" is
-        // named by a role achievement and a project yet lands once.
         #expect(Set(profile.skills.map(\.name)) == ["Swift", "CI", "Bazel", "SwiftData", "Python", "MapKit"])
         let swift = try #require(profile.skills.first { $0.name == "Swift" })
         let project = try #require(profile.projects.first)
@@ -293,9 +284,6 @@ struct CVImportFlowTests {
         await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
         let review = try #require(store.review)
 
-        // Excluding a role excludes its achievements with it; excluding one
-        // achievement keeps the role's others; excluding a tag keeps the
-        // achievement.
         try #require(review.roles.count == 2)
         review.roles[1].included = false
         review.roles[0].achievements[1].included = false
@@ -368,8 +356,6 @@ struct CVImportFlowTests {
             location: "Leeds, UK", link: "https://alex.dev"
         ))
 
-        // A proposal whose identity has no name fails validation with its
-        // reason — a fresh Profile needs a name.
         let nameless = Data("""
         {
           "identity": {
@@ -411,7 +397,6 @@ struct CVImportFlowTests {
         #expect(education.proposed.end == monthDate(2017, 6))
         #expect(education.proposed.detail == "First-class honours")
 
-        // An excluded education entry is simply absent from the replacement.
         education.included = false
         store.confirmReview()
         #expect(profileStore.profile?.education.isEmpty == true)
@@ -434,7 +419,6 @@ struct CVImportFlowTests {
         #expect(project.proposed.description == "An offline-first hiking map app with tile caching and route planning, built to survive a week without signal.")
         #expect(project.tags.map(\.name) == ["Swift", "MapKit"])
 
-        // Excluding one proposed tag keeps the project confirmable.
         project.tags[1].included = false
         store.confirmReview()
         let landed = try #require(profileStore.profile?.projects.first)
@@ -563,7 +547,6 @@ struct CVImportFlowTests {
         let review = try #require(store.review)
         #expect(review.interests.map(\.name) == ["Climbing", "Trail running"], "the CV's own order")
 
-        // An excluded interest is simply absent from the replacement.
         try #require(review.interests.count == 2)
         review.interests[1].included = false
         store.confirmReview()
@@ -584,8 +567,6 @@ struct CVImportFlowTests {
         #expect(review.notImportedSections.map(\.name) == ["Profile"])
         #expect(review.notImportedSections.first?.content.contains("decade of platform") == true)
 
-        // Not-imported sections are never written anywhere: the fresh
-        // Profile holds exactly the schema'd sections.
         store.confirmReview()
         let profile = try #require(profileStore.profile)
         #expect(Set(profile.roles.map(\.company)) == ["Acme", "Initech"])
@@ -672,7 +653,6 @@ struct CVImportFlowTests {
 
         #expect(store.phase == .failed(.apiKeyRequired))
         #expect(store.review == nil)
-        // Refused before any extraction or service call.
         #expect(await service.recordedRequests.isEmpty)
     }
 
@@ -716,7 +696,6 @@ struct CVImportFlowTests {
     func proposalValidationFailureCarriesTheReason() async throws {
         let profileStore = try makeProfileStore()
 
-        // A missing required part…
         let missingRolesJSON = Data("""
         {
           "identity": {
@@ -738,7 +717,6 @@ struct CVImportFlowTests {
         }
         #expect(reason.contains("roles"), "the reason names the rejected part, got: \(reason)")
 
-        // …and a response that isn't JSON at all.
         let notJSON = makeImportStore(
             profileStore: profileStore,
             service: FixtureIntelligenceService(returning: Data("Sorry, I can't help with that.".utf8))
@@ -757,7 +735,6 @@ struct CVImportFlowTests {
     @Test("[CVIMPORT-18] a proposal wrapped in a markdown code fence produces a review")
     func fencedProposalProducesReview() async throws {
         let profileStore = try makeProfileStore()
-        // The canned proposal, exactly as a live model fences it.
         let bareJSON = try Data(contentsOf: fixtureURL("import-proposal", "json"))
         let fenced = Data("```json\n\(String(decoding: bareJSON, as: UTF8.self))\n```".utf8)
         let store = makeImportStore(
@@ -790,7 +767,6 @@ struct CVImportFlowTests {
 
     @Test("[CVIMPORT-19] the service throws truncated on a max_tokens stop, before returning any text")
     func serviceThrowsTruncatedOnMaxTokensStop() throws {
-        // Truncated JSON must never reach proposal validation.
         let truncated = Data(
             #"{"content":[{"type":"text","text":"{\"roles\":[{\"compa"}],"stop_reason":"max_tokens"}"#.utf8
         )
@@ -805,7 +781,6 @@ struct CVImportFlowTests {
     }
 }
 
-/// Fails every request the way the live service does.
 private struct ThrowingIntelligenceService: IntelligenceService {
     var error: AnthropicIntelligenceService.LiveServiceError
 
@@ -820,7 +795,6 @@ private final class KeyBox {
     var value: String?
 }
 
-/// Proposal dates are month-resolution UTC.
 @MainActor
 private func monthDate(_ year: Int, _ month: Int) -> Date {
     var components = DateComponents()

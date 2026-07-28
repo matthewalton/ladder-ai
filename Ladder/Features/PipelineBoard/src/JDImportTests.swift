@@ -53,14 +53,12 @@ struct JDImportTests {
     func failedImportLeavesJobDescriptionUnchanged() throws {
         let (store, application) = try makeStore(existingJD: "the old JD")
 
-        // An image-only PDF extracts no text.
         #expect(throws: TextExtractionError.noExtractableText) {
             try store.importJobDescription(
                 from: try fixtureURL("image-only", "pdf"), into: application)
         }
         #expect(application.jobDescription == "the old JD")
 
-        // Neither PDF nor docx.
         let textFile = FileManager.default.temporaryDirectory
             .appendingPathComponent("jd-\(UUID().uuidString).txt")
         try "Plain text JD".write(to: textFile, atomically: true, encoding: .utf8)
@@ -140,14 +138,12 @@ struct JDImportTests {
         let (store, application) = try makeStore(existingJD: "the old JD")
         let link = try #require(URL(string: "https://jobs.example.com/gone"))
 
-        // The link cannot be fetched.
         store.fetchLinkData = { _ in throw URLError(.notConnectedToInternet) }
         await #expect(throws: (any Error).self) {
             try await store.importJobDescription(fromLink: link, into: application)
         }
         #expect(application.jobDescription == "the old JD")
 
-        // The page fetches but its text extracts to nothing.
         store.fetchLinkData = { _ in Data("<html><body></body></html>".utf8) }
         await #expect(throws: TextExtractionError.noExtractableText) {
             try await store.importJobDescription(fromLink: link, into: application)

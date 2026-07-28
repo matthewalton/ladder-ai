@@ -1,17 +1,11 @@
 import Foundation
 import SwiftData
 
-/// One practice exercise for a technical-type Stage, tuned to the JD's
-/// stack. Answered outside the app — the §6 v1 ruling: exported, not
-/// interactive.
 struct MockTask: Codable, Hashable, Sendable {
     var title: String
     var brief: String
 }
 
-/// The preparation material for one upcoming Stage. One per Stage;
-/// regenerating replaces ([PREP-17]). Forward-looking coaching, never
-/// evidence (decisions/0002).
 @Model
 final class PrepPack {
     var generatedAt: Date
@@ -43,9 +37,6 @@ final class PrepPack {
     }
 }
 
-/// One thing worth saying at the Stage, as the service proposed it. A model
-/// row, not a value struct, so mapped achievements can be a real
-/// relationship to the canon (decisions/0001).
 @Model
 final class PrepTalkingPoint {
     var text: String
@@ -64,8 +55,6 @@ final class PrepTalkingPoint {
 }
 
 extension StageKind {
-    /// The kinds whose prep pack carries mock tasks (CONTEXT.md:
-    /// technical-type Stage).
     var isTechnicalType: Bool {
         switch self {
         case .technical, .systemDesign, .takeHome: true

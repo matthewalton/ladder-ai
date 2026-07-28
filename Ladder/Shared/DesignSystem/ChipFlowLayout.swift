@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Lays out chips left-to-right at their natural size, wrapping to new rows
-/// as needed — unlike an adaptive grid, no chip is ever squeezed narrower
-/// than its text.
+/// Unlike an adaptive grid, no chip is ever squeezed narrower than its text.
 struct ChipFlowLayout: Layout {
     var spacing: CGFloat = 6
 

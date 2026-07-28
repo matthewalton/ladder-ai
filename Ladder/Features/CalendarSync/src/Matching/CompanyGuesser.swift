@@ -1,6 +1,5 @@
 import Foundation
 
-/// Only ever pre-fills the confirmation sheet — the field stays editable.
 enum CompanyGuesser {
     private static let connectives: Set<String> = [
         "with", "at", "the", "a", "an", "and", "or", "for", "of", "on",
@@ -15,13 +14,10 @@ enum CompanyGuesser {
         return strippedTitle(event.title)
     }
 
-    /// `waynetech` + "Interview with WayneTech" → "WayneTech".
     private static func cased(_ label: String, fromTitle title: String) -> String {
         casedWords(title).first { $0.lowercased() == label } ?? label
     }
 
-    /// What remains after dropping interview vocabulary and connectives —
-    /// original order and casing — is the guess. Nothing left → empty.
     private static func strippedTitle(_ title: String) -> String {
         let words = casedWords(title)
         let lowered = words.map { $0.lowercased() }

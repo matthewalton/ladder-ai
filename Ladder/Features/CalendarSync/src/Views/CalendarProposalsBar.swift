@@ -1,18 +1,14 @@
 import SwiftData
 import SwiftUI
 
-/// What the bar shows below its header — never proposals; the calendar
-/// section owns those (decisions/0009). By construction this type has no
-/// proposals case.
+/// Never proposals below the header — the calendar section owns those; by
+/// construction this type has no proposals case.
 enum CalendarBarContent: Equatable {
     case headerOnly
     case deniedExplainer
     case noTrackedExplainer
     case noMatchesExplainer
 
-    /// The explainer signals stay [CALSYNC-17]/[CALSYNC-19]/[CALSYNC-20]:
-    /// denied wins, an empty ready scan explains itself, everything else —
-    /// idle, scanning, or proposals pending — is the header row alone.
     static func content(
         scanState: CalendarScanState, hasProposals: Bool, hasTrackedApplications: Bool
     ) -> CalendarBarContent {
@@ -27,8 +23,6 @@ enum CalendarBarContent: Equatable {
     }
 }
 
-/// Before a scan has run this renders only its header — the board never
-/// depends on a scan having run.
 struct CalendarProposalsBar: View {
     @Bindable var store: CalendarSyncStore
     @State private var showingResults = false
@@ -53,8 +47,7 @@ struct CalendarProposalsBar: View {
                         .controlSize(.small)
                 }
                 // Also the explicit gesture that first requests calendar
-                // access. Only a check opens the results sheet — automatic
-                // re-scans never present anything (decisions/0008).
+                // access; automatic re-scans never present anything.
                 Button {
                     Task {
                         await store.check()
@@ -89,8 +82,6 @@ struct CalendarProposalsBar: View {
         }
     }
 
-    /// Only reachable in `.ready` — idle, scanning, and denied render other
-    /// branches.
     private func emptyScanExplainer(_ message: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "calendar")

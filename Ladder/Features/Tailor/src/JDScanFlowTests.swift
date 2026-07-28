@@ -4,17 +4,11 @@ import Testing
 
 @testable import Ladder
 
-/// The JD scan (root `CONTEXT.md`): pool-aware, deterministic Match,
-/// transient suggestions (decisions/0011, 0013). Fixture service and fake
-/// key stores everywhere — no network.
 @MainActor
 struct JDScanFlowTests {
-    /// One context holding everything the scan reads: a Profile whose pool
-    /// is Swift, Kubernetes (alias "k8s"), SwiftUI, Leadership — the shape
-    /// the canned fixture response speaks to — and an Application carrying a
-    /// JD. "Team leadership" stays a gap despite the Leadership Tag: nothing
-    /// resolves it lexically, which is the resolving-alias story the fixture
-    /// tells ([TAILOR-51]).
+    /// The shape the canned jd-scan fixture speaks to. "Team leadership"
+    /// stays a gap despite the Leadership Tag — nothing resolves it
+    /// lexically; that is the resolving-alias story the fixture tells.
     private func makeWorld() throws -> (context: ModelContext, application: Application) {
         let container = try ProfileStore.container(inMemory: true)
         let context = ModelContext(container)
@@ -65,7 +59,6 @@ struct JDScanFlowTests {
             pool == ["Swift", "Kubernetes", "SwiftUI", "Leadership"],
             "the scan writes the Match, never the pool")
 
-        // A fresh context sees the Match, so it saved.
         let fresh = ModelContext(context.container)
         let saved = try #require(try fresh.fetch(FetchDescriptor<Match>()).first)
         #expect(saved.matchedTags.count == 2)
@@ -136,8 +129,6 @@ struct JDScanFlowTests {
         #expect(store.suggestions.first?.change == .mint(name: "GraphQL"))
         #expect(store.suggestions.last?.change == .alias("swift ui", onTagNamed: "SwiftUI"))
 
-        // A fresh context sees the Match without a trace of the proposals:
-        // pool untouched, no alias recorded, only matched/gaps/scannedAt.
         let fresh = ModelContext(context.container)
         let profile = try #require(try fresh.fetch(FetchDescriptor<Profile>()).first)
         #expect(Set(profile.skills.map(\.name)) == ["Swift", "Kubernetes", "SwiftUI", "Leadership"])

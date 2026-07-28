@@ -1,8 +1,7 @@
 import Foundation
 
-/// `achievements` is the ordered list result validation resolves missed-ammo
-/// indices against — index i in the payload is `achievements[i]`
-/// (decisions/0001).
+/// Index i in the payload is `achievements[i]` — missed-ammo indices resolve
+/// against this ordered list (decisions/0001).
 @MainActor
 struct DebriefPayload {
     let json: String
@@ -10,7 +9,7 @@ struct DebriefPayload {
 
     init(stage: Stage, notesOverview: String, profile: Profile?) throws {
         // Roles newest-first, achievements in sort order — the TailorPayload
-        // ordering; the JSON must be deterministic.
+        // ordering.
         let orderedRoles = (profile?.roles ?? []).sorted {
             ($0.start, $1.company) > ($1.start, $0.company)
         }

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Geometric badges inspired by painted trail markers. This file owns only
-/// the geometry; the stage-kind mapping lives in the timeline slice.
+/// This file owns only the geometry; the stage-kind mapping lives in the
+/// timeline slice.
 enum Blaze: Equatable, Sendable {
     case circle
     case diamond
@@ -43,7 +43,6 @@ struct BlazeShape: Shape {
             }
             return path
         case .flag:
-            // A pole on the left, a pennant flying right.
             var path = Path()
             let poleWidth = rect.width * 0.14
             path.addRect(
@@ -57,9 +56,6 @@ struct BlazeShape: Shape {
     }
 }
 
-/// Filled marks completed stages; hollow marks future ones. The tint carries
-/// the stage-kind accent where a caller maps one; pine is the default trail
-/// color.
 struct BlazeMark: View {
     var blaze: Blaze
     var filled: Bool

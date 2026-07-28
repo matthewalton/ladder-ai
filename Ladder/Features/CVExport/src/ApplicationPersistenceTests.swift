@@ -12,7 +12,6 @@ struct ApplicationPersistenceTests {
         defer { removeStore(at: url) }
         let snapshot = Data("not a real PDF, but exact bytes are the point".utf8)
         let createdAt = Date(timeIntervalSince1970: 1_770_000_000)
-        // Every field non-default ([CVEXPORT-30], decisions/0008).
         let fitMetrics = FitMetrics(
             roleCount: 3, bulletCount: 14, projectCount: 2, skillCount: 9,
             characterCount: 4_812,

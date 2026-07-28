@@ -2,8 +2,8 @@ import Foundation
 
 @testable import Ladder
 
-// Shared fixtures for the slice's tests. The file's *Tests.swift name
-// routes it to the test target; it defines no tests itself.
+// The file's *Tests.swift name routes it to the test target; it defines no
+// tests itself.
 
 /// Builds a Granola share page the way Next.js emits it: the payload JSON
 /// JS-escaped inside `self.__next_f.push([1,"…"])` chunks, split across two
@@ -40,7 +40,6 @@ func granolaSharePageHTML() -> String {
 
 let granolaShareURLText = "https://notes.granola.ai/t/d6baa78f-1080-40c2-a396-bccbfd7b5732-008umkv4"
 
-/// The fixture notes the page above flattens to.
 let granolaExpectedNotes = """
     ## Interview Format and Setup
     - Technical coding challenge via CodeSignal
@@ -59,7 +58,6 @@ struct FailingShareFetcher: GranolaShareFetching {
     }
 }
 
-/// Records whether any request was ever made ([TRANSCRIPT-31]).
 final class SpyShareFetcher: GranolaShareFetching, @unchecked Sendable {
     private(set) var requestCount = 0
     func html(from url: URL) async throws -> String {

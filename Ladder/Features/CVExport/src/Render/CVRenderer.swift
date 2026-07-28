@@ -1,11 +1,8 @@
 import SwiftUI
 
-/// Renders a `CVDocument` to A4 PDF bytes — real extractable text, never a
-/// rasterised image. Set in the CV template's bundled faces and print
-/// palette (`CVTheme`, decisions/0007).
+/// Real extractable text, never a rasterised image.
 @MainActor
 enum CVRenderer {
-    /// A4 in PostScript points.
     static let pageSize = CVMetrics.pageSize
 
     static func pdfData(for document: CVDocument, metrics: CVMetrics = CVMetrics()) -> Data {
@@ -19,8 +16,6 @@ enum CVRenderer {
             let pdf = CGContext(consumer: consumer, mediaBox: &mediaBox, nil)
         else { return data as Data }
 
-        // One rendered view per page — a page holds whole blocks only
-        // ([CVEXPORT-24]), so no text line can straddle the boundary.
         for page in layout.pages {
             // Forced light so the print document keeps its paper-and-ink
             // palette regardless of the app's appearance.
@@ -39,11 +34,6 @@ enum CVRenderer {
     }
 }
 
-/// One A4 page of the CV template (decisions/0007): caps section headers
-/// over hairline rules, company in blue, right-aligned meta dates.
-/// Renders exactly the blocks its page was assigned ([CVEXPORT-24]);
-/// everything is set in the bundled faces — no system fonts anywhere
-/// ([CVEXPORT-34]).
 struct CVPageView: View {
     var document: CVDocument
     var blocks: [CVBlock]
@@ -109,7 +99,6 @@ struct CVPageView: View {
                     .font(CVTheme.body(CVTheme.metaSize))
                     .foregroundStyle(CVTheme.meta)
             }
-            // The thick header rule.
             Rectangle()
                 .fill(CVTheme.heading)
                 .frame(height: 2)
@@ -117,8 +106,6 @@ struct CVPageView: View {
         }
     }
 
-    /// Tracked caps over a hairline rule — the reference CV's section
-    /// treatment.
     private func sectionHeader(_ title: String) -> some View {
         VStack(alignment: .leading, spacing: metrics.lineGap) {
             // No .tracking(): letter-spacing garbles PDF text extraction
@@ -133,8 +120,6 @@ struct CVPageView: View {
         }
     }
 
-    /// The role line + optional subline — bullets are separate blocks so a
-    /// page break can fall between them ([CVEXPORT-24]).
     private func roleHeader(_ role: CVDocument.RoleSection) -> some View {
         VStack(alignment: .leading, spacing: metrics.lineGap) {
             HStack(alignment: .firstTextBaseline) {
@@ -157,9 +142,7 @@ struct CVPageView: View {
         }
     }
 
-    /// "• **Title** - text" for a titled bullet, "• text" for a plain one
-    /// ([CVEXPORT-32]). One concatenated Text so extraction reads the
-    /// bullet as a single run.
+    /// One concatenated Text so extraction reads the bullet as a single run.
     private func bulletText(_ bullet: CVDocument.Bullet) -> Text {
         let body = Text(bullet.text)
             .font(CVTheme.body())
@@ -195,9 +178,7 @@ struct CVPageView: View {
         }
     }
 
-    /// The two-column categorised table ([CVEXPORT-23]): each cell one
-    /// category, name in template blue, its skills after it — one
-    /// concatenated Text per cell so extraction reads the pair together.
+    /// One concatenated Text per cell so extraction reads the pair together.
     private var skillsTable: some View {
         LazyVGrid(
             columns: [
@@ -245,7 +226,6 @@ struct CVPageView: View {
 }
 
 extension CVDocument {
-    /// Preview-only sample; tests build real documents from a Profile.
     static var previewDocument: CVDocument {
         var document = CVDocument()
         document.name = "Alex Climber"

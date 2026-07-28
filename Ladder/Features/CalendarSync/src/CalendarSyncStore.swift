@@ -21,7 +21,6 @@ struct StageProposal: Identifiable {
     var isPossibleInterview: Bool { candidates.isEmpty }
 }
 
-/// Scan, match, propose — confirmation is the only write path.
 @MainActor
 @Observable
 final class CalendarSyncStore {
@@ -33,13 +32,9 @@ final class CalendarSyncStore {
 
     private(set) var scanState: CalendarScanState = .idle
     private(set) var proposals: [StageProposal] = []
-    /// Fetched by the most recent check — an automatic scan never fills
-    /// this, and it is never persisted (decisions/0008).
     private var checkedEvents: [CalendarEvent] = []
 
-    /// The check's fetched events that produced no proposal — linked,
-    /// dismissed, and proposed events excluded, in start order. Computed
-    /// live so a confirmation or dismissal mid-review drops out.
+    /// Computed live so a confirmation or dismissal mid-review drops out.
     var otherEvents: [CalendarEvent] {
         let linked = linkedEventIDs()
         let dismissed = dismissedEventIDs()
@@ -53,8 +48,7 @@ final class CalendarSyncStore {
             .sorted { $0.start < $1.start }
     }
 
-    /// A proposal on demand for a picked other event — the interview
-    /// heuristic's verdict is ignored here.
+    /// The interview heuristic's verdict is ignored here.
     func proposal(for event: CalendarEvent) -> StageProposal {
         makeProposal(
             for: event,
@@ -64,8 +58,6 @@ final class CalendarSyncStore {
         )
     }
 
-    /// The look-back is on demand only — never automatic, never the
-    /// standing scan window.
     static func lookBackWindow(asOf: Date) -> DateInterval {
         DateInterval(start: asOf.addingTimeInterval(-90 * 86_400), end: asOf)
     }
@@ -113,8 +105,6 @@ final class CalendarSyncStore {
         }
     }
 
-    /// Seven days back keeps a just-happened interview linkable; thirty
-    /// ahead covers any scheduled round.
     static func scanWindow(asOf: Date) -> DateInterval {
         DateInterval(
             start: asOf.addingTimeInterval(-7 * 86_400),
@@ -122,22 +112,15 @@ final class CalendarSyncStore {
         )
     }
 
-    /// The automatic form — launch and the calendar-change signal.
-    /// Refreshes proposals and populates no other events (decisions/0008).
     func scan(asOf: Date = .now) async {
         checkedEvents = []
         await performScan(asOf: asOf)
     }
 
-    /// The user-initiated form — "Check calendar". The one scan that keeps
-    /// its unproposed events as other events (decisions/0008), and also the
-    /// explicit gesture that first requests calendar access.
     func check(asOf: Date = .now) async {
         checkedEvents = await performScan(asOf: asOf)
     }
 
-    /// Closing the check-results sheet ends the review; the other events
-    /// only come back with the next check (decisions/0008).
     func discardOtherEvents() {
         checkedEvents = []
     }
@@ -197,8 +180,6 @@ final class CalendarSyncStore {
         return stage
     }
 
-    /// Goes through the pipeline's own creation paths so its invariants —
-    /// blank fields refuse, the first Stage auto-advances — both hold.
     @discardableResult
     func confirmCreate(
         _ proposal: StageProposal, company: String, roleTitle: String, kind: StageKind
@@ -220,7 +201,6 @@ final class CalendarSyncStore {
         return stage
     }
 
-    /// Writes calendar fields only — kind and outcome stay untouched.
     func link(_ proposal: StageProposal, to stage: Stage) throws {
         guard let local = context.model(for: stage.persistentModelID) as? Stage else {
             return
@@ -240,7 +220,6 @@ final class CalendarSyncStore {
         proposals.removeAll { $0.id == proposal.id }
     }
 
-    /// Draft is not yet sent; rejected and withdrawn are closed.
     static let trackedStatuses: Set<ApplicationStatus> = [.applied, .active, .offer]
 
     /// Computed live, not captured at scan time, so the empty-scan explainer
@@ -278,7 +257,6 @@ final class CalendarSyncStore {
                 let candidates = tracked.filter {
                     CalendarMatcher.matches(event: event, company: $0.company)
                 }
-                // Matching wins; the heuristic only sees the leftovers.
                 if candidates.isEmpty {
                     guard InterviewHeuristic.flags(event) else { return nil }
                 }

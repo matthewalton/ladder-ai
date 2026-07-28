@@ -5,7 +5,7 @@ import Testing
 @testable import Ladder
 
 /// The canned prep result loads from the app bundle's Fixtures folder
-/// (tests run in the app host). No network anywhere.
+/// (tests run in the app host).
 @MainActor
 struct PrepPackFlowTests {
     /// One role, three achievements — payload indices 0, 1, 2 in sort order.
@@ -24,8 +24,6 @@ struct PrepPackFlowTests {
         return store
     }
 
-    /// An active Application with one technical Stage — the JD alone is
-    /// enough input to prep from ([PREP-5]).
     private func makeStage(
         in container: ModelContainer,
         kind: StageKind = .technical,
@@ -100,8 +98,6 @@ struct PrepPackFlowTests {
         #expect(pack.mockTasks.count == 1)
     }
 
-    /// Attaches a debrief to a Stage — the marker travels as the question
-    /// text so payload assertions can tell debriefs apart.
     private func attachDebrief(
         to stage: Stage,
         question: String,
@@ -126,7 +122,6 @@ struct PrepPackFlowTests {
         try context.save()
     }
 
-    /// The valid fixture bytes, for invalid-then-valid repair sequences.
     private var validJSON: Data {
         get throws {
             try Data(contentsOf: #require(
@@ -140,7 +135,6 @@ struct PrepPackFlowTests {
         Data(#"{"likelyQuestions": "not an array"}"#.utf8)
     }
 
-    /// Schema-valid, no mock tasks — what a non-technical stage should get.
     private var noMockTasksResponse: Data {
         Data("""
         {
@@ -164,7 +158,6 @@ struct PrepPackFlowTests {
         await store.generate(for: bare, generatedAt: Date(timeIntervalSince1970: 1_772_300_000))
         #expect(store.phase == .failed(.inputsRequired))
 
-        // Whitespace-only inputs count as absent.
         let blank = try makeStage(in: container, jobDescription: " \n\t ", prepContext: "  ")
         await store.generate(for: blank, generatedAt: Date(timeIntervalSince1970: 1_772_300_000))
         #expect(store.phase == .failed(.inputsRequired))
@@ -173,8 +166,6 @@ struct PrepPackFlowTests {
         #expect(bare.prepPack == nil)
         #expect(blank.prepPack == nil)
 
-        // A later-stage pack riding on prior debriefs alone generates: only
-        // all-three-empty refuses.
         let ridden = try makeStage(
             in: container, jobDescription: "", prepContext: "", sortIndex: 1)
         let context = try #require(ridden.modelContext)
@@ -342,8 +333,7 @@ struct PrepPackFlowTests {
     @Test("[PREP-11] an achievement reference matching no listed achievement fails validation")
     func outOfRangeAchievementReferenceFailsValidation() async throws {
         // Index 7 matches nothing in a three-achievement payload; the fixture
-        // returns the same invalid result to the repair request, so the run
-        // ends failed.
+        // returns the same invalid result to the repair, so the run ends failed.
         let outOfRange = Data("""
         {
           "likelyQuestions": ["Walk me through a production incident."],
@@ -391,9 +381,6 @@ struct PrepPackFlowTests {
 
     @Test("[PREP-13] a result carrying mock tasks for a non-technical Stage fails validation")
     func mockTasksForNonTechnicalStageFailValidation() async throws {
-        // The fixture result carries mock tasks; for a behavioral stage that
-        // is a schema violation, repaired away by the mock-task-free repair
-        // response — never silently dropped.
         let container = try ProfileStore.container(inMemory: true)
         let profileStore = try makeProfileStore(container: container)
         let service = FixtureIntelligenceService(
@@ -431,8 +418,6 @@ struct PrepPackFlowTests {
                 == "Summit Labs is hiring a Platform Engineer to own reliability end to end; the JD centres on incident response and infrastructure ownership.",
             "persisted as returned, never re-derived")
 
-        // A result with no company brief is valid when there is nothing to
-        // say.
         let noBrief = Data("""
         {
           "likelyQuestions": ["What would your first 90 days look like?"],
@@ -467,7 +452,6 @@ struct PrepPackFlowTests {
         #expect(requests.count == 2, "an invalid-then-valid sequence records two requests, never three")
         let repair = try #require(requests.last)
         #expect(repair.prompt == requests.first?.prompt, "the repair keeps the versioned prompt")
-        // The original request content, the invalid response, and the failure.
         #expect(repair.payload.contains("failed validation"))
         #expect(repair.payload.contains(#""likelyQuestions": "not an array""#))
         #expect(repair.payload.contains("Own platform reliability."))
@@ -554,7 +538,6 @@ struct PrepPackFlowTests {
         #expect(store.phase == .generated)
         let pack = try #require(stage.prepPack)
         #expect(pack.orderedTalkingPoints.count == 2, "the fenced result reads exactly as the bare one")
-        // The fence never costs the single repair request.
         #expect(await service.recordedRequests.count == 1)
     }
 }

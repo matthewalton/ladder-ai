@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// PROJECTS — each project is told as one description with Tags for JD
-/// matching (decisions/0009), not a bullet list.
 struct ProjectsSectionView: View {
     @Bindable var store: ProfileStore
     let profile: Profile

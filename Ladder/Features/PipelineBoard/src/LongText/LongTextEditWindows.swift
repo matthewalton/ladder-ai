@@ -1,10 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The editable windows of the docs/adr/0003 pattern ([PIPEBOARD-32]):
-/// typing is the only input path for the notes and the prep context, so —
-/// unlike the read-only job description window — these edit, autosaving
-/// through the store's existing seams, never a private write path.
 struct NotesEditWindow: View {
     static let windowID = "application-notes"
 
@@ -54,7 +50,6 @@ struct NotesEditWindow: View {
         .frame(minWidth: 420, minHeight: 320)
     }
 
-    /// Autosave through `updateDetails` — the [PIPEBOARD-12] seam.
     func save(_ newText: String) {
         guard let application else { return }
         do {
@@ -72,8 +67,6 @@ struct NotesEditWindow: View {
     }
 }
 
-/// The prep context's editable window — the Stage-side twin of
-/// `NotesEditWindow`.
 struct PrepContextEditWindow: View {
     static let windowID = "stage-prep-context"
 
@@ -123,8 +116,6 @@ struct PrepContextEditWindow: View {
         .frame(minWidth: 420, minHeight: 320)
     }
 
-    /// Autosave through `updateStage` — the [PIPEBOARD-15] seam; every other
-    /// Stage field is passed back unchanged.
     func save(_ newText: String) {
         guard let stage else { return }
         do {

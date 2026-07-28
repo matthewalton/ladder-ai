@@ -1,8 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The separate window showing a Stage's full notes overview — the Stage
-/// itself only indicates that notes are attached (decisions/0007).
 struct GranolaNotesWindow: View {
     static let windowID = "granola-notes"
 

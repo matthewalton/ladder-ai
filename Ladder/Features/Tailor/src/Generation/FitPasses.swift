@@ -1,14 +1,10 @@
 import Foundation
 
-/// One bullet as the fit passes see it: a run-scoped id and its current
-/// reviewed text.
 struct FitPassItem: Equatable, Sendable, Codable {
     var id: String
     var text: String
 }
 
-/// The versioned fit-pass prompts, loaded from the bundled `Prompts/`
-/// folder like the tailor prompt — never inline strings.
 enum FitPassPrompts {
     static func condense(from bundle: Bundle = .main) throws -> String {
         try text(named: "condense", from: bundle)
@@ -26,11 +22,6 @@ enum FitPassPrompts {
     }
 }
 
-/// The condense and trim passes (decisions/0010): tailor-owned service
-/// calls invoked only by cv-export's fit loop. Rewording is tailoring's
-/// monopoly — cv-export renders what these return. Validation failures get
-/// the house single repair (decisions/0004); a failed repair throws the
-/// `TailorValidationFailure`, and the export run surfaces its reason.
 @MainActor
 struct FitPassRunner {
     private let service: any IntelligenceService
@@ -41,9 +32,6 @@ struct FitPassRunner {
         self.bundle = bundle
     }
 
-    /// [TAILOR-25] Same selection, shorter texts. The returned items keep
-    /// the input's ids and order; only the texts change. Titles never
-    /// travel here — the pass shortens descriptions alone.
     func condense(_ items: [FitPassItem]) async throws -> [FitPassItem] {
         let prompt = try FitPassPrompts.condense(from: bundle)
         let payload = try Self.payloadJSON(["items": items])
@@ -64,14 +52,10 @@ struct FitPassRunner {
             }
             return decoded
         }
-        // Input order, regardless of response order.
         let byID = Dictionary(uniqueKeysWithValues: response.items.map { ($0.id, $0) })
         return items.compactMap { byID[$0.id] }
     }
 
-    /// [TAILOR-26] A non-empty strict subset: the ids that survive, in the
-    /// input's order. The caller diffs for the fit report's trim list
-    /// ([CVEXPORT-28]).
     func trim(_ items: [FitPassItem], jobDescription: String) async throws -> [String] {
         let prompt = try FitPassPrompts.trim(from: bundle)
         let payload = try Self.payloadJSON(TrimPayload(items: items, jobDescription: jobDescription))
@@ -92,8 +76,6 @@ struct FitPassRunner {
         return items.map(\.id).filter(keep.contains)
     }
 
-    /// The decisions/0004 pattern: one attempt, one repair carrying the
-    /// failure, then fail with the reason.
     private func completeWithRepair<Response>(
         prompt: String,
         payload: String,

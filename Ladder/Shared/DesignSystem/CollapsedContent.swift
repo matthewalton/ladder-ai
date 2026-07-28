@@ -2,9 +2,8 @@ import SwiftData
 import SwiftUI
 
 extension ModelContext {
-    /// Resolve a model by ID without trapping on a deleted one: the gone
-    /// branch of a content window needs nil here, and `model(for:)` returns
-    /// an invalidated instance that traps on first property access.
+    /// Resolve a model by ID without trapping on a deleted one — `model(for:)`
+    /// returns an invalidated instance that traps on first property access.
     func existingModel<T: PersistentModel>(_ id: PersistentIdentifier) -> T? {
         var descriptor = FetchDescriptor<T>(
             predicate: #Predicate { $0.persistentModelID == id })
@@ -13,10 +12,6 @@ extension ModelContext {
     }
 }
 
-/// The docs/adr/0003 collapsed-content pattern: long text content that is
-/// set shows as an indicator row — never the text inline — with Open and
-/// Remove, plus any per-content extras (Regenerate, Export…). Granola notes
-/// established the shape (`GranolaNotesSection`).
 struct IndicatorRow<Extras: View>: View {
     var label: String
     var icon: String
@@ -53,8 +48,6 @@ extension IndicatorRow where Extras == EmptyView {
     }
 }
 
-/// The read-only content window of the pattern: scrolling content on paper
-/// while the model still resolves, a gone message once it no longer does.
 struct ContentWindow<Model, Content: View>: View {
     var model: Model?
     var goneMessage: String

@@ -79,6 +79,7 @@ docs/adr/
 - API key: Keychain only. Never UserDefaults, never in code, never logged.
 - Colors/fonts: only via `Palette.swift` / `Typography.swift` accessors. No raw hex or `.custom` fonts in views (Summit View exempt later, per DESIGN.md §3; the rendered CV's print template exempt per CVExport decisions/0007).
 - Dependencies: none without asking.
+- Comments: almost none. Names carry the meaning — never restate a declaration or body, never narrate steps, never write doc-comment summaries that repeat the signature, and never cite criteria/decisions for behaviour the code makes plain (traceability lives in SPEC.md, decisions/, and git history, not in source). A comment earns its place only by stating something the code cannot: a framework quirk, a hard-won trap, deliberately surprising test data. `// MARK:` markers are fine. `@Test("[TOKEN-n] …")` names are string literals, not comments — never strip them.
 - You cannot see rendered SwiftUI. For UI tasks: build cleanly, keep previews compiling (`#Preview` on every view), and list what the human should visually verify at the end of the session. Each slice's `CLAUDE.md` names the parts of that slice needing eyes.
 
 ## Testing

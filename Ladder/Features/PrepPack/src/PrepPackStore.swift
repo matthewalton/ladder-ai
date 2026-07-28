@@ -1,16 +1,12 @@
 import Foundation
 import SwiftData
 
-/// One prep run at a time; a valid result is persisted onto the Stage,
-/// replacing any existing prep pack ([PREP-17]).
 @MainActor
 @Observable
 final class PrepPackStore {
     enum Phase: Equatable {
         case idle
-        /// The repair request runs in this phase too — it never gets its own.
         case running
-        /// The validated prep pack is persisted on the Stage.
         case generated
         case failed(PrepPackError)
     }
@@ -23,8 +19,6 @@ final class PrepPackStore {
     private let bundle: Bundle
     private let makeIntelligence: (String) -> any IntelligenceService
 
-    /// `makeIntelligence` is the seam tests and previews use to substitute a
-    /// fixture service.
     init(
         container: ModelContainer,
         profileStore: ProfileStore,
@@ -41,16 +35,12 @@ final class PrepPackStore {
         self.makeIntelligence = makeIntelligence
     }
 
-    /// Generation is an explicit user action — nothing calls this
-    /// automatically. `generatedAt` is passed in; tests never read the clock.
     func generate(for stage: Stage, generatedAt: Date = .now) async {
         let jobDescription = stage.application?.jobDescription
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let prepContext = stage.prepContext
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let priorDebriefs = PrepPackPayload.priorDebriefs(for: stage)
-        // Refused only when every input is empty ([PREP-5]): a JD alone, or
-        // prior debriefs alone, is enough to prep from.
         guard !jobDescription.isEmpty || !prepContext.isEmpty || !priorDebriefs.isEmpty else {
             phase = .failed(.inputsRequired)
             return
@@ -74,8 +64,6 @@ final class PrepPackStore {
                     json: response, achievementCount: payload.achievements.count,
                     mockTasksWanted: mockTasksWanted)
             } catch let failure as PrepPackValidationFailure {
-                // Exactly one repair attempt; a repair response failing
-                // validation fails the run ([PREP-15], [PREP-16]).
                 let repair = IntelligenceRequest(
                     prompt: prompt,
                     payload: Self.repairPayload(
@@ -92,21 +80,16 @@ final class PrepPackStore {
         } catch is PrepPackValidationFailure {
             phase = .failed(.resultInvalid)
         } catch {
-            // A missing bundled prompt or a transport failure — not an
-            // invalid result.
             phase = .failed(.requestFailed)
         }
     }
 
-    /// Writes the validated result onto the Stage, replacing any existing
-    /// prep pack — the old record is deleted, never orphaned ([PREP-17]).
     private func persist(
         _ result: PrepPackResult, on stage: Stage, achievements: [Achievement], generatedAt: Date
     ) throws {
         let context = stage.modelContext ?? self.context
-        // Payload achievements may live in the ProfileStore's context;
-        // relationships are wired within one context, so resolve each into
-        // the persisting one by its store identity.
+        // Payload achievements may live in the ProfileStore's context; relationships
+        // are wired within one context, so resolve each into the persisting one.
         let resolved = achievements.map { achievement in
             context.model(for: achievement.persistentModelID) as? Achievement ?? achievement
         }
@@ -154,10 +137,6 @@ final class PrepPackStore {
         phase = .idle
     }
 
-    /// The confirmed remove ([PREP-22]): deletes the pack — its
-    /// talking-point rows cascade with it — and leaves the mapped
-    /// Achievements untouched. The confirmation dialog is the view's; the
-    /// store just deletes. A Stage without a pack is a no-op.
     func removePrepPack(from stage: Stage) throws {
         guard let pack = stage.prepPack else { return }
         let context = stage.modelContext ?? self.context

@@ -4,9 +4,9 @@ import Testing
 
 @testable import Ladder
 
-/// [PROFILE-24]/[PROFILE-25]: the committed fixture store was written by the
-/// pre-migration (tech-carrying) schema — never regenerate it. Copy it
-/// (sidecars too) before opening: migration rewrites the file.
+/// The committed fixture store was written by the pre-migration
+/// (tech-carrying) schema — never regenerate it. Copy it (sidecars too)
+/// before opening: migration rewrites the file.
 @MainActor
 struct ProfileMigrationTests {
     private func copyFixtureToTemp() throws -> (work: URL, store: URL) {

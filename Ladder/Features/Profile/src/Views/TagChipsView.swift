@@ -1,12 +1,8 @@
 import SwiftUI
 
-/// Chips are the UI rendering of Tags (the `SkillTag` model). With an
-/// `onRemove` handler each chip grows a remove control.
 struct TagChipsView: View {
     let names: [String]
     var onRemove: ((String) -> Void)?
-    /// Tapping the chip's name opens curation — the tag manage sheet
-    /// (decisions/0013). The chip is the rendering, the SkillTag the model.
     var onTap: ((String) -> Void)?
 
     var body: some View {

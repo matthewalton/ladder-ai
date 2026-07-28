@@ -6,14 +6,12 @@ enum CalendarAccessState: Equatable, Sendable {
     case denied
 }
 
-/// All calendar access crosses this seam; the posture is read-only — the
-/// protocol has no write operation.
+/// All calendar access crosses this seam; the posture is read-only.
 protocol CalendarSyncService: Sendable {
     func accessState() async -> CalendarAccessState
     /// Prompts the user; never called on launch — only from an explicit
     /// user action.
     func requestAccess() async -> CalendarAccessState
-    /// Events overlapping the interval, already filtered to it.
     func events(in interval: DateInterval) async throws -> [CalendarEvent]
 }
 

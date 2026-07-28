@@ -1,7 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// View-layer labels for the board's chrome; the models stay label-free.
 extension ApplicationStatus {
     var columnTitle: String {
         switch self {

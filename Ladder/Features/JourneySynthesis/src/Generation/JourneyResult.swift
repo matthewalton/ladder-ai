@@ -1,20 +1,13 @@
 import Foundation
 
-/// Carried into the repair request so the service is told what to fix.
 struct JourneyValidationFailure: Error, Equatable {
     var reason: String
 }
 
-/// The decoded, validated response. Validation is minimal (decisions/0002):
-/// the object parses and `narrative` is a non-empty string — free prose has
-/// no structure and no references to resolve.
 struct JourneyResult: Equatable, Sendable, Decodable {
     var narrative: String
 
     init(json: Data) throws {
-        // A whole-response fence is presentation, not content — stripped so a
-        // formatting quirk never consumes the single repair request
-        // ([JOURNEY-13]).
         let json = FencedJSON.stripped(from: json)
         do {
             self = try JSONDecoder().decode(JourneyResult.self, from: json)

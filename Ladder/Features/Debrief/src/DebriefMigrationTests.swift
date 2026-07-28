@@ -55,7 +55,6 @@ struct DebriefMigrationTests {
         #expect(screen.outcome == .passed)
         #expect(screen.heardBackAt == Date(timeIntervalSince1970: 1_771_500_000))
 
-        // The attached notes ride through untouched.
         let technical = try #require(stages.last)
         let transcript = try #require(technical.transcript, "the attached notes survive")
         #expect(transcript.recordedAt == Date(timeIntervalSince1970: 1_772_000_000))
@@ -65,12 +64,10 @@ struct DebriefMigrationTests {
         )
         #expect(transcript.segments.isEmpty)
 
-        // The new link lands nil on migrated rows.
         #expect(screen.debrief == nil)
         #expect(technical.debrief == nil)
         #expect(try context.fetch(FetchDescriptor<Debrief>()).isEmpty)
 
-        // The rest of the Phase 3 store survives alongside.
         let profile = try #require(try context.fetch(FetchDescriptor<Profile>()).first)
         #expect(profile.name == "Matt Alton")
         #expect(profile.roles.count == 1)

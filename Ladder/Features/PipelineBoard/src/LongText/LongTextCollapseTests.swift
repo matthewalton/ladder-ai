@@ -5,9 +5,6 @@ import Testing
 
 @testable import Ladder
 
-/// The docs/adr/0003 collapsed-content pattern on this slice's long-text
-/// fields: collapse decision, windows, and confirmed removes. Row and dialog
-/// chrome are on the visual-verify list.
 @MainActor
 struct LongTextCollapseTests {
     private func makeStore(
@@ -30,7 +27,6 @@ struct LongTextCollapseTests {
     func nonEmptyFieldCollapses() throws {
         #expect(LongTextField.collapsesAtAppearance("Own platform reliability."))
 
-        // Render-smoke of the collapsed detail: row chrome is visual-verify.
         let (store, application) = try makeStore(
             notes: "warm intro via Sam", jobDescription: "Own platform reliability.")
         let detail = ImageRenderer(
@@ -54,7 +50,6 @@ struct LongTextCollapseTests {
             store: store, applicationID: application.persistentModelID)
 
         #expect(window.resolvedApplication?.jobDescription == "Own platform reliability.")
-        // The window renders the text; its read-only chrome is visual-verify.
         let image = ImageRenderer(content: window.frame(width: 480, height: 360))
         #expect(image.nsImage != nil)
 
@@ -77,7 +72,6 @@ struct LongTextCollapseTests {
         prepWindow.save("Panel of three; whiteboard likely")
         #expect(stage.prepContext == "Panel of three; whiteboard likely")
 
-        // Autosave went through the store seams — a fresh context sees it.
         let fresh = ModelContext(store.container)
         let applications = try fresh.fetch(FetchDescriptor<Application>())
         #expect(applications.first?.notes == "first impression, updated after the call")
@@ -85,8 +79,6 @@ struct LongTextCollapseTests {
 
     @Test("[PIPEBOARD-33] removing a long-text field's content requires confirmation before clearing it")
     func confirmedRemovesClearThroughTheStore() throws {
-        // The dialog itself is chrome (visual-verify); the confirmed action
-        // clears through the store, leaving every other field untouched.
         let (store, application) = try makeStore(
             notes: "warm intro via Sam", jobDescription: "Own platform reliability.")
         let stage = try store.addStage(
@@ -103,7 +95,6 @@ struct LongTextCollapseTests {
         #expect(stage.prepContext.isEmpty)
         #expect(stage.kind == .technical, "the Stage's other fields stay")
 
-        // Cleared through the store — a fresh context sees empty values.
         let fresh = ModelContext(store.container)
         let applications = try fresh.fetch(FetchDescriptor<Application>())
         #expect(applications.first?.jobDescription.isEmpty == true)

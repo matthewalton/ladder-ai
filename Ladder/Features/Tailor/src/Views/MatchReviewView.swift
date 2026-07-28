@@ -1,17 +1,10 @@
 import SwiftData
 import SwiftUI
 
-/// The Match review ([TAILOR-46]; root `CONTEXT.md`: Match): the
-/// confirmation step between scan and selection. The score recomputes live
-/// and offline as suggestions toggle ([TAILOR-47]); nothing writes until
-/// Continue ([TAILOR-48], [TAILOR-50]).
 struct MatchReviewView: View {
     @Bindable var model: MatchReviewModel
     var onCancel: () -> Void
     var onContinue: () -> Void
-    /// The tailor flow continues into the run; the application detail's
-    /// on-demand door ends here (PipelineBoard decisions/0009), so the
-    /// confirm copy is the caller's.
     var continueLabel = "Continue to tailoring"
 
     var body: some View {
@@ -85,8 +78,6 @@ struct MatchReviewView: View {
     }
 }
 
-/// One transient suggestion as a checkbox — unchecked on entry: claiming a
-/// skill is opt-in, never opt-out ([TAILOR-46]).
 private struct SuggestionRow: View {
     @Binding var item: MatchReviewModel.SuggestionItem
 

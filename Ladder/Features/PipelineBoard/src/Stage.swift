@@ -12,8 +12,6 @@ enum StageKind: Hashable, Sendable {
     case offer
     case other(String)
 
-    /// Picker source — deliberately omits `.other`; the form's free-text row
-    /// is the only way to produce one.
     static let knownCases: [StageKind] = [
         .screen, .recruiter, .technical, .systemDesign,
         .takeHome, .behavioral, .final, .offer,
@@ -49,7 +47,6 @@ enum StageOutcome: String, Codable, CaseIterable, Sendable {
     case noResponse
 }
 
-/// One step in an Application's interview loop.
 @Model
 final class Stage {
     var kindRaw: String
@@ -63,18 +60,15 @@ final class Stage {
     var sortIndex: Int
     var application: Application?
 
-    /// One conversation per Stage; deleting the Stage deletes it too
-    /// (owned by the transcript-import slice — see Ladder/Features/TranscriptImport/).
+    /// Owned by the transcript-import slice — see Ladder/Features/TranscriptImport/.
     @Relationship(deleteRule: .cascade, inverse: \Transcript.stage)
     var transcript: Transcript?
 
-    /// One debrief per Stage; deleting the Stage deletes it too
-    /// (owned by the debrief slice — see Ladder/Features/Debrief/).
+    /// Owned by the debrief slice — see Ladder/Features/Debrief/.
     @Relationship(deleteRule: .cascade, inverse: \Debrief.stage)
     var debrief: Debrief?
 
-    /// One prep pack per Stage; deleting the Stage deletes it too
-    /// (owned by the prep-pack slice — see Ladder/Features/PrepPack/).
+    /// Owned by the prep-pack slice — see Ladder/Features/PrepPack/.
     @Relationship(deleteRule: .cascade, inverse: \PrepPack.stage)
     var prepPack: PrepPack?
 

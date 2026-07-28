@@ -1,8 +1,6 @@
 import Foundation
 import SwiftData
 
-/// The scan's failure states. Validation failures repair once
-/// (decisions/0004); transport and truncation fail fast.
 enum JDScanError: Error, Equatable {
     case jobDescriptionRequired
     case apiKeyRequired
@@ -11,8 +9,6 @@ enum JDScanError: Error, Equatable {
     case resultInvalid(reason: String)
 }
 
-/// A scan response the schema or the pool rejects — feeds the single repair
-/// request exactly like a tailor result's ([TAILOR-29], [TAILOR-31]).
 struct JDScanValidationFailure: Error, Equatable {
     let reason: String
 }
@@ -26,33 +22,23 @@ enum JDScanPrompt {
     }
 }
 
-/// One JD scan at a time (root `CONTEXT.md`: JD scan): reads an
-/// Application's job description against the pool and persists the Match —
-/// the slice's one write ([TAILOR-27]; decisions/0011). Suggestions stay in
-/// memory for review (decisions/0013).
 @MainActor
 @Observable
 final class JDScanStore {
     enum Phase: Equatable {
         case idle
-        /// The repair request runs in this phase too — it never gets its own.
         case scanning
-        /// The Match is saved; `suggestions` are held transiently.
         case scanned
         case failed(JDScanError)
     }
 
     private(set) var phase: Phase = .idle
-    /// The scan result's pool-level proposals — mint and alias, never
-    /// attach (decisions/0013) — transient, awaiting the Match review.
     private(set) var suggestions: [TagSuggestionProposal] = []
 
     private let keyStore: any APIKeyStore
     private let bundle: Bundle
     private let makeIntelligence: (String) -> any IntelligenceService
 
-    /// `makeIntelligence` receives the stored API key — the live service in
-    /// production, a fixture in tests and previews ([TAILOR-35]).
     init(
         keyStore: any APIKeyStore,
         bundle: Bundle = .main,
@@ -65,16 +51,13 @@ final class JDScanStore {
         self.makeIntelligence = makeIntelligence
     }
 
-    /// Scans the Application's stored job description and replaces its
-    /// Match. Works entirely in the Application's own context, so the
-    /// matched references and the pool are one set of instances.
+    /// Works entirely in the Application's own context, so the matched
+    /// references and the pool are one set of instances.
     func scan(_ application: Application) async {
         guard !application.jobDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             phase = .failed(.jobDescriptionRequired)
             return
         }
-        // No stored key means no live run — never a fixture fallback
-        // ([TAILOR-34]; decisions/0002).
         guard let key = try? keyStore.readKey(), !key.isEmpty else {
             phase = .failed(.apiKeyRequired)
             return
@@ -104,7 +87,7 @@ final class JDScanStore {
                 resolved = try Self.resolvedScan(from: response, pool: pool)
             } catch let failure as JDScanValidationFailure {
                 // Exactly one repair attempt; a repair response failing
-                // validation fails the scan (decisions/0004; [TAILOR-32]).
+                // validation fails the scan.
                 let repair = IntelligenceRequest(
                     prompt: prompt,
                     payload: Self.repairPayload(original: payload, response: response, failure: failure)
@@ -119,8 +102,6 @@ final class JDScanStore {
                 }
                 resolved = try Self.resolvedScan(from: repairResponse, pool: pool)
             }
-            // Replace wholesale — the Match tracks the pool, never freezes
-            // ([TAILOR-36]).
             if let previous = application.match {
                 context.delete(previous)
             }
@@ -163,9 +144,6 @@ final class JDScanStore {
         var vocabulary: [PayloadTag]
     }
 
-    /// The request carries the JD verbatim and the whole vocabulary —
-    /// primary names with Aliases — so the model matches or aliases before
-    /// it mints and a flagged gap is a genuine one ([TAILOR-28]).
     static func payload(jobDescription: String, pool: [SkillTag]) -> String {
         let vocabulary = pool
             .map { PayloadTag(name: $0.name, aliases: $0.aliases) }
@@ -205,12 +183,6 @@ final class JDScanStore {
         var suggestions: [TagSuggestionProposal]
     }
 
-    /// Validates the scan response and resolves its matched names against
-    /// the pool — case-insensitively across primary names and Aliases; a
-    /// name resolving to nothing means the model invented vocabulary and
-    /// the response fails ([TAILOR-29]). Two asks resolving to the same Tag
-    /// land one reference. A fenced-but-valid response parses exactly as a
-    /// bare one ([TAILOR-18]'s tolerance).
     static func resolvedScan(from raw: Data, pool: [SkillTag]) throws -> ResolvedScan {
         let data = FencedJSON.stripped(from: raw)
         let object: Any
@@ -273,8 +245,6 @@ final class JDScanStore {
                 }
                 return value
             }
-            // Pool-level kinds only — attach is a point-door kind
-            // (decisions/0013).
             let change: TagSuggestionProposal.Change =
                 switch kind {
                 case "mint": .mint(name: try required("name"))
@@ -283,10 +253,8 @@ final class JDScanStore {
                     throw JDScanValidationFailure(
                         reason: "suggestion \(index + 1) has unknown kind '\(kind)'")
                 }
-            // `resolves` points into the scan result itself, so it is the
-            // one suggestion field checked at validation ([TAILOR-51];
-            // decisions/0015) — and it normalises to the gap as listed, so
-            // downstream gap-moving compares by plain equality.
+            // `resolves` normalises to the gap as listed, so downstream
+            // gap-moving compares by plain equality.
             var resolves: String?
             if let rawResolves = suggestion["resolves"] as? String {
                 let trimmed = rawResolves.trimmingCharacters(in: .whitespacesAndNewlines)

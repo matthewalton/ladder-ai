@@ -10,7 +10,6 @@ struct CalendarSyncUnitTests {
         #expect(CalendarMatcher.contains("ACME interview", company: "Acme, Corp."))
         #expect(CalendarMatcher.contains("Interview with acme corp", company: "ACME"))
         #expect(CalendarMatcher.contains("Round 2 — Wayne Enterprises Ltd.", company: "wayne enterprises"))
-        // Whole-word containment: "Acme" never matches "Acmex".
         #expect(!CalendarMatcher.contains("Acmex interview", company: "Acme"))
         #expect(!CalendarMatcher.contains("Interview", company: "Acme"))
     }
@@ -23,15 +22,12 @@ struct CalendarSyncUnitTests {
             CalendarEvent(identifier: "evt-2", title: "Team standup", start: start),
             CalendarEvent(identifier: "evt-3", title: "HOOLI follow-up", start: start),
         ]
-        // Containment ignores case.
         #expect(
             OtherEventsFilter.filtered(events, titleContains: "hooli").map(\.identifier)
                 == ["evt-1", "evt-3"]
         )
-        // An empty or blank filter shows the whole list.
         #expect(OtherEventsFilter.filtered(events, titleContains: "").count == 3)
         #expect(OtherEventsFilter.filtered(events, titleContains: "   ").count == 3)
-        // No match → nothing.
         #expect(OtherEventsFilter.filtered(events, titleContains: "dentist").isEmpty)
     }
 
@@ -65,7 +61,6 @@ struct CalendarSyncUnitTests {
         )
 
         let rows = CalendarSection.rows(from: [matched, possible])
-        // One row per proposal, in scan order.
         #expect(rows.map(\.id) == ["evt-1", "evt-2"])
         #expect(rows[0].title == "Acme phone screen")
         #expect(rows[0].start == start)
@@ -73,20 +68,16 @@ struct CalendarSyncUnitTests {
         #expect(!rows[0].isPossibleInterview)
         #expect(rows[1].isPossibleInterview)
         #expect(rows[1].kindGuess == nil)
-        // Zero proposals → no section at all; the divider never renders alone.
         #expect(CalendarSection.rows(from: []).isEmpty)
     }
 
     @Test("[CALSYNC-36] the bar renders only its header row and the explainers")
     func barContentNeverListsProposals() {
-        // Proposals pending, no explainer state → the header row alone;
-        // the content type has no proposals case to render.
         #expect(
             CalendarBarContent.content(
                 scanState: .ready, hasProposals: true, hasTrackedApplications: true
             ) == .headerOnly
         )
-        // The explainers keep their [CALSYNC-17]/[CALSYNC-19]/[CALSYNC-20] signals.
         #expect(
             CalendarBarContent.content(
                 scanState: .denied, hasProposals: false, hasTrackedApplications: true
@@ -102,7 +93,6 @@ struct CalendarSyncUnitTests {
                 scanState: .ready, hasProposals: false, hasTrackedApplications: true
             ) == .noMatchesExplainer
         )
-        // No explainer while idle or scanning.
         #expect(
             CalendarBarContent.content(
                 scanState: .idle, hasProposals: false, hasTrackedApplications: true

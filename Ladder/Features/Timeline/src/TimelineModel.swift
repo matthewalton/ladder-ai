@@ -15,8 +15,6 @@ struct TimelineEntry: Equatable {
     var blaze: Blaze
 }
 
-/// Pure derivation — statics only, an explicit `asOf` where the clock
-/// matters, no writes.
 enum TimelineModel {
     static func entries(for application: Application) -> [TimelineEntry] {
         var entries: [TimelineEntry] = []
@@ -28,7 +26,6 @@ enum TimelineModel {
                     isFilled: true, blaze: .circle))
         }
 
-        // Heard-back is derived, never stored: the earliest date any Stage carries.
         let stageDates = application.stages.flatMap { [$0.scheduledAt, $0.heardBackAt] }
         if let heardBackAt = stageDates.compactMap({ $0 }).min() {
             entries.append(
@@ -46,7 +43,6 @@ enum TimelineModel {
                     blaze: blaze(for: stage.kind)))
         }
 
-        // Statuses carry no timestamp, so the outcome entry is undated.
         if isTerminal(application.status) {
             entries.append(
                 TimelineEntry(

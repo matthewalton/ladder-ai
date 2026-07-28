@@ -4,11 +4,8 @@ import Testing
 
 @testable import Ladder
 
-/// The pagination model ([CVEXPORT-24]): blocks are measured with the same
-/// faces the view sets, and a page break falls only between blocks.
 @MainActor
 struct CVLayoutTests {
-    /// A document long enough to spill well past one A4 page.
     private var longDocument: CVDocument {
         var document = CVDocument.previewDocument
         document.roles = (1...6).map { roleIndex in
@@ -34,8 +31,6 @@ struct CVLayoutTests {
 
         try #require(layout.pages.count > 1, "the fixture document must actually paginate")
         for page in layout.pages {
-            // Page-top gap is dropped; every block lands wholly inside the
-            // content box — a break can only fall between blocks.
             var y: CGFloat = 0
             for (index, block) in page.enumerated() {
                 if index > 0 { y += block.gapAbove }
@@ -43,7 +38,6 @@ struct CVLayoutTests {
             }
             #expect(y <= metrics.contentHeight + 0.5, "a page never overflows its content box")
         }
-        // Nothing lost, nothing duplicated, order preserved.
         #expect(layout.pages.flatMap(\.self) == layout.blocks)
     }
 

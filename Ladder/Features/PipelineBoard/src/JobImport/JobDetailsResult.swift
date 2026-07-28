@@ -5,8 +5,6 @@ struct JobDetailsValidationFailure: Error, Equatable {
     var reason: String
 }
 
-/// The structured essentials of one job posting ([PIPEBOARD-35]): what the
-/// extraction must produce before an Application can be created from it.
 struct JobDetailsResult: Equatable, Sendable {
     var company: String
     var roleTitle: String

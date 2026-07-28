@@ -3,15 +3,10 @@ import SQLite3
 import SwiftData
 
 enum ProfileStoreError: Error, Equatable {
-    /// Exactly one Profile may exist.
     case profileAlreadyExists
     case noProfile
     case nameRequired
-    /// Resolution must stay unambiguous — one name, one Tag ([PROFILE-27]).
     case aliasAlreadyInUse
-    /// The manage sheet's rename is a recase; a real rename is a merge
-    /// question and waits for the pool manager ([PROFILE-30],
-    /// decisions/0013).
     case renameBeyondRecase
 }
 
@@ -20,13 +15,10 @@ enum ProfilePresentation: Equatable {
     case editor
 }
 
-/// All mutations save immediately — persistence is part of the slice's
-/// promise, not a detail.
 @MainActor
 @Observable
 final class ProfileStore {
-    /// Exposed so sibling slices can open their own contexts on the same
-    /// store.
+    /// Exposed so sibling slices can open their own contexts on the same store.
     let container: ModelContainer
     private let context: ModelContext
     private(set) var profile: Profile?
@@ -36,9 +28,6 @@ final class ProfileStore {
         self.context = ModelContext(container)
     }
 
-    /// The app's schema, one place — the current versioned schema plus the
-    /// migration plan (decisions/0011). `url` nil means the app's own store
-    /// file.
     static func container(at url: URL? = nil, inMemory: Bool = false) throws -> ModelContainer {
         let schema = Schema(versionedSchema: LadderSchemaV3.self)
         if inMemory {
@@ -50,15 +39,13 @@ final class ProfileStore {
 
         let storeURL = try url ?? defaultStoreURL()
         if storeStillCarriesTech(at: storeURL) {
-            // The one-way step gets a safety net first ([PROFILE-25]; root
-            // ADR 0004 is why a destructive migration never touches the only
-            // copy): the store file set is copied before anything opens it.
+            // Safety net before the one-way step: the store file set is
+            // copied before anything opens it ([PROFILE-25], ADR 0004).
             try backUpStoreFiles(at: storeURL)
-            // Staged migration only recognises the plan's checkpoints, but a
-            // committed phase-era store predates V1. A plain lightweight open
-            // against V1 brings any such store exactly to the V1 checkpoint
-            // (a store already at V1 passes through untouched), and the plan
-            // then runs its custom stage.
+            // Staged migration only recognises the plan's checkpoints; a
+            // lightweight open against V1 brings a pre-versioning store to
+            // that checkpoint (an already-V1 store passes through untouched)
+            // before the plan runs its custom stage.
             try bringStoreToV1(at: storeURL)
         }
         let configuration = ModelConfiguration(schema: schema, url: storeURL)
@@ -67,11 +54,10 @@ final class ProfileStore {
             configurations: [configuration])
     }
 
-    /// The V1→V2 discriminator, read without Core Data: a store whose
-    /// Achievement table still has the `tech` column (`ZTECH`) has not been
-    /// through the fold ([PROFILE-24]). A fresh path, or a migrated store,
-    /// answers false — reopening an already-migrated store never re-enters
-    /// the migration gate.
+    /// The migration-gate discriminator, read with raw SQLite so the check
+    /// itself never opens (and migrates) the store: an Achievement table
+    /// still carrying the `tech` column (`ZTECH`) has not been through the
+    /// fold.
     private static func storeStillCarriesTech(at url: URL) -> Bool {
         guard FileManager.default.fileExists(atPath: url.path) else { return false }
         var db: OpaquePointer?
@@ -89,9 +75,6 @@ final class ProfileStore {
         return String(cString: sql).contains("ZTECH")
     }
 
-    /// Copies the store file and its WAL/SHM sidecars to sibling
-    /// `.pre-migration-backup` paths — byte copies, taken before any open
-    /// touches the file ([PROFILE-25]).
     private static func backUpStoreFiles(at url: URL) throws {
         for suffix in ["", "-wal", "-shm"] {
             let source = URL(fileURLWithPath: url.path + suffix)
@@ -111,12 +94,10 @@ final class ProfileStore {
         _ = try ModelContainer(for: v1, configurations: [configuration])
     }
 
-    /// The app's own store file, never SwiftData's default. The default
-    /// (`~/Library/Application Support/default.store`) is shared by every
-    /// unsandboxed SwiftData process on the machine — including Apple's
-    /// icloudmailagent — and whichever opens it last migrates it to its own
-    /// schema, dropping the others' tables (ADR 0004; this destroyed the
-    /// store on 2026-07-22).
+    /// The app's own store file, never SwiftData's default: `default.store`
+    /// is shared by every unsandboxed SwiftData process on the machine, and
+    /// whichever opens it last migrates it to its own schema, dropping the
+    /// others' tables (ADR 0004; this destroyed the store on 2026-07-22).
     private static func defaultStoreURL() throws -> URL {
         let directory = URL.applicationSupportDirectory
             .appending(path: "Ladder", directoryHint: .isDirectory)
@@ -171,10 +152,6 @@ final class ProfileStore {
 
     // MARK: - Replace
 
-    /// The wholesale replace pathway (decisions/0008): creates the single
-    /// Profile from the replacement when none exists, rebuilds all content
-    /// when one does. All-or-nothing — never a merged hybrid; the Tag pool
-    /// is rebuilt from the replacement's skill names alone.
     func replaceProfile(with replacement: ProfileReplacement) throws {
         let name = replacement.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { throw ProfileStoreError.nameRequired }
@@ -185,9 +162,8 @@ final class ProfileStore {
             for education in existing.education { context.delete(education) }
             for project in existing.projects { context.delete(project) }
             for tag in existing.skills { context.delete(tag) }
-            // Belt and braces for the all-or-nothing promise: an achievement
-            // with no surviving role (e.g. an ex-project point left behind by
-            // the decisions/0009 migration) has no cascade to catch it.
+            // An achievement with no surviving role (e.g. an ex-project point
+            // left by the decisions/0009 migration) has no cascade to catch it.
             for orphan in try context.fetch(FetchDescriptor<Achievement>()) where orphan.role == nil {
                 context.delete(orphan)
             }
@@ -306,8 +282,6 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// The decisions/0010 rule: trimmed, and empty-after-trim is nil —
-    /// absent, never an empty string.
     static func normalizedPrintField(_ raw: String?) -> String? {
         guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
               !trimmed.isEmpty
@@ -358,8 +332,6 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// Achievement text is user-owned canon — this is the only place it
-    /// changes.
     func updateAchievementText(_ achievement: Achievement, to text: String) throws {
         let profile = try requireProfile()
         achievement.text = text
@@ -367,8 +339,6 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// The title is canon like the text (decisions/0010): edited only here,
-    /// never by tailoring. Empty after trimming persists as nil.
     func updateAchievementTitle(_ achievement: Achievement, to rawTitle: String?) throws {
         let profile = try requireProfile()
         achievement.title = Self.normalizedPrintField(rawTitle)
@@ -376,7 +346,6 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// Resequences the surviving siblings so sortIndex stays dense.
     func deleteAchievement(_ achievement: Achievement) throws {
         let profile = try requireProfile()
         let siblings = achievement.role?.orderedAchievements ?? []
@@ -402,14 +371,11 @@ final class ProfileStore {
         return tag
     }
 
-    /// The [PROFILE-8] rule, alias-aware since [PROFILE-28]: trimmed,
-    /// case-insensitive across primary names and Aliases alike; first casing
-    /// wins when minting.
     private func resolvePoolTag(named rawName: String, in profile: Profile) -> SkillTag {
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         if let existing = profile.skills.first(where: {
             $0.name.caseInsensitiveCompare(name) == .orderedSame
-                || $0.aliases.contains(name.lowercased())  // aliases are stored lowercase
+                || $0.aliases.contains(name.lowercased())
         }) {
             return existing
         }
@@ -418,17 +384,13 @@ final class ProfileStore {
         return tag
     }
 
-    /// Records a matching-only Alias on a Tag ([PROFILE-26]): trimmed,
-    /// lowercased, persisted. Empty after trimming is ignored. An alias
-    /// matching any primary name or alias already in the pool — the target
-    /// Tag's own included — is refused ([PROFILE-27]).
     func recordAlias(_ rawAlias: String, on tag: SkillTag) throws {
         let profile = try requireProfile()
         let alias = rawAlias.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !alias.isEmpty else { return }
         let collides = profile.skills.contains { poolTag in
             poolTag.name.caseInsensitiveCompare(alias) == .orderedSame
-                || poolTag.aliases.contains(alias)  // aliases are stored lowercase
+                || poolTag.aliases.contains(alias)
         }
         if collides { throw ProfileStoreError.aliasAlreadyInUse }
         tag.aliases.append(alias)
@@ -436,10 +398,8 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// Curates the primary name's display casing ([PROFILE-29]): the new
-    /// name must equal the old case-insensitively — anything more is a merge
-    /// question the deferred pool manager owns ([PROFILE-30]). Points and
-    /// Projects share the one record, so the recase propagates untouched.
+    /// A rename beyond a recase is a merge question the deferred pool
+    /// manager owns ([PROFILE-30]).
     func recaseTag(_ tag: SkillTag, to rawName: String) throws {
         let profile = try requireProfile()
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -451,8 +411,6 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// Severs the alias only ([PROFILE-40]) — the Tag, its casing, and its
-    /// links are untouched; the name simply stops resolving.
     func removeAlias(_ rawAlias: String, from tag: SkillTag) throws {
         let profile = try requireProfile()
         let alias = rawAlias.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -461,8 +419,6 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// Removes the link only — the Tag itself survives (no orphan pruning,
-    /// consistent with role deletion).
     func untag(_ achievement: Achievement, tag: SkillTag) throws {
         let profile = try requireProfile()
         achievement.skills.removeAll { $0 === tag }
@@ -558,8 +514,6 @@ final class ProfileStore {
         try context.save()
     }
 
-    /// Project tags draw from the same shared pool as achievement skills
-    /// ([PROFILE-21], decisions/0009).
     @discardableResult
     func tag(_ project: Project, skillNamed rawName: String) throws -> SkillTag {
         let profile = try requireProfile()
@@ -581,7 +535,6 @@ final class ProfileStore {
 
     // MARK: - Interests
 
-    /// Trimmed; empty and case-insensitive duplicates are ignored.
     func addInterest(_ rawName: String) throws {
         let profile = try requireProfile()
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)

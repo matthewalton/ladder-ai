@@ -8,14 +8,11 @@ enum JobImportError: Error, Equatable {
     case requestFailed
 }
 
-/// One import at a time: posting in — link or PDF — draft Application out
-/// ([PIPEBOARD-35..40]). Any failure creates nothing.
 @MainActor
 @Observable
 final class JobImportStore {
     enum Phase: Equatable {
         case idle
-        /// The repair request runs in this phase too — it never gets its own.
         case running
         case failed(JobImportError)
         case created(Application)
@@ -28,11 +25,8 @@ final class JobImportStore {
     private let bundle: Bundle
     private let makeIntelligence: (String) -> any IntelligenceService
 
-    /// Injected so import criteria run offline ([PIPEBOARD-26]'s stance).
     var fetchLinkData: (URL) async throws -> Data = PipelineStore.fetchOverHTTP
 
-    /// `makeIntelligence` is the seam tests and previews use to substitute a
-    /// fixture service.
     init(
         pipelineStore: PipelineStore,
         keyStore: any APIKeyStore,
@@ -48,8 +42,6 @@ final class JobImportStore {
     }
 
     func importPosting(fromLink url: URL) async {
-        // No key refuses before any fetch or service call ([PIPEBOARD-38],
-        // the [TAILOR-4] stance).
         guard let key = try? keyStore.readKey(), !key.isEmpty else {
             phase = .failed(.apiKeyRequired)
             return
@@ -64,8 +56,6 @@ final class JobImportStore {
         }
         let text: String
         do {
-            // A JobPosting structured-data block wins over whole-page text —
-            // it is the posting without the nav and footer ([PIPEBOARD-37]).
             text =
                 try JobPostingStructuredData.text(fromHTMLData: data)
                 ?? FileTextExtractor.extractText(fromFetchedData: data)
@@ -92,8 +82,6 @@ final class JobImportStore {
         await structureAndCreate(postingText: text, source: url.lastPathComponent, key: key)
     }
 
-    /// LLM structuring always, both doors (decisions/0008): the posting text
-    /// is the payload, the validated result is the Application.
     private func structureAndCreate(postingText: String, source: String, key: String) async {
         do {
             let prompt = try JobDetailsPrompt.text(from: bundle)
@@ -104,8 +92,6 @@ final class JobImportStore {
             do {
                 result = try JobDetailsResult(json: response)
             } catch let failure as JobDetailsValidationFailure {
-                // Exactly one repair attempt ([PIPEBOARD-39]); a repair
-                // response failing validation fails the import.
                 let repair = IntelligenceRequest(
                     prompt: prompt,
                     payload: Self.repairPayload(
@@ -127,8 +113,6 @@ final class JobImportStore {
             // Validation guarantees non-blank fields, so this is defensive.
             phase = .failed(.resultInvalid)
         } catch {
-            // A missing bundled prompt or a transport failure — not an
-            // invalid result.
             phase = .failed(.requestFailed)
         }
     }

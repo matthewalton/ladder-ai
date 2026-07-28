@@ -1,11 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// A thin wrapper around the export's markdown text — rendering happened
-/// before the save panel opened; the bytes written are the rendered string.
 struct MarkdownFileDocument: FileDocument {
-    /// `.md` resolves to the system's markdown type where one is declared;
-    /// plain text is the honest fallback.
     static let markdownType: UTType =
         UTType(filenameExtension: "md", conformingTo: .plainText) ?? .plainText
     static let readableContentTypes: [UTType] = [markdownType]

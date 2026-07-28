@@ -4,16 +4,10 @@ import Testing
 
 @testable import Ladder
 
-/// The scan-first flow (decisions/0014, 0015): scan → Match review →
-/// tailor run → review, one fixture service recording every request — the
-/// request order is the flow's proof. No network anywhere.
 @MainActor
 struct TailorFlowStoreTests {
-    /// A ProfileStore world the canned jd-scan and tailor-result fixtures
-    /// both speak to: three achievements (payload ids a1–a3; the tailor
-    /// fixture selects a1 and a3) tagged from the pool Swift, Kubernetes
-    /// (alias "k8s"), SwiftUI, Leadership — and an Application on the same
-    /// container carrying the JD.
+    /// A world the canned jd-scan and tailor-result fixtures both speak to;
+    /// the tailor fixture selects a1 and a3.
     private func makeWorld() throws -> (profileStore: ProfileStore, application: Application) {
         let profileStore = try ProfileStore(container: ProfileStore.container(inMemory: true))
         try profileStore.load()
@@ -149,8 +143,7 @@ struct TailorFlowStoreTests {
             requests.allSatisfy { $0.prompt == scanPrompt },
             "no tailor request was ever sent")
 
-        // Retry re-runs from the scan (decisions/0014) — the third canned
-        // response is valid, so the retried flow reaches the Match review.
+        // The third canned response is valid, so retry reaches the Match review.
         await flow.retry()
         #expect(flow.phase == .matchReview)
         #expect(await service.recordedRequests.count == 3, "retry scanned again")
@@ -255,7 +248,6 @@ struct TailorFlowStoreTests {
 
         await flow.confirmMatchReview()
 
-        // A fresh context proves the pool writes persisted.
         let fresh = ModelContext(profileStore.container)
         let profile = try #require(try fresh.fetch(FetchDescriptor<Profile>()).first)
         let poolNames = Set(profile.skills.map(\.name))
@@ -413,7 +405,6 @@ struct TailorFlowStoreTests {
 
     // MARK: - [TAILOR-52/53] the annotated, ordered payload
 
-    /// Drills to the payload's profile dictionary.
     private func decodedProfile(from json: String) throws -> [String: Any] {
         let root = try #require(
             try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
@@ -569,8 +560,6 @@ struct TailorFlowStoreTests {
         await flow.start()
         await flow.confirmMatchReview()
 
-        // Both signals present per point, side by side — the deterministic
-        // coverage and the judged relevance, never merged (root ADR 0005).
         let review = try #require(flow.review)
         let first = try #require(review.items.first)
         #expect(review.coveredMatchedTags(for: first.achievement) == ["Kubernetes", "Swift"])
@@ -618,9 +607,8 @@ struct TailorFlowStoreTests {
         let flow = makeFlow(profileStore: profileStore, application: application, service: service)
         await flow.start()
 
-        // The scan stored the Match; no suggestion is accepted, so
-        // confirmation writes nothing more — any change after this point
-        // could only come from the tailor run that follows it.
+        // No suggestion is accepted, so any change after confirmation could
+        // only come from the tailor run.
         let match = try #require(application.match)
         let matchedBefore = match.matchedTags.map(\.name).sorted()
         let gapsBefore = match.vocabularyGaps
@@ -636,8 +624,6 @@ struct TailorFlowStoreTests {
         }
         _ = review.outcome
 
-        // Root ADR 0005's hard line: judged relevance is per-point stats
-        // only — the vocabulary-level Match and its derived score never move.
         let after = try #require(application.match)
         #expect(after.matchedTags.map(\.name).sorted() == matchedBefore)
         #expect(after.vocabularyGaps == gapsBefore)

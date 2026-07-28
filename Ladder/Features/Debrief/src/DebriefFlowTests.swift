@@ -5,7 +5,7 @@ import Testing
 @testable import Ladder
 
 /// The canned debrief result loads from the app bundle's Fixtures folder
-/// (tests run in the app host). No network anywhere.
+/// (tests run in the app host).
 @MainActor
 struct DebriefFlowTests {
     /// The notes overview every fixture quote is grounded in — quotes in
@@ -36,7 +36,6 @@ struct DebriefFlowTests {
         return store
     }
 
-    /// An active Application with one technical Stage carrying attached notes.
     private func makeStage(
         in container: ModelContainer,
         notesOverview: String? = DebriefFlowTests.notesOverview
@@ -125,7 +124,6 @@ struct DebriefFlowTests {
         await store.generate(for: bare, generatedAt: Date(timeIntervalSince1970: 1_772_100_000))
         #expect(store.phase == .failed(.notesRequired))
 
-        // A whitespace-only notes overview counts as no notes.
         let blank = try makeStage(in: container, notesOverview: "  \n\t ")
         await store.generate(for: blank, generatedAt: Date(timeIntervalSince1970: 1_772_100_000))
         #expect(store.phase == .failed(.notesRequired))
@@ -230,7 +228,6 @@ struct DebriefFlowTests {
         }
     }
 
-    /// The valid fixture bytes, for invalid-then-valid repair sequences.
     private var validJSON: Data {
         get throws {
             try Data(contentsOf: #require(
@@ -240,7 +237,6 @@ struct DebriefFlowTests {
         }
     }
 
-    /// A schema-valid response whose theme quote appears nowhere in the notes.
     private var fabricatedQuoteResponse: Data {
         Data("""
         {
@@ -263,8 +259,6 @@ struct DebriefFlowTests {
 
         await store.generate(for: stage, generatedAt: Date(timeIntervalSince1970: 1_772_100_000))
 
-        // The fabricated quote fed the repair path and the valid repair
-        // produced the debrief.
         #expect(store.phase == .generated)
         let requests = await service.recordedRequests
         #expect(requests.count == 2, "an ungrounded claim is handled exactly like a schema mismatch")
@@ -293,7 +287,6 @@ struct DebriefFlowTests {
             linked.persistentModelID == outage.persistentModelID,
             "a relationship to the canon, never a copy")
 
-        // The link survives rewording — the whole point of decisions/0001.
         try profileStore.updateAchievementText(outage, to: "Commanded the payments-outage incident response")
         let fresh = ModelContext(container)
         let refetched = try #require(try fresh.fetch(FetchDescriptor<Debrief>()).first)
@@ -304,9 +297,6 @@ struct DebriefFlowTests {
 
     @Test("[DEBRIEF-12] a missed-ammo reference matching no listed achievement fails validation")
     func outOfRangeMissedAmmoFailsValidation() async throws {
-        // Index 7 matches nothing in a three-achievement payload; the fixture
-        // returns the same invalid result to the repair request, so the run
-        // ends failed.
         let outOfRange = Data("""
         {
           "questions": [
@@ -360,7 +350,6 @@ struct DebriefFlowTests {
         #expect(requests.count == 2, "an invalid-then-valid sequence records two requests, never three")
         let repair = try #require(requests.last)
         #expect(repair.prompt == requests.first?.prompt, "the repair keeps the versioned prompt")
-        // The original request content, the invalid response, and the failure.
         #expect(repair.payload.contains("failed validation"))
         #expect(repair.payload.contains(#""questions": "not an array""#))
         #expect(repair.payload.contains("Interviewer asked twice about Kubernetes experience"))
@@ -474,7 +463,6 @@ struct DebriefFlowTests {
         #expect(store.phase == .generated)
         let debrief = try #require(stage.debrief)
         #expect(debrief.orderedQuestions.count == 2, "the fenced result reads exactly as the bare one")
-        // The fence never costs the single repair request.
         #expect(await service.recordedRequests.count == 1)
     }
 }

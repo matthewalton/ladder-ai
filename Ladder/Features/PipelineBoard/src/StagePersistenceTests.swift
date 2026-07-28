@@ -37,7 +37,6 @@ struct StagePersistenceTests {
                 )
             )
             let review = try #require(tailorStore.review)
-            // Export attaches to the imported draft (decisions/0006).
             let pipelineStore = PipelineStore(container: profileStore.container)
             try pipelineStore.load()
             let draft = try pipelineStore.createApplication(
@@ -105,17 +104,14 @@ struct StagePersistenceTests {
         )
         #expect(application.cvSelectionRationale == "CI work maps directly to the JD's platform focus.")
         #expect(application.createdAt == Date(timeIntervalSince1970: 1_770_000_000))
-        // New fields land at their defaults — notes' declaration default is
-        // exactly what lightweight migration fills existing rows with.
+        // Lightweight migration fills new fields with their declaration defaults.
         #expect(application.notes == "")
         #expect(application.source == nil)
         #expect(application.appliedAt == nil, "backfill is load()'s job ([PIPEBOARD-8]), not the migration's")
         #expect(application.stages.isEmpty)
 
-        // The rest of the Phase 1 store survives alongside. The pool holds
-        // the original Tag plus the achievement's folded tech string —
-        // the [PROFILE-24] fold runs on any pre-migration store
-        // (Profile decisions/0011).
+        // The pool holds 2: the original Tag plus the achievement's folded
+        // tech string — the [PROFILE-24] fold runs on any pre-migration store.
         let profiles = try context.fetch(FetchDescriptor<Profile>())
         let profile = try #require(profiles.first)
         #expect(profile.name == "Matt Alton")
@@ -182,17 +178,14 @@ struct StagePersistenceTests {
         do {
             let container = try ProfileStore.container(at: url)
             let context = ModelContext(container)
-            // The Phase 1 shape: applied, no applied date.
             context.insert(
                 Application(
                     company: "Needs Backfill", roleTitle: "Engineer", jobDescription: "JD",
                     status: .applied, createdAt: createdAt))
-            // Already has one — never touched.
             context.insert(
                 Application(
                     company: "Keeps Own Date", roleTitle: "Engineer", jobDescription: "JD",
                     status: .applied, appliedAt: ownAppliedAt, createdAt: createdAt))
-            // Not applied — not the backfill's business.
             context.insert(
                 Application(
                     company: "Still Draft", roleTitle: "Engineer", jobDescription: "JD",

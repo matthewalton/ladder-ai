@@ -8,9 +8,8 @@ import Testing
 struct JourneyMigrationTests {
     @Test("[JOURNEY-4] a prep-era Application survives the schema migration with its Stages, debriefs and prep packs intact")
     func prepEraStoreSurvivesMigration() throws {
-        // The committed fixture store was written by the prep-era Phase 4
-        // schema — never regenerate it. Copy it (sidecars too) before
-        // opening: migration rewrites the file.
+        // Written by the prep-era schema — never regenerate it. Copy it
+        // (sidecars too) before opening: migration rewrites the file.
         let fixtureDirectory = try #require(
             Bundle.main.url(forResource: "Phase4PrepStore", withExtension: nil, subdirectory: "Fixtures"),
             "Phase4PrepStore is missing from the bundled Fixtures folder"
@@ -51,14 +50,12 @@ struct JourneyMigrationTests {
         #expect(screen.outcome == .passed)
         #expect(screen.heardBackAt == Date(timeIntervalSince1970: 1_771_500_000))
 
-        // The attached notes ride through untouched.
         let transcript = try #require(screen.transcript, "the attached notes survive")
         #expect(
             transcript.notesSummary
                 == "## Payments outage\n- Walked through the incident timeline\n- Interviewer asked about on-call rotation"
         )
 
-        // The debrief rides through with its links intact.
         let debrief = try #require(screen.debrief, "the debrief survives")
         #expect(debrief.generatedAt == Date(timeIntervalSince1970: 1_772_100_000))
         let question = try #require(debrief.orderedQuestions.first)
@@ -68,8 +65,6 @@ struct JourneyMigrationTests {
                 "Led incident response for the payments outage"
             ], "the missed-ammo relationship survives the migration")
 
-        // The prep pack rides through with its talking points and mapped
-        // achievements.
         let technical = try #require(stages.last)
         let pack = try #require(technical.prepPack, "the prep pack survives")
         #expect(pack.generatedAt == Date(timeIntervalSince1970: 1_772_300_000))
@@ -79,11 +74,9 @@ struct JourneyMigrationTests {
                 "Led incident response for the payments outage"
             ], "the talking-point relationship survives the migration")
 
-        // The new link lands nil on migrated rows.
         #expect(application.journeyNarrative == nil)
         #expect(try context.fetch(FetchDescriptor<JourneyNarrative>()).isEmpty)
 
-        // The rest of the prep-era store survives alongside.
         let profile = try #require(try context.fetch(FetchDescriptor<Profile>()).first)
         #expect(profile.name == "Matt Alton")
         #expect(profile.roles.count == 1)

@@ -4,16 +4,10 @@ import Testing
 
 @testable import Ladder
 
-/// The on-demand JD scan door (decisions/0009): the detail's Match section
-/// drives Tailor's scan and review machinery, ending back at the detail —
-/// never a tailor run. One fixture service records every request; no
-/// network anywhere.
 @MainActor
 struct MatchSectionTests {
     /// The same world the canned jd-scan fixture speaks to (the
-    /// TailorFlowStoreTests shape): a pool of Swift, Kubernetes (alias
-    /// "k8s"), SwiftUI, Leadership — and an Application on the same
-    /// container carrying the JD.
+    /// TailorFlowStoreTests shape).
     private func makeWorld() throws -> (profileStore: ProfileStore, application: Application) {
         let profileStore = try ProfileStore(container: ProfileStore.container(inMemory: true))
         try profileStore.load()
@@ -145,9 +139,6 @@ struct MatchSectionTests {
         #expect(
             !MatchSectionModel.offersMatchSection(jobDescription: "  \n\t "),
             "whitespace-only counts as empty")
-        // The gate is the JD alone (decisions/0009): unlike Create CV's
-        // helper ([PIPEBOARD-42]), this one takes no snapshot and no status
-        // — there is deliberately nothing else to pass.
     }
 
     // MARK: - [PIPEBOARD-46] the prompt state
@@ -185,8 +176,6 @@ struct MatchSectionTests {
             "the scan's own request stays the only one — no tailor prompt ever ([TAILOR-44]'s stance)")
         #expect(model.phase == .idle, "the flow ends back at the detail")
         #expect(model.matchReview == nil)
-        // The confirm write path is the shared seam ([TAILOR-48]/[TAILOR-49]
-        // own its semantics) — the summary already reflects it.
         let fresh = ModelContext(profileStore.container)
         let profile = try #require(try fresh.fetch(FetchDescriptor<Profile>()).first)
         #expect(
@@ -242,7 +231,7 @@ struct MatchSectionTests {
             "the scan and its single repair ([TAILOR-31]) — nothing more")
         #expect(application.match == nil, "a failed scan leaves the Match as it was ([TAILOR-32])")
 
-        // Retry re-runs the scan — the third canned response is valid.
+        // The third canned response is valid, so retry lands in the review.
         await model.retry()
         #expect(model.phase == .review, "retry lands in the Match review")
         #expect(await service.recordedRequests.count == 3, "retry scanned again")

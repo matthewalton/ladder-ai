@@ -1,14 +1,10 @@
 import Foundation
 
-/// `achievementsByID` (`a1…`) and `projectsByID` (`p1…`) are the maps result
-/// validation resolves selections against (decisions/0007).
 @MainActor
 struct TailorPayload {
     let json: String
     let achievementsByID: [String: Achievement]
     let projectsByID: [String: Project]
-    /// Tag names per payload id (`a…` and `p…`) — the vocabulary bound the
-    /// skill grouping validates against (decisions/0009).
     var tagNamesByID: [String: [String]] {
         var tags: [String: [String]] = [:]
         for (id, achievement) in achievementsByID {
@@ -32,11 +28,6 @@ struct TailorPayload {
         let matched = Set(matchedTagNames.map { $0.lowercased() })
         var byID: [String: Achievement] = [:]
 
-        // Within each role, achievements rank by descending matched-Tag
-        // overlap, ties keeping the Profile's own order ([TAILOR-53]); the
-        // roles themselves never reorder — chronology is the CV's spine.
-        // Ids are payload-positional, assigned after the ranking, stable
-        // within this one payload ([TAILOR-19]).
         var nextRolePointID = 1
         let payloadRoles = orderedRoles.map { role in
             PayloadRole(
@@ -55,8 +46,6 @@ struct TailorPayload {
             )
         }
 
-        // Projects serialize as whole units (decisions/0007) — the model
-        // includes or omits each by its `p…` id — ranked like achievements.
         var projectsByID: [String: Project] = [:]
         var nextProjectID = 1
         let payloadProjects = Self.ranked(profile.orderedProjects, by: matched) {
@@ -100,8 +89,6 @@ struct TailorPayload {
                 roleTitle: details.roleTitle,
                 description: details.jobDescription
             ),
-            // Encoded only when history qualifies — an absent budget is no
-            // key at all, never zeros ([TAILOR-57], [TAILOR-58]).
             budget: budget.map {
                 PayloadBudget(bullets: $0.bullets, projects: $0.projects, characters: $0.characters)
             }
@@ -122,18 +109,12 @@ struct TailorPayload {
         return formatter.string(from: date)
     }
 
-    /// The deterministic per-point annotation ([TAILOR-52]): the point's own
-    /// Tags intersected with the Match's matched Tags, computed in Swift —
-    /// never by the model. Always present; a zero-overlap point carries an
-    /// empty list and 0, so absence never reads as "not computed".
     @MainActor
     private static func overlap(of skills: [SkillTag], with matched: Set<String>) -> PayloadOverlap {
         let tags = skills.map(\.name).filter { matched.contains($0.lowercased()) }.sorted()
         return PayloadOverlap(count: tags.count, tags: tags)
     }
 
-    /// Descending overlap count, ties keeping the incoming order — an
-    /// explicitly stable sort ([TAILOR-53]).
     private static func ranked<Point>(
         _ points: [Point], by matched: Set<String>, overlap: (Point) -> PayloadOverlap
     ) -> [(Point, PayloadOverlap)] {
@@ -148,8 +129,6 @@ struct TailorPayload {
     }
 }
 
-/// The [TAILOR-52] annotation: the overlapping primary names, sorted, and
-/// their count.
 struct PayloadOverlap: Encodable {
     var count: Int
     var tags: [String]
@@ -161,7 +140,6 @@ private struct PayloadBody: Encodable {
     var budget: PayloadBudget?
 }
 
-/// The advisory aim-for line (decisions/0016) — [TAILOR-57].
 private struct PayloadBudget: Encodable {
     var bullets: Int
     var projects: Int

@@ -1,10 +1,8 @@
 import SwiftData
 import SwiftUI
 
-/// The read-only window showing an Application's full job description — the
-/// detail form only indicates it is set ([PIPEBOARD-31]). Read-only is
-/// deliberate (docs/adr/0003): a set JD changes by re-import, or remove and
-/// retype.
+/// Read-only is deliberate (docs/adr/0003): a set JD changes by re-import,
+/// or remove and retype.
 struct JobDescriptionWindow: View {
     static let windowID = "job-description"
 

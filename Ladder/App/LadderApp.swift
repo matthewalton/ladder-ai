@@ -11,7 +11,6 @@ struct LadderApp: App {
         do {
             store = try ProfileStore(container: ProfileStore.container())
             try store.load()
-            // load() runs the applied-date backfill.
             pipelineStore = PipelineStore(container: store.container)
             try pipelineStore.load()
         } catch {
@@ -38,16 +37,11 @@ struct LadderApp: App {
         Settings {
             SettingsView()
         }
-        // The notes window (TranscriptImport decisions/0007): the Stage only
-        // indicates attached notes; reading them opens here.
         WindowGroup(id: GranolaNotesWindow.windowID, for: PersistentIdentifier.self) { $transcriptID in
             if let transcriptID {
                 GranolaNotesWindow(container: store.container, transcriptID: transcriptID)
             }
         }
-        // The collapsed-content windows (docs/adr/0003): forms only indicate
-        // long text content is set; reading — or, for the typed-only fields,
-        // editing — opens here.
         WindowGroup(id: JobDescriptionWindow.windowID, for: PersistentIdentifier.self) { $applicationID in
             if let applicationID {
                 JobDescriptionWindow(store: pipelineStore, applicationID: applicationID)

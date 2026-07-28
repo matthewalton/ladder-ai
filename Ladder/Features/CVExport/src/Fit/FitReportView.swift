@@ -26,8 +26,6 @@ struct FitReportView: View {
                     }
                 }
                 if !report.trimmed.isEmpty {
-                    // Nothing the fit loop dropped is silently gone
-                    // ([CVEXPORT-28]).
                     Section("Trimmed to fit two pages") {
                         ForEach(report.trimmed, id: \.self) { item in
                             chip(item, icon: "scissors", tint: Color.inkSoft)

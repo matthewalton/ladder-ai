@@ -1,13 +1,9 @@
 import Foundation
 
-/// The full Stage chain in `sortIndex` order — every Stage appears,
-/// debriefed or not ([JOURNEY-8]); the JSON must be deterministic.
 @MainActor
 struct JourneyPayload {
     let json: String
 
-    /// Dates travel as ISO 8601 strings — readable in the prompt, stable
-    /// across runs.
     private static let dateFormatter = ISO8601DateFormatter()
 
     init(application: Application) throws {

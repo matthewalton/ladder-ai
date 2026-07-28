@@ -49,8 +49,6 @@ struct FitReportTests {
     func fitReportListsEachSelectionAsAStrength() {
         let report = FitReport(outcome: outcome)
 
-        // Reviewed text: the accepted rephrasing for the first, canonical
-        // for the second.
         #expect(report.strengths == [
             "Drove CI build times down across every product target",
             "Led incident response for the payments outage",

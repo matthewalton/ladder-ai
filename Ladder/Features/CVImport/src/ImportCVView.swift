@@ -5,11 +5,8 @@ struct ImportCVView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var store: ImportStore
     @State private var isPickingFile = false
-    /// A picked file waiting on the replace confirmation ([CVIMPORT-22]).
     @State private var pendingReplaceURL: URL?
 
-    /// Live by default; tests and previews inject fakes — production never
-    /// falls back to fixtures.
     init(
         profileStore: ProfileStore,
         keyStore: any APIKeyStore = KeychainAPIKeyStore(),
@@ -54,8 +51,6 @@ struct ImportCVView: View {
         }
         .frame(minWidth: 560, minHeight: 440)
         .background(Color.paper)
-        // The hard-refresh warning lands before the run starts — before
-        // extraction and before any paid service call (decisions/0007).
         .confirmationDialog(
             "Importing replaces your current Profile",
             isPresented: Binding(
@@ -279,8 +274,6 @@ struct ImportReviewView: View {
         }
     }
 
-    /// Identity always travels with the confirmation — shown, not toggled
-    /// ([CVIMPORT-23]).
     private var identitySection: some View {
         Section("Identity") {
             VStack(alignment: .leading, spacing: 2) {
@@ -443,7 +436,6 @@ private struct ReviewedAchievementRow: View {
     }
 }
 
-/// Rendering only — the SkillTag is created at replace time.
 private struct ReviewedTagChip: View {
     @Bindable var tag: ReviewedTag
 

@@ -5,9 +5,6 @@ import Testing
 
 @testable import Ladder
 
-/// The docs/adr/0003 collapsed-content pattern on the prep pack: indicator
-/// row, content window, and the confirmed remove. Row and dialog chrome are
-/// on the visual-verify list.
 @MainActor
 struct PrepPackCollapseTests {
     private func makeStageWithPack() throws -> (ModelContainer, Stage, PrepPack, Achievement) {
@@ -41,9 +38,7 @@ struct PrepPackCollapseTests {
     @Test("[PREP-20] a Stage's prep pack collapses to an indicator row in the Stage form")
     func prepPackCollapsesToIndicatorRow() throws {
         let (container, stage, _, _) = try makeStageWithPack()
-        // Render-smoke: the section renders in its collapsed state — the
-        // content moved behind Open, Regenerate and Export Markdown stay;
-        // row chrome is visual-verify.
+        // Render-smoke; the row chrome is on the visual-verify list.
         let section = ImageRenderer(
             content: Form {
                 PrepPackSection(

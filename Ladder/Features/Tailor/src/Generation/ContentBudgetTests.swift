@@ -3,7 +3,6 @@ import Testing
 
 @testable import Ladder
 
-/// The pure budget helper (decisions/0016) — no store, no service.
 struct ContentBudgetTests {
     private func record(
         bullets: Int, projects: Int, characters: Int,

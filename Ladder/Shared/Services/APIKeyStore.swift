@@ -1,7 +1,5 @@
 import Foundation
 
-/// The live implementation is the Keychain; the protocol exists so tests
-/// and previews fake it.
 protocol APIKeyStore: Sendable {
     func readKey() throws -> String?
     func save(key: String) throws

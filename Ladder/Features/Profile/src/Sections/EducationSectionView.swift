@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// EDUCATION — entries newest-first; fields are edited in the detail rail.
 struct EducationSectionView: View {
     @Bindable var store: ProfileStore
     let profile: Profile

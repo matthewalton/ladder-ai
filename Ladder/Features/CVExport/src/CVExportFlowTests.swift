@@ -6,9 +6,6 @@ import Testing
 
 @testable import Ladder
 
-/// A tailor run driven to review with the fixture intelligence service, then
-/// exported into a pre-created draft Application (decisions/0006). No test
-/// touches the network or the real save panel.
 @MainActor
 struct CVExportFlowTests {
     /// One role, three achievements — payload ids a1, a2, a3 in sort order.
@@ -27,8 +24,6 @@ struct CVExportFlowTests {
         return store
     }
 
-    /// The application the tailor would have started from ([PIPEBOARD-35]):
-    /// a draft with its details already on it.
     @discardableResult
     private func makeDraft(
         in container: ModelContainer,
@@ -46,7 +41,6 @@ struct CVExportFlowTests {
         return application
     }
 
-    /// Drives the tailor flow to review with the bundled fixture.
     private func makeReview(profileStore: ProfileStore) async throws -> TailorReview {
         let tailorStore = TailorStore(
             profileStore: profileStore,
@@ -225,8 +219,6 @@ struct CVExportFlowTests {
             into: draft.persistentModelID
         )
 
-        // The FileDocument wraps the export's bytes; tests never drive the
-        // real save dialog.
         let document = PDFFileDocument(data: export.pdfData)
         let written = try #require(document.fileWrapper().regularFileContents)
         #expect(written == export.application.cvSnapshot, "one render, two destinations — never a second render")
@@ -251,7 +243,6 @@ struct CVExportFlowTests {
 
     @Test("[CVEXPORT-14] an export leaves the persisted Profile unchanged")
     func exportLeavesPersistedProfileUnchanged() async throws {
-        // On-disk store, reopened after the flow.
         let url = temporaryStoreURL()
         defer { removeStore(at: url) }
 
@@ -287,8 +278,6 @@ struct CVExportFlowTests {
             "Led incident response for the payments outage",
         ], "reviewed text never lands back on the canon")
         #expect(profile.skills.isEmpty)
-        // The only persisted change is on the Application the export
-        // attached to.
         let context = ModelContext(reopened.container)
         #expect(try context.fetch(FetchDescriptor<Application>()).count == 1)
     }

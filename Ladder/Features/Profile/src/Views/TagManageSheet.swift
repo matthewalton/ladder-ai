@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// The tag manage sheet (CONTEXT.md; decisions/0013): curates the one shared
-/// Tag a chip names — recase the primary name, record or remove Aliases.
-/// Never a rename, never a merge — those wait for the pool manager view.
 struct TagManageSheet: View {
     @Bindable var store: ProfileStore
     let tag: SkillTag

@@ -1,9 +1,6 @@
 import Foundation
 
-/// The known-interview escape (decisions/0008): the human reviewing a check
-/// knows the interview they're looking for, so typing beats scrolling.
 enum OtherEventsFilter {
-    /// Case-insensitive title containment; a blank filter keeps everything.
     static func filtered(
         _ events: [CalendarEvent], titleContains query: String
     ) -> [CalendarEvent] {

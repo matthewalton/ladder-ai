@@ -1,9 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The debrief section of the Stage form: Generate sits beside the notes
-/// attach it depends on, and the generated debrief renders below. Generation
-/// is an explicit user action — the only place the debrief API is called.
 struct DebriefSection: View {
     var stage: Stage
 
@@ -45,8 +42,6 @@ struct DebriefSection: View {
     var body: some View {
         Section("Debrief") {
             if let debrief = stage.debrief {
-                // The content collapses to an indicator row ([DEBRIEF-18],
-                // docs/adr/0003); reading it opens the debrief window.
                 IndicatorRow(
                     label: "Debrief generated — \(debrief.generatedAt.formatted(date: .abbreviated, time: .omitted))",
                     icon: "text.badge.checkmark",
@@ -130,8 +125,6 @@ struct DebriefSection: View {
     }
 }
 
-/// Renders a persisted debrief: question entries with quality and missed
-/// ammo, then themes, signals, and drills — every claim beside its quote.
 struct DebriefContentView: View {
     var debrief: Debrief
 

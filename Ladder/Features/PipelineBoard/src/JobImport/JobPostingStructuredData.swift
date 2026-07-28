@@ -1,12 +1,9 @@
 import Foundation
 
-/// The schema.org JobPosting block ATS pages embed for search engines
-/// ([PIPEBOARD-28]): the posting without the page chrome — and on
+/// The schema.org JobPosting block ATS pages embed for search engines — on
 /// Ashby-class JS shells, the only place the posting exists at all.
 @MainActor
 enum JobPostingStructuredData {
-    /// Nil when the page embeds no readable JobPosting — the caller falls
-    /// back to whole-page extraction.
     static func text(fromHTMLData data: Data) -> String? {
         guard
             let html = String(data: data, encoding: .utf8)
@@ -48,8 +45,6 @@ enum JobPostingStructuredData {
         }
     }
 
-    /// A posting may sit at the top level, inside an array, or under
-    /// `@graph`.
     private static func jobPosting(in object: Any) -> [String: Any]? {
         if let dictionary = object as? [String: Any] {
             if isJobPosting(dictionary) { return dictionary }

@@ -8,8 +8,6 @@ actor FixtureIntelligenceService: IntelligenceService {
         responses = [fixtureJSON]
     }
 
-    /// Responses are returned in order, one per request; the last repeats
-    /// once the sequence is exhausted.
     init(returning sequence: [Data]) {
         precondition(!sequence.isEmpty, "the fixture needs at least one response")
         responses = sequence

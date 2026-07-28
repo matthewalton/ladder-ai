@@ -8,9 +8,8 @@ import Testing
 struct PrepPackMigrationTests {
     @Test("[PREP-4] a debrief-era Application survives the schema migration with its Stages and debriefs intact")
     func debriefEraStoreSurvivesMigration() throws {
-        // The committed fixture store was written by the debrief-era Phase 4
-        // schema — never regenerate it. Copy it (sidecars too) before
-        // opening: migration rewrites the file.
+        // Written by the debrief-era schema — never regenerate it. Copy it
+        // (sidecars too) before opening: migration rewrites the file.
         let fixtureDirectory = try #require(
             Bundle.main.url(forResource: "Phase4Store", withExtension: nil, subdirectory: "Fixtures"),
             "Phase4Store is missing from the bundled Fixtures folder"
@@ -55,7 +54,6 @@ struct PrepPackMigrationTests {
         #expect(screen.outcome == .passed)
         #expect(screen.heardBackAt == Date(timeIntervalSince1970: 1_771_500_000))
 
-        // The attached notes ride through untouched.
         let transcript = try #require(screen.transcript, "the attached notes survive")
         #expect(transcript.recordedAt == Date(timeIntervalSince1970: 1_772_000_000))
         #expect(
@@ -63,7 +61,6 @@ struct PrepPackMigrationTests {
                 == "## Payments outage\n- Walked through the incident timeline\n- Interviewer asked about on-call rotation"
         )
 
-        // The debrief-era debrief rides through with its links intact.
         let debrief = try #require(screen.debrief, "the debrief survives")
         #expect(debrief.generatedAt == Date(timeIntervalSince1970: 1_772_100_000))
         let question = try #require(debrief.orderedQuestions.first)
@@ -74,14 +71,12 @@ struct PrepPackMigrationTests {
                 "Led incident response for the payments outage"
             ], "the missed-ammo relationship survives the migration")
 
-        // The new link lands nil on migrated rows.
         let technical = try #require(stages.last)
         #expect(screen.prepPack == nil)
         #expect(technical.prepPack == nil)
         #expect(try context.fetch(FetchDescriptor<PrepPack>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<PrepTalkingPoint>()).isEmpty)
 
-        // The rest of the debrief-era store survives alongside.
         let profile = try #require(try context.fetch(FetchDescriptor<Profile>()).first)
         #expect(profile.name == "Matt Alton")
         #expect(profile.roles.count == 1)

@@ -1,9 +1,6 @@
 import Foundation
 import SwiftData
 
-/// Attach / replace / remove Granola notes on a Stage — the one-step flow
-/// (decisions/0007). Fetching is behind the `GranolaShareFetching` seam;
-/// only `attachNotes` and `removeNotes` write.
 @MainActor
 @Observable
 final class GranolaNotesStore {
@@ -15,9 +12,6 @@ final class GranolaNotesStore {
         self.fetcher = fetcher
     }
 
-    /// Validates, fetches, and attaches in one step. Replaces any existing
-    /// notes ([TRANSCRIPT-29]); throws before any request when the text is
-    /// not a share link ([TRANSCRIPT-31]).
     @discardableResult
     func attachNotes(fromLinkText text: String, to stage: Stage, importedAt: Date) async throws -> Transcript {
         guard let url = GranolaSharePayload.shareLink(in: text) else {
@@ -38,8 +32,6 @@ final class GranolaNotesStore {
             context.delete(existing)
         }
         let transcript = Transcript(
-            // The call's moment: scheduled date, else the document's created
-            // date, else the explicit import moment ([TRANSCRIPT-20/25]).
             recordedAt: stage.scheduledAt ?? document.createdAt ?? importedAt,
             notesSummary: notes
         )
@@ -49,7 +41,6 @@ final class GranolaNotesStore {
         return transcript
     }
 
-    /// Deletes the notes record and clears the link ([TRANSCRIPT-30]).
     func removeNotes(from stage: Stage) throws {
         guard let transcript = stage.transcript else { return }
         let context = stage.modelContext ?? self.context

@@ -5,8 +5,7 @@ import Testing
 @testable import Ladder
 
 /// Asserted by extracting text from the PDF with PDFKit — the extraction
-/// succeeding at all is the ATS-parseable guarantee. Reviews are constructed
-/// directly from a TailorResult; no service, no network.
+/// succeeding at all is the ATS-parseable guarantee.
 @MainActor
 struct CVRenderTests {
     /// Two roles, newest-first: Acme (current; "Cut CI…" = a1, "Shipped the
@@ -85,7 +84,6 @@ struct CVRenderTests {
 
         let summary = "Senior engineer with platform-scale CI performance and analytics delivery behind them."
         #expect(text.contains(summary), "the summary renders verbatim")
-        // Under the identity header, before the first role.
         let summaryIndex = try #require(text.range(of: summary)?.lowerBound)
         let nameIndex = try #require(text.range(of: "Alex Climber")?.lowerBound)
         let firstRoleIndex = try #require(text.range(of: "Senior Engineer, Acme")?.lowerBound)
@@ -118,7 +116,6 @@ struct CVRenderTests {
         #expect(text.contains("Sep 2020 - Present"), "a current role renders its end as Present")
         #expect(text.contains("Engineer, Globex"))
         #expect(text.contains("Jun 2015 - Feb 2018"), "month-resolution dates")
-        // Newest-first.
         let acme = try #require(text.range(of: "Senior Engineer, Acme"))
         let globex = try #require(text.range(of: "Engineer, Globex"))
         #expect(acme.lowerBound < globex.lowerBound)
@@ -127,7 +124,6 @@ struct CVRenderTests {
     @Test("[CVEXPORT-3] a Role with no selected achievements still appears in the rendered CV")
     func roleWithoutSelectionsStillAppears() throws {
         let profileStore = try makeProfileStore()
-        // Select only a1 (Acme) — Globex contributes nothing.
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
         let result = try TailorResult(
@@ -159,7 +155,6 @@ struct CVRenderTests {
         let profileStore = try makeProfileStore()
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
-        // Globex keeps nil for both — no subline at all, never an empty line.
         try profileStore.updateRole(
             acme, company: acme.company, title: acme.title, start: acme.start, end: acme.end,
             location: "London, UK", industry: "Fintech"
@@ -200,7 +195,6 @@ struct CVRenderTests {
         let profileStore = try makeProfileStore()
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
-        // a1 gets a canonical title; a3 stays titleless and renders plain.
         try profileStore.updateAchievementTitle(
             acme.orderedAchievements[0], to: "Rebuilt the CI pipeline"
         )
@@ -226,7 +220,6 @@ struct CVRenderTests {
 
         let text = try extractedText(profileStore: profileStore, review: review)
 
-        // Accepted rephrasings land between their role's header and the next.
         let acmeHeader = try #require(text.range(of: "Senior Engineer, Acme"))
         let acmeBullet = try #require(text.range(of: "Drove CI build times down across every product target"))
         let globexHeader = try #require(text.range(of: "Engineer, Globex"))
@@ -268,9 +261,6 @@ struct CVRenderTests {
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
         let globex = try #require(profile.roles.first(where: { $0.company == "Globex" }))
-        // CI/CD and Swift tag selected points; Kubernetes tags a2, outside
-        // the selection — the decisions/0004 vocabulary bound survives the
-        // grouping, so it must not appear.
         try profileStore.tag(acme.orderedAchievements[0], skillNamed: "CI/CD")
         try profileStore.tag(acme.orderedAchievements[0], skillNamed: "Swift")
         try profileStore.tag(acme.orderedAchievements[1], skillNamed: "Kubernetes")
@@ -339,7 +329,6 @@ struct CVRenderTests {
         #expect(text.contains("BSc Computer Science, University of Example"))
         #expect(text.contains("First-class honours"))
         #expect(text.contains("ML Specialisation, Open Courseware"))
-        // Newest-first: the in-progress specialisation precedes the degree.
         let course = try #require(text.range(of: "ML Specialisation, Open Courseware"))
         let degree = try #require(text.range(of: "BSc Computer Science, University of Example"))
         #expect(course.lowerBound < degree.lowerBound)
@@ -417,7 +406,6 @@ struct CVRenderTests {
         )
     }
 
-    /// The `/BaseFont` names of every font resource in every page.
     private static func embeddedFontNames(in pdfData: Data) -> Set<String>? {
         guard
             let provider = CGDataProvider(data: pdfData as CFData),
@@ -494,7 +482,6 @@ struct CVRenderTests {
 
     @Test("[CVEXPORT-7] a CV too long for one page paginates into A4 pages")
     func longCVPaginatesIntoA4Pages() throws {
-        // Forty selected achievements overflow a single A4 page.
         let store = try ProfileStore(container: ProfileStore.container(inMemory: true))
         try store.load()
         try store.createProfile(name: "Alex Climber", headline: "Staff Engineer")
@@ -542,7 +529,6 @@ struct CVRenderTests {
             #expect(abs(bounds.width - 595.2) <= 1)
             #expect(abs(bounds.height - 841.8) <= 1)
         }
-        // The tail of the content survives pagination.
         let text = try #require(pdf.string)
         #expect(text.contains("Rephrased achievement 40"))
     }

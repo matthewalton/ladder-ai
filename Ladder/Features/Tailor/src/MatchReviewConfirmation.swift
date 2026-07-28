@@ -1,20 +1,10 @@
 import Foundation
 import SwiftData
 
-/// The Match review confirmation door (root ADR 0005; decisions/0015),
-/// shared by every surface that presents the review — the tailor flow and
+/// Shared by every surface that presents the review — the tailor flow and
 /// the application detail's Match section (PipelineBoard decisions/0009).
-/// Each accepted suggestion applies independently, in the Application's own
-/// context so the pool and the Match stay one set of instances. Mint and
-/// alias resolve alias-aware at confirm time, where the view of the pool is
-/// never stale — the [PROFILE-34]/[PROFILE-35] semantics; a colliding alias
-/// is refused like a manual one ([PROFILE-27]) and noted. A resolving
-/// suggestion then moves its gap into the matched Tags ([TAILOR-49]).
 @MainActor
 enum MatchReviewConfirmation {
-    /// Applies the review's accepted suggestions and returns the
-    /// per-suggestion refusal notes — a colliding alias is skipped, never a
-    /// reason to derail the rest ([TAILOR-48]).
     static func apply(_ review: MatchReviewModel, to application: Application) throws -> [String] {
         var notes: [String] = []
         guard
@@ -60,8 +50,6 @@ enum MatchReviewConfirmation {
                 landed = target
             }
 
-            // decisions/0015: the gap leaves, the resolved Tag joins — one
-            // reference, and `scannedAt` stays where the scan put it.
             if let landed, let gap = item.proposal.resolves {
                 match.vocabularyGaps.removeAll { $0 == gap }
                 if !match.matchedTags.contains(where: { $0 === landed }) {
@@ -73,8 +61,6 @@ enum MatchReviewConfirmation {
         return notes
     }
 
-    /// Case-insensitive across primary names and Aliases — the pool's one
-    /// resolution rule (root `CONTEXT.md`: Alias).
     private static func resolve(_ rawName: String, in pool: [SkillTag]) -> SkillTag? {
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         return pool.first {

@@ -1,8 +1,5 @@
 import Foundation
 
-/// Renders the whole pack as one markdown file — offline string assembly,
-/// no service call ([PREP-19]). Sections with nothing to say are omitted
-/// rather than left as empty headings.
 enum PrepPackMarkdown {
     @MainActor
     static func render(_ pack: PrepPack, for stage: Stage) -> String {

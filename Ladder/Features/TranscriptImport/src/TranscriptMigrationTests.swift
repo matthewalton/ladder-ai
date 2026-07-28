@@ -57,7 +57,6 @@ struct TranscriptMigrationTests {
         #expect(screen.transcript == nil, "the new link lands nil on migrated rows")
         #expect(stages.last?.transcript == nil)
 
-        // The rest of the Phase 2 store survives alongside.
         let profile = try #require(try context.fetch(FetchDescriptor<Profile>()).first)
         #expect(profile.name == "Matt Alton")
         #expect(profile.roles.count == 1)

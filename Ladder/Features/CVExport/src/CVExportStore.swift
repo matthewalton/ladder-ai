@@ -3,13 +3,9 @@ import SwiftData
 
 enum CVExportError: Error, Equatable {
     case applicationMissing
-    /// A fit pass failed after its single repair (Tailor decisions/0010) —
-    /// the reason travels so the export surfaces it, never a silent
-    /// fallback.
     case fitFailed(String)
 }
 
-/// One render serves both destinations — snapshot and save panel.
 @MainActor
 @Observable
 final class CVExportStore {
@@ -27,12 +23,8 @@ final class CVExportStore {
         context = ModelContext(container)
     }
 
-    /// The Profile is read, never written; export attaches to the
-    /// application the tailor ran for (decisions/0006) — never a fresh row.
     /// By ID, fetched in this store's own context: mutating an instance from
-    /// another context would not save here. The fit loop (decisions/0008)
-    /// runs before the render — `fitPasses` is only called when compaction
-    /// alone cannot land two pages ([CVEXPORT-26/27]).
+    /// another context would not save here.
     @discardableResult
     func export(
         profile: Profile,
@@ -59,8 +51,6 @@ final class CVExportStore {
         application.cvSnapshot = pdfData
         application.cvSelectionRationale = outcome.rationale
         application.fitMetrics = fitOutcome.fitMetrics
-        // Exporting is the act of applying ([CVEXPORT-10]); an existing
-        // status past draft — and an existing date — are never touched.
         if application.status == .draft {
             application.status = .applied
             if application.appliedAt == nil {
@@ -76,15 +66,10 @@ final class CVExportStore {
     }
 }
 
-/// Strengths derived from the selection step, gaps and rationale verbatim
-/// from the reviewed outcome — nothing re-derived from the JD.
 struct FitReport: Equatable {
-    /// One strength per selected achievement, in reviewed text.
     var strengths: [String]
     var gaps: [String]
     var rationale: String
-    /// Items the fit loop trimmed to land two pages ([CVEXPORT-28]) —
-    /// nothing is silently dropped. Empty when nothing was.
     var trimmed: [String]
 
     init(outcome: ReviewedOutcome, trimmed: [String] = []) {

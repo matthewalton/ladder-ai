@@ -1,9 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The calendar section (decisions/0009): rendered inside the Applications
-/// sidebar beneath the tracked-applications list. Renders nothing at all
-/// when no proposal is pending.
 struct CalendarSidebarSection: View {
     @Bindable var store: CalendarSyncStore
 
@@ -18,9 +15,6 @@ struct CalendarSidebarSection: View {
     }
 }
 
-/// Compact for the narrow sidebar: clicking opens the confirmation sheet;
-/// dismissal is the hover ✕ or the context menu, both through
-/// `CalendarSyncStore.dismiss`.
 private struct CalendarSidebarRow: View {
     @Bindable var store: CalendarSyncStore
     let row: CalendarSectionRow

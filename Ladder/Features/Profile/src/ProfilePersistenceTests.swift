@@ -4,8 +4,6 @@ import Testing
 
 @testable import Ladder
 
-/// Each test simulates a relaunch by closing one container and reopening a
-/// new one against the same store URL.
 @MainActor
 struct ProfilePersistenceTests {
     @Test("[PROFILE-1] a role added to the Profile is still present after the app relaunches")
@@ -47,7 +45,6 @@ struct ProfilePersistenceTests {
             try store.addAchievement(to: role, text: "Second")
             try store.addAchievement(to: role, text: "Third")
 
-            // First moves to last; every intermediate index shifts by one.
             try store.moveAchievements(in: role, from: IndexSet(integer: 0), to: 3)
             #expect(role.orderedAchievements.map(\.text) == ["Second", "Third", "First"])
         }
@@ -106,7 +103,7 @@ struct ProfilePersistenceTests {
             context.insert(profile)
 
             let swift = SkillTag(name: "Swift")
-            swift.aliases = ["swiftlang"]  // one Tag carries an Alias ([PROFILE-26])
+            swift.aliases = ["swiftlang"]
             let swiftData = SkillTag(name: "SwiftData")
             profile.skills = [swift, swiftData]
 
@@ -276,7 +273,7 @@ struct ProfilePersistenceTests {
             )
             let achievement = try store.addAchievement(to: role, text: "Old achievement")
             let oldTag = try store.tag(achievement, skillNamed: "OldSkill")
-            oldTag.aliases = ["legacy"]  // wiped with the pool — the replace is wholesale
+            oldTag.aliases = ["legacy"]
             try store.addEducation(
                 institution: "Old University", qualification: "Old BSc",
                 start: Date(timeIntervalSince1970: 900_000_000), end: nil
@@ -371,8 +368,6 @@ struct ProfilePersistenceTests {
 
         #expect(profile.interests == ["Cycling", "Running"], "interests dedupe per [PROFILE-14]")
 
-        // All-or-nothing: nothing of the old content survives anywhere in the
-        // store — the Tag pool is rebuilt from the replacement alone.
         let context = ModelContext(reopened.container)
         #expect(try context.fetchCount(FetchDescriptor<Profile>()) == 1)
         #expect(try context.fetchCount(FetchDescriptor<Role>()) == 1)

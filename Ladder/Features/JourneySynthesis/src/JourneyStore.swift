@@ -1,16 +1,12 @@
 import Foundation
 import SwiftData
 
-/// One journey run at a time; a valid result is persisted onto the
-/// Application, replacing any existing narrative ([JOURNEY-12]).
 @MainActor
 @Observable
 final class JourneyStore {
     enum Phase: Equatable {
         case idle
-        /// The repair request runs in this phase too — it never gets its own.
         case running
-        /// The validated narrative is persisted on the Application.
         case generated
         case failed(JourneyError)
     }
@@ -22,9 +18,6 @@ final class JourneyStore {
     private let bundle: Bundle
     private let makeIntelligence: (String) -> any IntelligenceService
 
-    /// `makeIntelligence` is the seam tests and previews use to substitute a
-    /// fixture service. No ProfileStore: the journey payload reads only the
-    /// Application and its Stage chain ([JOURNEY-8]).
     init(
         container: ModelContainer,
         keyStore: any APIKeyStore,
@@ -39,11 +32,7 @@ final class JourneyStore {
         self.makeIntelligence = makeIntelligence
     }
 
-    /// Generation is an explicit user action — nothing calls this
-    /// automatically, and reaching `.offer` never generates by itself.
-    /// `generatedAt` is passed in; tests never read the clock.
     func generate(for application: Application, generatedAt: Date = .now) async {
-        // The offer-time gate, store side ([JOURNEY-5]).
         guard application.status == .offer else {
             phase = .failed(.offerRequired)
             return
@@ -63,8 +52,6 @@ final class JourneyStore {
             do {
                 result = try JourneyResult(json: response)
             } catch let failure as JourneyValidationFailure {
-                // Exactly one repair attempt; a repair response failing
-                // validation fails the run ([JOURNEY-10], [JOURNEY-11]).
                 let repair = IntelligenceRequest(
                     prompt: prompt,
                     payload: Self.repairPayload(
@@ -79,15 +66,10 @@ final class JourneyStore {
         } catch is JourneyValidationFailure {
             phase = .failed(.resultInvalid)
         } catch {
-            // A missing bundled prompt or a transport failure — not an
-            // invalid result.
             phase = .failed(.requestFailed)
         }
     }
 
-    /// Writes the validated result onto the Application, replacing any
-    /// existing narrative — the old record is deleted, never orphaned
-    /// ([JOURNEY-12]).
     private func persist(
         _ result: JourneyResult, on application: Application, generatedAt: Date
     ) throws {
@@ -122,10 +104,6 @@ final class JourneyStore {
         phase = .idle
     }
 
-    /// The confirmed remove ([JOURNEY-16]): deletes the narrative; the
-    /// Application and its Stages survive untouched. The confirmation dialog
-    /// is the view's; the store just deletes. An Application without a
-    /// narrative is a no-op.
     func removeNarrative(from application: Application) throws {
         guard let narrative = application.journeyNarrative else { return }
         let context = application.modelContext ?? self.context

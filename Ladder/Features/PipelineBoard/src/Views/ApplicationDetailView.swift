@@ -10,10 +10,7 @@ struct ApplicationDetailView: View {
     /// Injected as a closure so this slice never depends on a calendar-sync
     /// type; nil renders no button.
     var onLookBack: (() -> Void)?
-    /// The pause-at-the-application step ([PIPEBOARD-42]): presents the
-    /// tailor for this application. Injected as a closure — the same
-    /// no-cross-slice-dependency stance as `onLookBack`; nil renders no
-    /// button.
+    /// Same no-cross-slice-dependency stance as `onLookBack`.
     var onCreateCV: (() -> Void)?
 
     @State private var source: String
@@ -27,8 +24,8 @@ struct ApplicationDetailView: View {
     @State private var jdLinkText = ""
     @State private var pendingJDImport: JDImportSource?
     @State private var jdImportFailureMessage: String?
-    // The collapse decision is made at appearance ([PIPEBOARD-29/30]) —
-    // these never flip mid-typing, only on remove.
+    // The collapse decision is made at appearance — these never flip
+    // mid-typing, only on remove.
     @State private var showsNotesIndicator: Bool
     @State private var showsJDIndicator: Bool
     @State private var pendingRemoval: LongTextRemoval?
@@ -186,9 +183,8 @@ struct ApplicationDetailView: View {
             }
             .listRowBackground(Color.paperRaised)
 
-            // The Match section (decisions/0009): gated on the JD alone
-            // ([PIPEBOARD-45]); keyed so a selection switch never carries a
-            // stale scan flow across applications.
+            // Keyed so a selection switch never carries a stale scan flow
+            // across applications.
             if MatchSectionModel.offersMatchSection(jobDescription: application.jobDescription) {
                 MatchSection(application: application)
                     .id(application.persistentModelID)
@@ -237,8 +233,7 @@ struct ApplicationDetailView: View {
             }
             .listRowBackground(Color.paperRaised)
 
-            // Renders only at offer or once a narrative exists — the
-            // journey-synthesis slice owns the section ([JOURNEY-14/15]).
+            // The section gates itself — journey-synthesis owns when it renders.
             JourneySection(container: store.container, application: application)
 
             if saveFailed {
@@ -313,8 +308,6 @@ struct ApplicationDetailView: View {
         }
     }
 
-    /// The confirmed remove ([PIPEBOARD-33]): clear through the store, then
-    /// hand the field back to its inline editor ([PIPEBOARD-30]).
     private func performRemoval(_ removal: LongTextRemoval) {
         do {
             switch removal {
@@ -332,16 +325,11 @@ struct ApplicationDetailView: View {
         }
     }
 
-    /// Empty (or whitespace-only) job descriptions have nothing worth
-    /// protecting — the import lands without a confirmation step
-    /// ([PIPEBOARD-25]).
     static func jdImportNeedsConfirmation(existing: String) -> Bool {
         !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// Create CV is offered only while no CV exists — the snapshot is
-    /// written once ([CVEXPORT-1]) — and there is a job description to
-    /// tailor against ([PIPEBOARD-42]; [PIPEBOARD-33]'s remove can empty it).
+    /// The snapshot is written once — no re-tailor offer once a CV exists.
     static func offersCreateCV(cvSnapshot: Data?, jobDescription: String) -> Bool {
         cvSnapshot == nil
             && !jobDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

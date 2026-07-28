@@ -1,7 +1,5 @@
 import SwiftUI
 
-// Faint topographic contour lines, used only in the journey celebration view
-// and the empty states — texture as reward, not wallpaper.
 struct ContourBackground: View {
     var opacity: Double = 0.4
 

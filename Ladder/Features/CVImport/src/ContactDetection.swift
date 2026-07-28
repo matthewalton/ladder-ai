@@ -1,20 +1,13 @@
 import Foundation
 import PDFKit
 
-/// Deterministic contact detection (decisions/0009): `NSDataDetector` over
-/// the extracted CV text plus the PDF's link annotations. Detected values
-/// override the model's proposal ([CVIMPORT-29]); detection fills, never
-/// blanks ([CVIMPORT-30]). Location is never detected.
 struct DetectedContact: Equatable, Sendable {
     var email: String?
     var phone: String?
     var link: String?
 
-    /// First match per field wins — a CV header leads with the owner's own
-    /// details. Email and phone are detected anywhere in the text; a URL
-    /// counts as the personal link only when it sits in the header region,
-    /// so a per-project link further down never masquerades as the
-    /// portfolio URL (the same carve-out the prompt gives the model).
+    /// A URL counts as the personal link only when it sits in the header
+    /// region — the same carve-out the prompt gives the model.
     static func detect(in text: String, fileURL: URL? = nil) -> DetectedContact {
         var detected = DetectedContact()
         let types: NSTextCheckingResult.CheckingType = [.link, .phoneNumber]
@@ -47,9 +40,8 @@ struct DetectedContact: Equatable, Sendable {
         return detected
     }
 
-    /// Fills each still-empty field from the PDF's link annotations — URLs
-    /// (and mailto/tel) that a template renders as icons never reach the
-    /// text layer.
+    /// URLs (and mailto/tel) that a template renders as icons never reach
+    /// the text layer.
     private mutating func absorb(annotationsOf fileURL: URL) {
         guard let document = PDFDocument(url: fileURL) else { return }
         for pageIndex in 0..<document.pageCount {
@@ -68,8 +60,6 @@ struct DetectedContact: Equatable, Sendable {
         }
     }
 
-    /// The header region: the first five lines. CV headers put the owner's
-    /// contact up top; below it, URLs belong to projects and employers.
     private static func headerRegionEnd(of text: String) -> String.Index {
         var end = text.startIndex
         var lines = 0
@@ -80,9 +70,6 @@ struct DetectedContact: Equatable, Sendable {
         return end
     }
 
-    /// Detection fills, never blanks: each detected value replaces the
-    /// model's; an undetected field keeps the proposal's value, and
-    /// location always passes through untouched.
     func overriding(_ contact: ProposedContact) -> ProposedContact {
         ProposedContact(
             email: email ?? contact.email,

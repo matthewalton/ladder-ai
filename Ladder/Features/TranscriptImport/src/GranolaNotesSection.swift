@@ -1,9 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The Granola notes section of the Stage form (decisions/0007): a link
-/// field with a one-step attach, and — once attached — an indicator row,
-/// never the full notes inline. Reading opens the notes window.
 struct GranolaNotesSection: View {
     var container: ModelContainer
     var stage: Stage

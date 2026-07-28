@@ -4,8 +4,6 @@ import Testing
 
 @testable import Ladder
 
-/// Relaunch is simulated by closing one container and reopening a new one
-/// against the same store URL.
 @MainActor
 struct CalendarSyncPersistenceTests {
     @Test("[CALSYNC-12] a dismissal survives an app relaunch")
@@ -46,7 +44,6 @@ struct CalendarSyncPersistenceTests {
             .fetch(FetchDescriptor<DismissedEvent>())
         #expect(records.map(\.calendarEventID) == ["evt-1"])
 
-        // And the reopened store still suppresses the event.
         let sync = CalendarSyncStore(
             pipeline: pipeline,
             service: FixtureCalendarSyncService(events: events)

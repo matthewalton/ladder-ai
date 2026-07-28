@@ -3,13 +3,9 @@ import SwiftUI
 
 struct PipelineRootView<SidebarFooter: View>: View {
     @Bindable var store: PipelineStore
-    /// Tailoring starts from this shell (decisions/0007); nil renders no
-    /// tailor affordance (tests that only exercise the board).
     var profileStore: ProfileStore?
-    /// Passed through to the detail's look-back button; nil renders none.
     var onLookBack: ((Application) -> Void)?
-    /// Rendered at the bottom of the sidebar list — the slot the calendar
-    /// section plugs into (CalendarSync decisions/0009). Unspecced here.
+    /// The slot the calendar section plugs into (CalendarSync decisions/0009).
     @ViewBuilder var sidebarFooter: () -> SidebarFooter
 
     enum ContentPane: String, CaseIterable {
@@ -37,8 +33,6 @@ struct PipelineRootView<SidebarFooter: View>: View {
         }
         // Attached here so the toolbar and empty-state affordances share it.
         .sheet(isPresented: $isImporting) {
-            // Pause at the application ([PIPEBOARD-42]): the created draft
-            // is selected with its detail open — Create CV lives there.
             JobImportSheet(
                 pipelineStore: store,
                 onCreated: { application in
@@ -50,9 +44,8 @@ struct PipelineRootView<SidebarFooter: View>: View {
         }
         .sheet(item: $tailoringApplication) { application in
             if let profileStore {
-                // The export attaches the CV to this application; the store
-                // reloads on dismiss so the draft → applied move re-columns
-                // the card without a relaunch.
+                // The store reloads on dismiss so the draft → applied move
+                // re-columns the card without a relaunch.
                 TailorView(profileStore: profileStore, application: application)
                     .onDisappear { try? store.load() }
             }
@@ -86,8 +79,6 @@ struct PipelineRootView<SidebarFooter: View>: View {
                     }
                 }
                 .toolbar {
-                    // The one creation door ([PIPEBOARD-41]) — deliberately
-                    // the only prominent toolbar action.
                     ToolbarItem {
                         Button {
                             isImporting = true
@@ -123,8 +114,6 @@ struct PipelineRootView<SidebarFooter: View>: View {
                         onLookBack: onLookBack.map { callback in
                             { callback(application) }
                         },
-                        // Tailoring needs the Profile; nil renders no
-                        // Create CV ([PIPEBOARD-42]).
                         onCreateCV: profileStore == nil
                             ? nil
                             : { tailoringApplication = application }
@@ -153,7 +142,6 @@ struct PipelineRootView<SidebarFooter: View>: View {
             Text("Paste a job posting's link or drop its PDF — Ladder files the application and starts your CV.")
                 .font(.callout)
                 .foregroundStyle(Color.inkSoft)
-            // The shell toolbar (and its button) does not render here.
             Button("Create CV for new application") {
                 isImporting = true
             }

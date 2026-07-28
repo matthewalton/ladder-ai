@@ -1,8 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The separate window showing a Stage's full prep pack — the Stage form
-/// only indicates one exists ([PREP-20], [PREP-21]; docs/adr/0003).
 struct PrepPackWindow: View {
     static let windowID = "prep-pack"
 

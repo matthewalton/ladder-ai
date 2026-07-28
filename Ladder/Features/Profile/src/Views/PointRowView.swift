@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// One brief bullet on the CV page — shared by the Experience and Projects
-/// sections. Depth (tags, impact, notes) lives in the detail rail.
 struct PointRowView: View {
     let achievement: Achievement
     let isFocused: Bool
@@ -56,9 +54,6 @@ struct PointRowView: View {
     }
 }
 
-/// The visible delete affordance shared by the CV page's rows — revealed on
-/// hover so the page stays quiet, with the context menu as the secondary
-/// path.
 struct RowDeleteButton: View {
     let label: String
     let isVisible: Bool

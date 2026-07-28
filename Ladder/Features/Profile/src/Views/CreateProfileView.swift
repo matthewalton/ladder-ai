@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The only place a Profile can be created.
 struct CreateProfileView: View {
     @Bindable var store: ProfileStore
 

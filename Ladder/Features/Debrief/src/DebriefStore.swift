@@ -1,16 +1,12 @@
 import Foundation
 import SwiftData
 
-/// One debrief run at a time; a valid result is persisted onto the Stage,
-/// replacing any existing debrief ([DEBRIEF-15]).
 @MainActor
 @Observable
 final class DebriefStore {
     enum Phase: Equatable {
         case idle
-        /// The repair request runs in this phase too — it never gets its own.
         case running
-        /// The validated debrief is persisted on the Stage.
         case generated
         case failed(DebriefError)
     }
@@ -23,8 +19,6 @@ final class DebriefStore {
     private let bundle: Bundle
     private let makeIntelligence: (String) -> any IntelligenceService
 
-    /// `makeIntelligence` is the seam tests and previews use to substitute a
-    /// fixture service.
     init(
         container: ModelContainer,
         profileStore: ProfileStore,
@@ -41,8 +35,6 @@ final class DebriefStore {
         self.makeIntelligence = makeIntelligence
     }
 
-    /// Generation is an explicit user action — nothing calls this
-    /// automatically. `generatedAt` is passed in; tests never read the clock.
     func generate(for stage: Stage, generatedAt: Date = .now) async {
         let notesOverview = stage.transcript?.notesSummary?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -68,8 +60,6 @@ final class DebriefStore {
                     json: response, notesOverview: notesOverview,
                     achievementCount: payload.achievements.count)
             } catch let failure as DebriefValidationFailure {
-                // Exactly one repair attempt; a repair response failing
-                // validation fails the run (decisions/0002).
                 let repair = IntelligenceRequest(
                     prompt: prompt,
                     payload: Self.repairPayload(
@@ -86,14 +76,10 @@ final class DebriefStore {
         } catch is DebriefValidationFailure {
             phase = .failed(.resultInvalid)
         } catch {
-            // A missing bundled prompt or a transport failure — not an
-            // invalid result.
             phase = .failed(.requestFailed)
         }
     }
 
-    /// Writes the validated result onto the Stage, replacing any existing
-    /// debrief — the old record is deleted, never orphaned ([DEBRIEF-15]).
     private func persist(
         _ result: DebriefResult, on stage: Stage, achievements: [Achievement], generatedAt: Date
     ) throws {
@@ -151,10 +137,8 @@ final class DebriefStore {
         phase = .idle
     }
 
-    /// The confirmed remove ([DEBRIEF-20]): deletes the debrief — its
-    /// question entries cascade with it — and leaves the linked Achievements
-    /// untouched. The confirmation dialog is the view's; the store just
-    /// deletes. A Stage without a debrief is a no-op.
+    /// Question entries cascade with the deleted debrief; the linked
+    /// Achievements are untouched.
     func removeDebrief(from stage: Stage) throws {
         guard let debrief = stage.debrief else { return }
         let context = stage.modelContext ?? self.context

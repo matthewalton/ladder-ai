@@ -11,7 +11,6 @@ struct StatusColumnView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Signage-style eyebrow (DESIGN.md §3 trail metadata).
             HStack {
                 Text(status.columnTitle)
                     .font(.caption.weight(.medium))
@@ -50,8 +49,6 @@ struct StatusColumnView: View {
         }
         .padding(8)
         .frame(width: 236)
-        // Columns are open regions on the map, not boxes — only a drop
-        // target gets a wash.
         .background(
             isTargeted ? Color.pineTint.opacity(0.5) : Color.clear,
             in: RoundedRectangle(cornerRadius: 10, style: .continuous)

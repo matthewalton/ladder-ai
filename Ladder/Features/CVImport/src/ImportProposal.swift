@@ -1,9 +1,5 @@
 import Foundation
 
-/// The structure the intelligence service returns for an extracted CV —
-/// held in memory for review, never persisted. Covers the whole CV
-/// (decisions/0008): identity, roles, education, projects, interests, plus
-/// not-imported sections.
 struct ImportProposal: Equatable, Sendable, Decodable {
     var identity: ProposedIdentity
     var roles: [ProposedRole]
@@ -32,8 +28,7 @@ struct ImportProposal: Equatable, Sendable, Decodable {
         } catch {
             throw ImportError.proposalInvalid(reason: "the response did not match the proposal schema")
         }
-        // A fresh Profile needs a name ([CVIMPORT-23], [PROFILE-3]) — reject
-        // here so the failure carries its reason, not at replace time.
+        // Reject here so the failure carries its reason, not at replace time.
         if identity.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             throw ImportError.proposalInvalid(reason: "'identity.name' is empty — a CV always names its owner")
         }
@@ -56,7 +51,6 @@ struct ImportProposal: Equatable, Sendable, Decodable {
         }
     }
 
-    /// "roles[0].achievements[1].text" from a coding path.
     private static func path(_ codingPath: [any CodingKey], then last: (any CodingKey)? = nil) -> String {
         var rendered = ""
         for key in codingPath + [last].compactMap(\.self) {
@@ -69,7 +63,6 @@ struct ImportProposal: Equatable, Sendable, Decodable {
         return rendered.isEmpty ? "the proposal" : rendered
     }
 
-    /// CVs state dates at month resolution ("2021-04").
     private static func parseMonth(_ raw: String) -> Date? {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -79,15 +72,12 @@ struct ImportProposal: Equatable, Sendable, Decodable {
     }
 }
 
-/// Identity always travels with the confirmation — it is not a per-item
-/// reviewable ([CVIMPORT-23]).
 struct ProposedIdentity: Equatable, Sendable, Decodable {
     var name: String
     var headline: String?
     var contact: ProposedContact
 }
 
-/// Fields the CV lacks arrive as null and land as empty strings.
 struct ProposedContact: Equatable, Sendable, Decodable {
     var email: String?
     var phone: String?
@@ -99,18 +89,14 @@ struct ProposedRole: Equatable, Sendable, Decodable {
     var company: String
     var title: String
     var start: Date
-    var end: Date?  // nil = current role
+    var end: Date?
     var achievements: [ProposedAchievement]
 }
 
 struct ProposedAchievement: Equatable, Sendable, Decodable {
-    /// The bullet's bold lead-in phrase, split from the description
-    /// ([CVIMPORT-31]; Profile decisions/0010). null = no lead-in.
     var title: String?
     var text: String
     var impactMetric: String?
-    /// One flat tags array ([CVIMPORT-32]; decisions/0011) — the v5
-    /// `skills`+`tech` split is gone.
     var tags: [String]
 }
 
@@ -118,12 +104,10 @@ struct ProposedEducation: Equatable, Sendable, Decodable {
     var institution: String
     var qualification: String
     var start: Date
-    var end: Date?  // nil = in progress
+    var end: Date?
     var detail: String?
 }
 
-/// Projects propose a description and tags, not points (decisions/0010;
-/// Profile decisions/0009; decisions/0011 renamed the list from "skills").
 struct ProposedProject: Equatable, Sendable, Decodable {
     var name: String
     var link: String?
@@ -132,8 +116,6 @@ struct ProposedProject: Equatable, Sendable, Decodable {
     var tags: [String]
 }
 
-/// CV content outside the import scope — the summary paragraph,
-/// certifications — listed in review, never merged ([CVIMPORT-27]).
 struct NotImportedSection: Equatable, Sendable, Decodable {
     var name: String
     var content: String

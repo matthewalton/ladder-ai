@@ -4,12 +4,11 @@ import Testing
 
 @testable import Ladder
 
-/// The canned tailor result loads from the app bundle's Fixtures folder
-/// (tests run in the app host). No network anywhere.
+/// Fixtures load from Bundle.main — the tests run hosted in the app.
 @MainActor
 struct TailorFlowTests {
-    /// One role, three achievements — payload ids a1, a2, a3 in sort order.
-    /// The bundled tailor-result fixture selects a1 and a3.
+    /// Payload ids a1–a3 in sort order; the bundled tailor-result fixture
+    /// selects a1 and a3.
     private func makeProfileStore() throws -> ProfileStore {
         let store = try ProfileStore(container: ProfileStore.container(inMemory: true))
         try store.load()
@@ -55,8 +54,6 @@ struct TailorFlowTests {
             status: .draft
         )
 
-        // The derivation ([TAILOR-23], decisions/0008): details come from
-        // the Application, verbatim — the view collects nothing.
         await store.startRun(JobDetails(application: application))
 
         #expect(store.phase == .review)
@@ -90,7 +87,6 @@ struct TailorFlowTests {
         let service = FixtureIntelligenceService.tailorFixture()
         let store = makeTailorStore(profileStore: try makeProfileStore(), service: service)
 
-        // Whitespace-only counts as empty.
         var details = jobDetails
         details.jobDescription = "  \n\t "
         await store.startRun(details)
@@ -184,8 +180,7 @@ struct TailorFlowTests {
 
     @Test("[TAILOR-8] a tailor result selecting an achievement not on the Profile fails validation")
     func unknownAchievementFailsValidation() async throws {
-        // "a9" matches nothing in the payload's id map; the fixture returns
-        // the same invalid result to the repair request, so the run ends failed.
+        // The single canned response repeats for the repair, so the run ends failed.
         let unknownSelection = Data("""
         {
           "summary": "…",
@@ -228,7 +223,6 @@ struct TailorFlowTests {
         #expect(requests.count == 2, "an invalid-then-valid sequence records two requests, never three")
         let repair = try #require(requests.last)
         #expect(repair.prompt == requests.first?.prompt, "the repair keeps the versioned prompt")
-        // The original request content, the invalid response, and the failure.
         #expect(repair.payload.contains("failed validation"))
         #expect(repair.payload.contains(#""selections": "not an array""#))
         #expect(repair.payload.contains("Cut CI build times across every product target"))
@@ -359,8 +353,7 @@ struct TailorFlowTests {
 
     @Test("[TAILOR-16] a saved API key round-trips through the Keychain store")
     func apiKeyRoundTripsThroughTheKeychain() throws {
-        // A unique service name keeps the test's item away from the app's
-        // real key; the defer cleans up even on failure.
+        // A unique service name keeps the test's item away from the app's real key.
         let store = KeychainAPIKeyStore(service: "app.ladder.tests.\(UUID().uuidString)")
         defer { try? store.deleteKey() }
 
@@ -369,7 +362,6 @@ struct TailorFlowTests {
         try store.save(key: "sk-ant-test-key")
         #expect(try store.readKey() == "sk-ant-test-key")
 
-        // Saving again overwrites, never duplicates.
         try store.save(key: "sk-ant-rotated")
         #expect(try store.readKey() == "sk-ant-rotated")
 
@@ -533,8 +525,6 @@ struct TailorFlowTests {
         #expect(review.summary == expected)
         #expect(review.outcome.summary == expected, "verbatim — never summarised or re-derived")
 
-        // Missing from the schema means a validation failure, which feeds
-        // the repair path ([TAILOR-9]) — a summary-less repair fails the run.
         let summaryless = Data("""
         {
           "selections": [],
@@ -569,12 +559,9 @@ struct TailorFlowTests {
             "Cut CI build times across every product target",
             "Led incident response for the payments outage",
         ], "the fenced result reads exactly as the bare one")
-        // The fence never costs the single repair request.
         #expect(await service.recordedRequests.count == 1)
     }
 
-    /// The makeProfileStore profile with Tags on the fixture-selected points
-    /// (a1, a3) — the selection's Tag union is Swift, CI, Incident response.
     private func makeTaggedProfileStore() throws -> ProfileStore {
         let store = try makeProfileStore()
         let role = try #require(store.profile?.roles.first)
@@ -621,8 +608,6 @@ struct TailorFlowTests {
             SkillCategory(name: "Platform Engineering", skills: ["Swift", "CI"]),
             SkillCategory(name: "Operations", skills: ["Incident response"]),
         ], "the grouping is carried verbatim (decisions/0009)")
-        // And travels into the reviewed outcome for cv-export's table
-        // ([CVEXPORT-23]).
         #expect(review.outcome.skillCategories == review.skillCategories)
     }
 
@@ -647,8 +632,8 @@ struct TailorFlowTests {
 
         await store.startRun(jobDetails)
 
-        // Kubernetes tags nothing selected — the vocabulary bound
-        // (CVExport decisions/0004) is validation, exactly like a bad id.
+        // Kubernetes is in the JD but tags nothing selected — the grouping
+        // breaches the vocabulary bound.
         #expect(await service.recordedRequests.count == 2, "one repair request, no more")
         #expect(store.phase == .review, "a valid repair recovers the run")
         #expect(store.review?.skillCategories.first?.name == "Platform Engineering")
@@ -656,7 +641,6 @@ struct TailorFlowTests {
 
     @Test("[TAILOR-60] a tailor result missing a selected point's relevance scores fails validation")
     func missingRelevanceFeedsTheSingleRepair() async throws {
-        // Selects a1 but judges nothing — the whole `relevance` block absent.
         let statless = Data("""
         {
           "summary": "Platform-minded senior engineer.",
@@ -674,7 +658,6 @@ struct TailorFlowTests {
 
         await store.startRun(jobDetails)
 
-        // The decisions/0004 loop, exactly like a schema mismatch.
         #expect(store.phase == .review, "a valid repair recovers the run")
         let requests = await service.recordedRequests
         #expect(requests.count == 2, "an invalid-then-valid sequence records two requests, never three")
@@ -707,8 +690,6 @@ struct TailorFlowTests {
 
     @Test("[TAILOR-60] relevance keyed to an id outside the selection fails validation")
     func unselectedRelevanceIDFeedsTheSingleRepair() async throws {
-        // a2 exists on the Profile but was not selected — the model judged
-        // a point it did not select.
         let judgingUnselected = Data("""
         {
           "summary": "Platform-minded senior engineer.",
@@ -743,8 +724,6 @@ struct TailorFlowTests {
 
         let review = try #require(store.review)
         try #require(review.items.count == 2)
-        // The canned fixture judges a1 and a3 — the model's sub-scores held
-        // verbatim, per point (decisions/0017).
         #expect(review.items[0].relevance
             == RelevanceStats(tech: 5, domain: 4, seniority: 3, impact: 4))
         #expect(review.items[1].relevance
@@ -753,8 +732,7 @@ struct TailorFlowTests {
 
     @Test("[TAILOR-61] a selected point's overall relevance is the unweighted mean of its four relevance scores")
     func overallRelevanceIsTheUnweightedMean() {
-        // Computed in Swift, never returned by the model (decisions/0017);
-        // a mean of four 0–5 integers lands on quarter precision exactly.
+        // A mean of four 0–5 integers lands on quarter precision, so Double == is exact.
         #expect(RelevanceStats(tech: 5, domain: 4, seniority: 3, impact: 2).overall == 3.5)
         #expect(RelevanceStats(tech: 3, domain: 3, seniority: 3, impact: 2).overall == 2.75)
         #expect(RelevanceStats(tech: 0, domain: 0, seniority: 0, impact: 0).overall == 0)

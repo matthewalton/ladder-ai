@@ -1,16 +1,12 @@
 import Foundation
 
 /// `achievements` is the ordered list result validation resolves talking-point
-/// indices against — index i in the payload is `achievements[i]`
-/// (decisions/0001).
+/// indices against — index i in the payload is `achievements[i]` (decisions/0001).
 @MainActor
 struct PrepPackPayload {
     let json: String
     let achievements: [Achievement]
 
-    /// The debriefs of the Application's Stages ordered strictly before the
-    /// prepped Stage — a later stage's debrief, or the prepped stage's own,
-    /// is never prior ([PREP-8]).
     static func priorDebriefs(for stage: Stage) -> [Debrief] {
         (stage.application?.orderedStages ?? [])
             .filter { $0.sortIndex < stage.sortIndex }

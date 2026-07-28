@@ -5,9 +5,6 @@ import Testing
 
 @testable import Ladder
 
-/// The journey section on the Application detail: the offer-time gate on
-/// the generate action, the inline plain-text display, and the confirmed
-/// remove. Section and dialog chrome are on the visual-verify list.
 @MainActor
 struct JourneySectionTests {
     private func makeApplication(
@@ -41,8 +38,6 @@ struct JourneySectionTests {
                 "the generate control renders for .offer and for no other status (\(status))")
         }
 
-        // Render-smoke at the empty-at-offer state: the section offers
-        // generation; button chrome is visual-verify.
         let (container, application) = try makeApplication(withNarrative: false)
         let section = ImageRenderer(
             content: Form {
@@ -57,8 +52,6 @@ struct JourneySectionTests {
 
     @Test("[JOURNEY-15] the journey section shows the persisted narrative text")
     func sectionShowsThePersistedNarrative() throws {
-        // The section renders only when the Application carries a narrative
-        // or is at offer; display itself is never status-gated.
         #expect(JourneySection.appears(status: .offer, hasNarrative: false))
         #expect(JourneySection.appears(status: .offer, hasNarrative: true))
         #expect(JourneySection.appears(status: .rejected, hasNarrative: true),
@@ -66,8 +59,6 @@ struct JourneySectionTests {
         #expect(!JourneySection.appears(status: .active, hasNarrative: false))
         #expect(!JourneySection.appears(status: .draft, hasNarrative: false))
 
-        // Render-smoke: the persisted narrative renders inline as plain
-        // text; section chrome is visual-verify.
         let (container, application) = try makeApplication()
         let section = ImageRenderer(
             content: Form {
@@ -102,7 +93,6 @@ struct JourneySectionTests {
             try context.fetch(FetchDescriptor<Stage>()).count == 1,
             "the Stages survive untouched")
 
-        // Declining changes nothing — and a second remove is a no-op.
         try store.removeNarrative(from: application)
         #expect(try context.fetch(FetchDescriptor<Application>()).count == 1)
     }

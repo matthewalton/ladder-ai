@@ -1,7 +1,6 @@
 import Foundation
 
-/// Live `IntelligenceService` over the Anthropic Messages API. The key is
-/// never logged.
+/// The key is never logged.
 struct AnthropicIntelligenceService: IntelligenceService {
     static let model = "claude-sonnet-5"
     static let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
@@ -17,7 +16,6 @@ struct AnthropicIntelligenceService: IntelligenceService {
     enum LiveServiceError: Error, Equatable {
         case httpFailure(status: Int)
         case emptyResponse
-        /// The reply hit the `max_tokens` cap and is cut off mid-content.
         case truncated
     }
 

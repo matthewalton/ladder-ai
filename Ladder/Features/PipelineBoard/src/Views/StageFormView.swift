@@ -17,9 +17,6 @@ struct StageFormView: View {
     @State private var prepContext = ""
     @State private var meetingURLText = ""
     @State private var saveFailed = false
-    // The collapse decision is made at appearance ([PIPEBOARD-29/30]) — it
-    // never flips mid-typing, only on remove. A new Stage always edits
-    // inline: it has no prep context yet.
     @State private var showsPrepContextIndicator = false
     @State private var isConfirmingPrepContextRemoval = false
     @Environment(\.openWindow) private var openWindow
@@ -115,10 +112,6 @@ struct StageFormView: View {
                     }
                 }
 
-                // Granola notes attach directly from the Stage form
-                // (TranscriptImport decisions/0007). Only a persisted Stage
-                // can carry them — and only then is there anything to
-                // debrief (Ladder/Features/Debrief/).
                 if let stage {
                     GranolaNotesSection(container: store.container, stage: stage)
                     DebriefSection(container: store.container, stage: stage)
@@ -147,8 +140,6 @@ struct StageFormView: View {
         .frame(minWidth: 420, minHeight: 440)
     }
 
-    /// The confirmed remove ([PIPEBOARD-33]): clear through the store, then
-    /// hand the field back to its inline editor ([PIPEBOARD-30]).
     private func removePrepContext() {
         guard let stage else { return }
         do {

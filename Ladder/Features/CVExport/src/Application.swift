@@ -10,10 +10,10 @@ enum ApplicationStatus: String, Codable, CaseIterable, Sendable {
     case withdrawn
 }
 
-/// One pursuit of a specific job at a company. `cvSnapshot` is written once
-/// at export and never mutated — the record of what was actually sent must be
-/// exact. `notes` keeps its default at the declaration: lightweight migration
-/// fills existing rows from there, not from `init`.
+/// `cvSnapshot` is written once at export and never mutated — the record of
+/// what was actually sent must be exact. `notes` keeps its default at the
+/// declaration: lightweight migration fills existing rows from there, not
+/// from `init`.
 @Model
 final class Application {
     var company: String
@@ -24,9 +24,7 @@ final class Application {
     var appliedAt: Date?
     var cvSnapshot: Data?
     var cvSelectionRationale: String?
-    /// What the fit loop saw and did for this export ([CVEXPORT-30],
-    /// decisions/0008); written once beside the snapshot. The declaration
-    /// default migrates existing rows to nil.
+    /// The declaration default migrates existing rows to nil.
     var fitMetrics: FitMetrics? = nil
     var createdAt: Date
     var notes: String = ""
@@ -34,15 +32,12 @@ final class Application {
     @Relationship(deleteRule: .cascade, inverse: \Stage.application)
     var stages: [Stage]
 
-    /// One journey narrative per Application; deleting the Application
-    /// deletes it too (owned by the journey-synthesis slice — see
-    /// Ladder/Features/JourneySynthesis/).
+    /// Owned by the journey-synthesis slice (Ladder/Features/JourneySynthesis/).
     @Relationship(deleteRule: .cascade, inverse: \JourneyNarrative.application)
     var journeyNarrative: JourneyNarrative?
 
-    /// The Application's Match — written only by the JD scan and replaced
-    /// wholesale by each one (owned by the tailor slice — see
-    /// Ladder/Features/Tailor/, decisions/0011).
+    /// Written only by the JD scan and replaced wholesale by each one (owned
+    /// by the tailor slice — Ladder/Features/Tailor/, decisions/0011).
     @Relationship(deleteRule: .cascade, inverse: \Match.application)
     var match: Match?
 

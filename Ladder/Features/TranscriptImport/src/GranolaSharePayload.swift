@@ -1,16 +1,11 @@
 import Foundation
 
 enum GranolaShareError: Error, Equatable {
-    /// Refused before any request ([TRANSCRIPT-31]).
     case notAShareLink
     case fetchFailed
-    /// The page's payload carries no shared document — not a share link,
-    /// or Granola changed the page internals (decisions/0006).
     case noSharedDocument
 }
 
-/// The fetch seam (decisions/0006): tests use a fixture, the app the live
-/// URLSession fetcher — the `IntelligenceService` pattern.
 protocol GranolaShareFetching: Sendable {
     func html(from url: URL) async throws -> String
 }
@@ -25,8 +20,7 @@ struct LiveGranolaShareFetcher: GranolaShareFetching {
     }
 }
 
-/// What a share link's page embeds (CONTEXT.md "shared document"). Share
-/// pages expose the notes only — never the transcript (decisions/0006).
+/// Share pages expose the notes only — never the transcript (decisions/0006).
 struct SharedDocument: Equatable {
     var title: String?
     var createdAt: Date?
@@ -43,12 +37,10 @@ extension ISO8601DateFormatter {
     }
 }
 
-/// Pure parsing of a Granola share page. The payload is a page internal
-/// (Next.js RSC flight chunks), not an API contract — everything here fails
-/// toward `noSharedDocument` or notes-only rather than guessing.
+/// The payload is a page internal (Next.js RSC flight chunks), not an API
+/// contract — everything here fails toward `noSharedDocument` or notes-only
+/// rather than guessing.
 enum GranolaSharePayload {
-    /// The door opens only for a lone `notes.granola.ai/t/…` URL
-    /// ([TRANSCRIPT-31]); anything else is refused before any request.
     static func shareLink(in text: String) -> URL? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !trimmed.contains(where: \.isWhitespace),
@@ -73,9 +65,8 @@ enum GranolaSharePayload {
         if let content = (panel["panel"] as? [String: Any])?["content"] as? [String: Any] {
             flattenNotes(content, bulletDepth: 0, into: &lines)
         }
-        // Granola appends a "Chat with meeting transcript: <url>" line for
-        // its own logged-in web app; on an anonymous import it is dead
-        // weight ([TRANSCRIPT-22]).
+        // Granola appends this line for its own logged-in web app; on an
+        // anonymous import it is dead weight ([TRANSCRIPT-22]).
         lines.removeAll { $0.hasPrefix("Chat with meeting transcript:") }
 
         return SharedDocument(
@@ -87,7 +78,6 @@ enum GranolaSharePayload {
 
     // MARK: - RSC flight payload
 
-    /// Concatenates every `self.__next_f.push([1,"…"])` chunk, JS-unescaped.
     private static func flightPayload(in html: String) -> String {
         let pattern = #"self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return "" }
@@ -100,8 +90,6 @@ enum GranolaSharePayload {
         }.joined()
     }
 
-    /// Extracts and parses the JSON value following `marker` — an object,
-    /// array, string, or null — by string-aware balanced scanning.
     private static func jsonValue(after marker: String, in payload: String) -> Any? {
         guard let markerRange = payload.range(of: marker) else { return nil }
         var index = markerRange.upperBound
@@ -151,8 +139,6 @@ enum GranolaSharePayload {
 
     // MARK: - Notes tree
 
-    /// Headings as `## ` lines, bullet items as `- ` lines indented by
-    /// nesting ([TRANSCRIPT-22]).
     private static func flattenNotes(_ node: [String: Any], bulletDepth: Int, into lines: inout [String]) {
         let children = node["content"] as? [[String: Any]] ?? []
         switch node["type"] as? String {

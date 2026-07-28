@@ -1,32 +1,22 @@
 import Foundation
 
-/// The per-export record of what the fit loop saw and did (decisions/0008,
-/// [CVEXPORT-30]) — feedstock for future selection budgets (Baton #162);
-/// this slice only records.
+/// Feedstock for future selection budgets (Baton #162); this slice only
+/// records.
 struct FitMetrics: Codable, Equatable, Sendable {
-    // Content volume sent to render.
     var roleCount: Int
     var bulletCount: Int
     var projectCount: Int
     var skillCount: Int
     var characterCount: Int
-    // Settings applied.
     var compactionStep: Int
     var stretchFactor: Double
-    // Passes run.
     var condensePassRun: Bool
     var trimPassCount: Int
     var trimmedItemCount: Int
-    // Page counts.
     var naturalPageCount: Int
     var finalPageCount: Int
 }
 
-/// The automatic ladder that lands every export on at most two pages
-/// (decisions/0008): density compaction, then the tailor-owned condense
-/// pass, then — terminally, repeated until it fits — the trim pass. Lazy:
-/// a fitting render sends no request. Underflow past the 1.5-page
-/// threshold stretches spacing toward a flush page two, capped at 1.25×.
 @MainActor
 struct CVFitLoop {
     struct Outcome {
@@ -34,14 +24,10 @@ struct CVFitLoop {
         /// The settings the final render must use.
         var metrics: CVMetrics
         var pageCount: Int
-        /// Display texts of the items the trim pass removed — the fit
-        /// report's trim list ([CVEXPORT-28]).
         var trimmedItems: [String]
         var fitMetrics: FitMetrics
     }
 
-    /// nil when no intelligence service is available — the loop then fails
-    /// on content that needs a pass, with the reason surfaced.
     let fitPasses: FitPassRunner?
 
     private static let pageCap = 2
@@ -72,9 +58,6 @@ struct CVFitLoop {
         }
         var (stepIndex, metrics, layout) = fit!
 
-        // Underflow stretch ([CVEXPORT-29]): only a naturally-fitting CV
-        // qualifies — overflow content just resolved to the cap is full by
-        // definition.
         var stretch: CGFloat = 1
         if stepIndex == 0, !condensed, trimPasses == 0 {
             let fill = layout.flowedHeight / metrics.contentHeight
@@ -143,8 +126,6 @@ struct CVFitLoop {
         return fitPasses
     }
 
-    /// [TAILOR-25]: same selection, shorter texts. Titles never travel —
-    /// the pass shortens descriptions alone.
     private func condensePass(on document: CVDocument) async throws -> CVDocument {
         let items = Self.bulletItems(of: document)
         let condensed = try await requireFitPasses().condense(items)
@@ -162,9 +143,6 @@ struct CVFitLoop {
         return result
     }
 
-    /// [TAILOR-26]: a non-empty strict subset survives. Roles always stay —
-    /// employment continuity ([CVEXPORT-3]); only their bullets and whole
-    /// projects trim.
     private func trimPass(
         on document: CVDocument, jobDescription: String
     ) async throws -> (CVDocument, removed: [String]) {
@@ -193,7 +171,6 @@ struct CVFitLoop {
         return (result, removed)
     }
 
-    /// The loop's deterministic bullet id scheme: "b<role>-<bullet>".
     private static func bulletItems(of document: CVDocument) -> [FitPassItem] {
         document.roles.enumerated().flatMap { roleIndex, role in
             role.bullets.enumerated().map { bulletIndex, bullet in

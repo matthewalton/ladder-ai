@@ -32,8 +32,7 @@ struct TimelineFlowTests {
         )
         await tailorStore.startRun(details)
         let review = try #require(tailorStore.review)
-        // Export attaches to the imported draft (decisions/0006) and flips
-        // it to applied, stamping the date the timeline then reads.
+        // Export flips the draft to applied, stamping the date the timeline reads.
         let pipelineStore = PipelineStore(container: profileStore.container)
         try pipelineStore.load()
         let draft = try pipelineStore.createApplication(
@@ -73,8 +72,7 @@ struct TimelineFlowTests {
     private static let base = Date(timeIntervalSince1970: 1_770_000_000)
     private static func day(_ n: Double) -> Date { base.addingTimeInterval(n * 86_400) }
 
-    /// An Application with Stages in an in-memory container; the context is
-    /// returned so SwiftData keeps the relationship alive for the test.
+    /// The context is returned so SwiftData keeps the relationships alive.
     private func makeApplication(
         status: ApplicationStatus = .active,
         appliedAt: Date? = base,
@@ -232,8 +230,6 @@ struct TimelineFlowTests {
 
     @Test("[TIMELINE-9] a non-terminal Application's in-stage label counts whole days since its latest dated entry")
     func inStageLabelCountsFromLatestDatedEntry() throws {
-        // Latest dated entry is the technical Stage at day 6 — later than
-        // the screen's day 3 and the applied day 0.
         let (_, application) = try makeApplication(stages: [
             Stage(kind: .screen, scheduledAt: Self.day(3), sortIndex: 0),
             Stage(kind: .technical, scheduledAt: Self.day(6), sortIndex: 1),

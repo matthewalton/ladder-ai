@@ -1,6 +1,5 @@
 import Foundation
 
-/// A closed set: anything not Zoom, Meet, or Teams is not a meeting link.
 enum MeetingLinkDetector {
     private static let recognisedHosts = [
         "zoom.us", "meet.google.com", "teams.microsoft.com", "teams.live.com",
