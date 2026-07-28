@@ -226,8 +226,8 @@ importers:
         specifier: ^3.9.5
         version: 3.9.5
       speccle:
-        specifier: ^0.16.0
-        version: 0.16.0
+        specifier: ^0.18.0
+        version: 0.18.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -676,8 +676,8 @@ packages:
     resolution: {integrity: sha512-stxByr12oeeOyY2BlviTNQlYV5xOj47GirPr4yA1hE9JCtxfQN0+tVbkxwCtYDQWhEKWFHsEK48ORg5jrouCAg==}
     engines: {node: '>=20'}
 
-  speccle@0.16.0:
-    resolution: {integrity: sha512-bbs5LxNVwrM/UQVtV/8F80p79UjejHufrHCriC/aBe+XBdJ5SqNrLc0E8n5qm//GS5dsY58n6MYCrCuAEiOK2w==}
+  speccle@0.18.0:
+    resolution: {integrity: sha512-ohuBmr/sDyPF8fpaP/SYwrbKgYVeRFWqIR3tMx80xy/4zGwF0orMIINOmy6pOBwklI0Gwqb/U/OCbq8J/bTEMg==}
     engines: {node: '>=24'}
     hasBin: true
 
@@ -1195,7 +1195,7 @@ snapshots:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
 
-  speccle@0.16.0: {}
+  speccle@0.18.0: {}
 
   string-argv@0.3.2: {}
 

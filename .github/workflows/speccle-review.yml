@@ -68,9 +68,13 @@ jobs:
           # `risk` measures from the merge base, which a shallow clone has no history to find.
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
+          # This job installs nothing from the repo's manifest — it runs Speccle straight from
+          # npm. Left on, setup-node reads `packageManager` and caches for a package manager
+          # this job never installs.
+          package-manager-cache: false
 
       # `origin/` prefixes the base ref because checkout leaves it as a remote-tracking ref;
       # a bare branch name would not resolve.
