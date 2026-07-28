@@ -6,6 +6,8 @@ struct TailorView: View {
     @State private var flow: TailorFlowStore
     @State private var hasStarted = false
     @State private var exportStore: CVExportStore
+    @State private var preview: CVPreviewModel?
+    @State private var isComposing = false
     @State private var export: CVExportStore.Export?
     @State private var isSavingPDF = false
     @State private var exportFailed = false
@@ -61,12 +63,20 @@ struct TailorView: View {
             case .review:
                 if let export {
                     FitReportView(report: export.fitReport, onDone: { dismiss() })
+                } else if isComposing {
+                    progress("Laying your CV out…")
+                } else if let preview {
+                    CVPreviewView(
+                        model: preview,
+                        onExport: { runExport(preview) },
+                        onClose: { self.preview = nil }
+                    )
                 } else if let review = flow.review {
                     TailorReviewView(
                         review: review,
                         onCancel: { retry() },
                         onDone: { dismiss() },
-                        onExport: { runExport(review: review) }
+                        onExport: { compose(review: review) }
                     )
                 }
             case .scanFailed(let error):
@@ -101,25 +111,52 @@ struct TailorView: View {
         Task { await flow.retry() }
     }
 
-    private func runExport(review: TailorReview) {
+    private func compose(review: TailorReview) {
         guard let profile = profileStore.profile else { return }
+        isComposing = true
         Task {
+            defer { isComposing = false }
             do {
-                export = try await exportStore.export(
+                let composition = try await exportStore.compose(
                     profile: profile, review: review,
-                    into: application.persistentModelID,
+                    for: application.persistentModelID,
                     fitPasses: fitPassRunner())
-                isSavingPDF = true
+                preview = CVPreviewModel(
+                    profileStore: profileStore,
+                    profile: profile,
+                    review: review,
+                    applicationID: application.persistentModelID,
+                    jobDescription: application.jobDescription,
+                    composition: composition,
+                    rescorePass: rescorePass()
+                )
             } catch {
                 exportFailed = true
             }
         }
     }
 
+    private func runExport(_ preview: CVPreviewModel) {
+        do {
+            export = try exportStore.export(
+                preview.composition, into: application.persistentModelID)
+            isSavingPDF = true
+        } catch {
+            exportFailed = true
+        }
+    }
+
     private func fitPassRunner() -> FitPassRunner? {
+        service().map { FitPassRunner(service: $0) }
+    }
+
+    private func rescorePass() -> RelevanceRescorePass? {
+        service().map { RelevanceRescorePass(service: $0) }
+    }
+
+    private func service() -> (any IntelligenceService)? {
         guard let key = try? keyStore.readKey(), !key.isEmpty else { return nil }
-        let service = makeIntelligence?(key) ?? AnthropicIntelligenceService(apiKey: key)
-        return FitPassRunner(service: service)
+        return makeIntelligence?(key) ?? AnthropicIntelligenceService(apiKey: key)
     }
 
     private var defaultFilename: String {

@@ -12,7 +12,7 @@ final class TailorReview {
 
     let skillCategories: [SkillCategory]
 
-    private let matchedTagNames: [String]
+    let matchedTagNames: [String]
 
     private let projectRelevance: [ObjectIdentifier: RelevanceStats]
 

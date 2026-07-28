@@ -30,7 +30,7 @@ struct CVFitLoop {
 
     let fitPasses: FitPassRunner?
 
-    private static let pageCap = 2
+    nonisolated static let pageCap = 2
 
     func fit(document original: CVDocument, jobDescription: String) async throws -> Outcome {
         let naturalMetrics = CVMetrics()
@@ -42,46 +42,25 @@ struct CVFitLoop {
         var trimPasses = 0
         var trimmedItems: [String] = []
 
-        var fit = Self.firstFittingCompaction(for: document)
-        if fit == nil {
+        var settings = Self.settings(for: document, stretching: true)
+        if !settings.fits {
             document = try await condensePass(on: document)
             condensed = true
-            fit = Self.firstFittingCompaction(for: document)
+            settings = Self.settings(for: document, stretching: false)
         }
-        while fit == nil {
+        while !settings.fits {
             let (trimmedDocument, removed) = try await trimPass(
                 on: document, jobDescription: jobDescription)
             document = trimmedDocument
             trimPasses += 1
             trimmedItems.append(contentsOf: removed)
-            fit = Self.firstFittingCompaction(for: document)
-        }
-        var (stepIndex, metrics, layout) = fit!
-
-        var stretch: CGFloat = 1
-        if stepIndex == 0, !condensed, trimPasses == 0 {
-            let fill = layout.flowedHeight / metrics.contentHeight
-            if fill > CVMetrics.underflowThreshold, fill < CGFloat(Self.pageCap) {
-                stretch = Self.stretchFactor(for: layout, metrics: metrics)
-                if stretch > 1 {
-                    var stretched = CVMetrics(stretch: stretch)
-                    var stretchedLayout = CVLayout(document: document, metrics: stretched)
-                    // Back off if pagination rounding pushed a block over.
-                    while stretch > 1, stretchedLayout.pages.count > Self.pageCap {
-                        stretch = max(1, stretch - 0.02)
-                        stretched = CVMetrics(stretch: stretch)
-                        stretchedLayout = CVLayout(document: document, metrics: stretched)
-                    }
-                    metrics = stretched
-                    layout = stretchedLayout
-                }
-            }
+            settings = Self.settings(for: document, stretching: false)
         }
 
         return Outcome(
             document: document,
-            metrics: metrics,
-            pageCount: layout.pages.count,
+            metrics: settings.metrics,
+            pageCount: settings.pageCount,
             trimmedItems: trimmedItems,
             fitMetrics: FitMetrics(
                 roleCount: original.roles.count,
@@ -89,30 +68,92 @@ struct CVFitLoop {
                 projectCount: original.projects.count,
                 skillCount: original.skillCategories.reduce(0) { $0 + $1.skills.count },
                 characterCount: Self.characterCount(of: original),
-                compactionStep: stepIndex,
-                stretchFactor: Double(stretch),
+                compactionStep: settings.stepIndex,
+                stretchFactor: Double(settings.stretch),
                 condensePassRun: condensed,
                 trimPassCount: trimPasses,
                 trimmedItemCount: trimmedItems.count,
                 naturalPageCount: naturalPages,
-                finalPageCount: layout.pages.count
+                finalPageCount: settings.pageCount
             )
+        )
+    }
+
+    /// The deterministic half alone, and it never refuses: the edited path
+    /// needs the real page count of a CV that overflows. Pass counts and the
+    /// trim list carry over from the composition being re-laid-out — only
+    /// the compose-time loop ever populates them.
+    static func relayout(_ document: CVDocument, carrying previous: Outcome) -> Outcome {
+        let settings = settings(for: document, stretching: true)
+        var fitMetrics = previous.fitMetrics
+        fitMetrics.roleCount = document.roles.count
+        fitMetrics.bulletCount = document.roles.reduce(0) { $0 + $1.bullets.count }
+        fitMetrics.projectCount = document.projects.count
+        fitMetrics.skillCount = document.skillCategories.reduce(0) { $0 + $1.skills.count }
+        fitMetrics.characterCount = characterCount(of: document)
+        fitMetrics.compactionStep = settings.stepIndex
+        fitMetrics.stretchFactor = Double(settings.stretch)
+        fitMetrics.finalPageCount = settings.pageCount
+        return Outcome(
+            document: document,
+            metrics: settings.metrics,
+            pageCount: settings.pageCount,
+            trimmedItems: previous.trimmedItems,
+            fitMetrics: fitMetrics
         )
     }
 
     // MARK: - Compaction
 
-    private static func firstFittingCompaction(
-        for document: CVDocument
-    ) -> (Int, CVMetrics, CVLayout)? {
+    struct Settings {
+        var stepIndex: Int
+        var metrics: CVMetrics
+        var stretch: CGFloat
+        var pageCount: Int
+        var fits: Bool
+    }
+
+    static func settings(for document: CVDocument, stretching: Bool) -> Settings {
         for (index, step) in CVMetrics.compactionSteps.enumerated() {
             let metrics = CVMetrics(compaction: step)
             let layout = CVLayout(document: document, metrics: metrics)
-            if layout.pages.count <= pageCap {
-                return (index, metrics, layout)
+            guard layout.pages.count <= pageCap else { continue }
+            guard stretching, index == 0 else {
+                return Settings(
+                    stepIndex: index, metrics: metrics, stretch: 1,
+                    pageCount: layout.pages.count, fits: true)
             }
+            return stretched(document: document, layout: layout, metrics: metrics)
         }
-        return nil
+        let stepIndex = CVMetrics.compactionSteps.count - 1
+        let metrics = CVMetrics(compaction: CVMetrics.compactionSteps[stepIndex])
+        return Settings(
+            stepIndex: stepIndex, metrics: metrics, stretch: 1,
+            pageCount: CVLayout(document: document, metrics: metrics).pages.count,
+            fits: false)
+    }
+
+    private static func stretched(
+        document: CVDocument, layout: CVLayout, metrics: CVMetrics
+    ) -> Settings {
+        let natural = Settings(
+            stepIndex: 0, metrics: metrics, stretch: 1,
+            pageCount: layout.pages.count, fits: true)
+        let fill = layout.flowedHeight / metrics.contentHeight
+        guard fill > CVMetrics.underflowThreshold, fill < CGFloat(pageCap) else { return natural }
+        var stretch = stretchFactor(for: layout, metrics: metrics)
+        guard stretch > 1 else { return natural }
+        var stretchedMetrics = CVMetrics(stretch: stretch)
+        var stretchedLayout = CVLayout(document: document, metrics: stretchedMetrics)
+        // Back off if pagination rounding pushed a block over.
+        while stretch > 1, stretchedLayout.pages.count > pageCap {
+            stretch = max(1, stretch - 0.02)
+            stretchedMetrics = CVMetrics(stretch: stretch)
+            stretchedLayout = CVLayout(document: document, metrics: stretchedMetrics)
+        }
+        return Settings(
+            stepIndex: 0, metrics: stretchedMetrics, stretch: stretch,
+            pageCount: stretchedLayout.pages.count, fits: true)
     }
 
     // MARK: - Service passes

@@ -86,7 +86,9 @@ struct CVLayout {
             ))
         }
 
-        blocks.append(sectionHeader("EXPERIENCE", measurer: measurer, metrics: metrics))
+        if !document.roles.isEmpty {
+            blocks.append(sectionHeader("EXPERIENCE", measurer: measurer, metrics: metrics))
+        }
         for (roleIndex, role) in document.roles.enumerated() {
             blocks.append(CVBlock(
                 kind: .roleHeader(role: roleIndex),

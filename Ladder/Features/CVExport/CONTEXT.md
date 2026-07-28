@@ -1,14 +1,44 @@
 # CV Export — language
 
-Slice-local terms. `Profile`, `Role`, `Achievement`, `Application`, and
+Slice-local terms. `Profile`, `Role`, `Achievement`, `Application`, `Tag`, and
 `Tailoring` are defined in the root `CONTEXT.md`; `reviewed outcome`, `gap`,
-and `rationale` in `Ladder/Features/Tailor/CONTEXT.md`. None is restated here.
+`rationale`, `rephrasing`, `overlap`, and `relevance stats` in
+`Ladder/Features/Tailor/CONTEXT.md`. None is restated here.
+
+**Compose**:
+Building the document, running the fit loop, and rendering — producing the CV
+the preview shows. Composing persists nothing (decisions/0009); a composed CV
+the user abandons leaves no trace.
+_Avoid_: pre-export, dry run, provisional export
 
 **Export**:
-The slice's one action: render the CV, persist the Application (snapshot,
-rationale, status applied), and offer the save panel. One render feeds both
-destinations.
+The slice's one persisting action: attach the rendered CV to the Application
+(snapshot, rationale, fit metrics, status applied) and offer the save panel.
+One render feeds both destinations. The user's explicit commit, taken from the
+preview.
 _Avoid_: submit, apply, send, generate
+
+**CV preview**:
+The screen between the tailor review and the export: the composed CV as it
+will print, its coverage, its page count, and the editing surface over it
+(decisions/0010). What the user rules on before anything is written.
+_Avoid_: draft, proof, mockup, preflight
+
+**Coverage**:
+How much of the confirmed Match the current selection carries — the matched
+Tags at least one selected point overlaps, and the matched Tags none does.
+Deterministic and recomputed live as the selection changes (decisions/0011),
+built from the per-point **Overlap** the tailor slice defines. Distinct from
+the **Match score**, which measures the Profile against the job description and
+never moves with editing.
+_Avoid_: match score, fit, coverage score, alignment
+
+**Re-score**:
+The single on-demand service pass that refreshes the **relevance stats** (Tailor
+`CONTEXT.md`) over the selection as the preview left it — one request, run when
+the user asks, never per edit (decisions/0011). A point the pass has not
+covered is **unscored**, a state distinct from a score of zero.
+_Avoid_: re-rank, refresh scores, re-run, live scoring
 
 **Rendered CV**:
 The A4, single-column, ATS-parseable PDF built from the Profile and the
@@ -28,8 +58,9 @@ receiving bytes identical to the CV snapshot (decisions/0003).
 _Avoid_: share sheet, download
 
 **Fit report**:
-The post-export view of how the Profile met this JD: strength chips, gap
-chips, and the rationale as New York prose.
+How the Profile met this JD: strength chips, gap chips, and the rationale as
+New York prose. Shown in the preview, before the export commits anything
+(decisions/0009) — its content is unchanged, only its moment.
 _Avoid_: summary, scorecard, analysis
 
 **Strength**:

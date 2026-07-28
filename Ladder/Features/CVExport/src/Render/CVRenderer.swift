@@ -265,13 +265,4 @@ extension CVDocument {
         document.interests = ["Cycling", "Trail running"]
         return document
     }
-
-    private init() {
-        name = ""
-        headline = ""
-        contactLines = []
-        roles = []
-        projects = []
-        education = []
-    }
 }
