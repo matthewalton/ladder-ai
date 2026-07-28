@@ -119,9 +119,13 @@ struct ApplicationDetailView: View {
 
             Section("Notes") {
                 if showsNotesIndicator {
+                    let indicator = LongTextField.indicator(
+                        name: "Notes", text: application.notes)
                     IndicatorRow(
-                        label: "Notes set",
+                        label: indicator.label,
+                        detail: indicator.snippet,
                         icon: "note.text",
+                        openAffordance: NotesEditWindow.openAffordance,
                         onOpen: {
                             openWindow(
                                 id: NotesEditWindow.windowID,
@@ -140,9 +144,13 @@ struct ApplicationDetailView: View {
 
             Section {
                 if showsJDIndicator {
+                    let indicator = LongTextField.indicator(
+                        name: "Job description", text: application.jobDescription)
                     IndicatorRow(
-                        label: "Job description set",
+                        label: indicator.label,
+                        detail: indicator.snippet,
                         icon: "doc.text",
+                        openAffordance: JobDescriptionWindow.openAffordance,
                         onOpen: {
                             openWindow(
                                 id: JobDescriptionWindow.windowID,

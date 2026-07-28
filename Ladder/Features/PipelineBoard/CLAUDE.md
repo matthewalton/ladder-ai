@@ -19,6 +19,10 @@ Profile/Applications sections.
   (decisions/0005), not a copy in this slice
 - `Ladder/Features/Tailor/src/` — the Match section on the detail is an on-demand JD scan **door**
   (decisions/0009); the scan machinery and the Match review it presents live in tailor
+- `Ladder/Shared/DesignSystem/CollapsedContent.swift` — the shared `IndicatorRow` this slice's
+  two detail views collapse into, also called by DEBRIEF, PREP and TRANSCRIPT. Anything added
+  for a row here (docs/adr/0006 gave it a detail line and a configurable open-affordance label)
+  defaults to today's behaviour, so those call sites stay untouched
 
 **Traps**
 

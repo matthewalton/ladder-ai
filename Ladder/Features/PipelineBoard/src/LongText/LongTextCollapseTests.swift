@@ -50,6 +50,9 @@ struct LongTextCollapseTests {
             store: store, applicationID: application.persistentModelID)
 
         #expect(window.resolvedApplication?.jobDescription == "Own platform reliability.")
+        #expect(
+            JobDescriptionWindow.openAffordance == "View",
+            "the window never edits, so the row must not promise Open")
         let image = ImageRenderer(content: window.frame(width: 480, height: 360))
         #expect(image.nsImage != nil)
 
@@ -75,6 +78,9 @@ struct LongTextCollapseTests {
         let fresh = ModelContext(store.container)
         let applications = try fresh.fetch(FetchDescriptor<Application>())
         #expect(applications.first?.notes == "first impression, updated after the call")
+
+        #expect(NotesEditWindow.openAffordance == "Open")
+        #expect(PrepContextEditWindow.openAffordance == "Open")
     }
 
     @Test("[PIPEBOARD-33] removing a long-text field's content requires confirmation before clearing it")
@@ -99,5 +105,68 @@ struct LongTextCollapseTests {
         let applications = try fresh.fetch(FetchDescriptor<Application>())
         #expect(applications.first?.jobDescription.isEmpty == true)
         #expect(applications.first?.notes.isEmpty == true)
+    }
+
+    @Test("[PIPEBOARD-49] a long-text field's indicator row reports how many words the field holds")
+    func indicatorLabelReportsTheWordCount() {
+        let english = Locale(identifier: "en_US")
+        let posting = String(repeating: "word ", count: 1240)
+
+        #expect(
+            LongTextField.indicator(name: "Job description", text: posting, locale: english)
+                .label == "Job description — 1,240 words")
+        #expect(
+            LongTextField.indicator(
+                name: "Notes", text: String(repeating: "word ", count: 86), locale: english
+            ).label == "Notes — 86 words")
+        #expect(
+            LongTextField.indicator(
+                name: "Prep context", text: String(repeating: "word ", count: 210),
+                locale: english
+            ).label == "Prep context — 210 words")
+
+        #expect(
+            LongTextField.indicator(
+                name: "Notes", text: "Senior iOS Engineer\n\nAcme, London", locale: english
+            ).label == "Notes — 5 words",
+            "the blank line is one run of whitespace, not a word of its own")
+        #expect(
+            LongTextField.indicator(name: "Notes", text: "  intro\n", locale: english).label
+                == "Notes — 1 word",
+            "a count of one is singular")
+
+        #expect(
+            LongTextField.indicator(
+                name: "Job description", text: posting, locale: Locale(identifier: "de_DE")
+            ).label == "Job description — 1.240 words",
+            "thousands group by the user's locale")
+    }
+
+    @Test("[PIPEBOARD-50] a long-text field's indicator row shows the start of the text it holds")
+    func indicatorSnippetShowsTheOpening() {
+        let posting =
+            "Senior iOS Engineer\n\nAcme, London. We are looking for someone to own our design system end to end."
+        let snippet = LongTextField.indicator(name: "Job description", text: posting).snippet
+
+        #expect(
+            snippet
+                == "Senior iOS Engineer Acme, London. We are looking for someone to own our design…")
+        #expect(snippet.count == 79, "78 characters, cut back off \"design s\", plus the ellipsis")
+
+        #expect(
+            LongTextField.indicator(name: "Notes", text: "  Warm intro\n\tvia Sam  ").snippet
+                == "Warm intro via Sam",
+            "trimmed, and every run of whitespace collapsed to a single space")
+
+        let eighty = String(String(repeating: "ab ", count: 30).prefix(80))
+        #expect(eighty.count == 80)
+        #expect(
+            LongTextField.indicator(name: "Notes", text: eighty).snippet == eighty,
+            "80 characters or fewer once normalised shows whole, with no ellipsis")
+
+        let eightyOne = eighty + "c"
+        #expect(
+            LongTextField.indicator(name: "Notes", text: eightyOne).snippet.hasSuffix("…"),
+            "one character over the limit truncates")
     }
 }

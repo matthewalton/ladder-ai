@@ -3,6 +3,7 @@ import SwiftUI
 
 struct NotesEditWindow: View {
     static let windowID = "application-notes"
+    static let openAffordance = "Open"
 
     var store: PipelineStore
     var applicationID: PersistentIdentifier
@@ -69,6 +70,7 @@ struct NotesEditWindow: View {
 
 struct PrepContextEditWindow: View {
     static let windowID = "stage-prep-context"
+    static let openAffordance = "Open"
 
     var store: PipelineStore
     var stageID: PersistentIdentifier

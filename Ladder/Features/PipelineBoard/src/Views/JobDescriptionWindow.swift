@@ -5,6 +5,7 @@ import SwiftUI
 /// or remove and retype.
 struct JobDescriptionWindow: View {
     static let windowID = "job-description"
+    static let openAffordance = "View"
 
     var store: PipelineStore
     var applicationID: PersistentIdentifier

@@ -54,8 +54,11 @@ _Avoid_: next step, upcoming stage (in UI copy); any use as a code identifier
 
 **Long-text field**:
 A field of the detail forms that collapses to an indicator row (root
-CONTEXT.md, docs/adr/0003) when set: the application detail's job description
-and notes, and the Stage form's prep context.
+CONTEXT.md, docs/adr/0003 as amended by docs/adr/0006) when set: the
+application detail's job description and notes, and the Stage form's prep
+context. The three are exactly the app's typed-or-imported long text, which
+is why their rows identify their content by its opening and its size rather
+than by a date.
 _Avoid_: big text field, free-text area, text blob
 
 **JD import**:

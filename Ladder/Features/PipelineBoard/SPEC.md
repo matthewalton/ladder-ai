@@ -28,7 +28,8 @@ PDF or docx file's text on-device via the shared extractor — or fetches a
 pasted link and extracts the page's text the same way (decisions/0006, both
 now scoped to re-import: raw text, no LLM). The detail forms' long-text
 fields — job description, notes, prep context — collapse to indicator rows
-when set (docs/adr/0003). Since decisions/0009 the detail also carries the
+when set (docs/adr/0003), each row identifying the content it holds by its
+opening words and its length (docs/adr/0006). Since decisions/0009 the detail also carries the
 Match section: the persisted Match's score, matched Tags and vocabulary
 gaps, with Scan JD — the on-demand door into the JD scan and Match review
 that the tailor flow otherwise reaches first (root CONTEXT.md's "and on
@@ -237,10 +238,23 @@ without one fall back to whole-page extraction ([PIPEBOARD-26]).
 The docs/adr/0003 pattern on this slice's three long-text fields: the job
 description and the notes on the application detail, the prep context on the
 Stage form. Set means non-empty after trimming whitespace. The indicator row
-names the content and offers Open and Remove; the text itself never renders
-inline — the Granola stance ([TRANSCRIPT-28]'s section). The set/collapsed
-decision is a pure helper so the rule is testable without views; row chrome
-is visual-verify.
+identifies the content it stands for — the start of the text
+([PIPEBOARD-50]) and how much of it there is ([PIPEBOARD-49]) — and offers
+the open affordance ([PIPEBOARD-31], [PIPEBOARD-32]) and Remove
+([PIPEBOARD-33]); the text itself never renders inline — the Granola stance
+([TRANSCRIPT-28]'s section). The set/collapsed decision is a pure helper so
+the rule is testable without views; row chrome is visual-verify.
+
+Amended by docs/adr/0006. The row used to carry nothing but the fact of
+being set — "Job description set" — which reads as a status flag, so an
+imported posting made the section look empty (ticket #201) even though every
+gate keyed off the stored JD fired. What collapses, and when, is unchanged:
+collapse still happens at any set content, decided at appearance, and a
+length threshold was considered and declined (it would return the variable
+form height docs/adr/0003 existed to stop). Only what the row then shows is
+amended, and only for these three typed-or-imported fields — the debrief,
+the prep pack and the Granola notes keep identifying themselves by the date
+they were made.
 
 ## [PIPEBOARD-30] A long-text field that is empty when its form appears keeps its inline editor
 
@@ -257,14 +271,20 @@ the window renders the job description with text selection enabled, and shows
 a gone message when the Application no longer resolves. Read-only is
 deliberate (docs/adr/0003): the JD has alternate input paths — re-import
 ([PIPEBOARD-25]'s confirmation still guards it), or remove and retype — so
-the window never edits. Window chrome is visual-verify.
+the window never edits. The indicator row's affordance says so: it reads
+**View**, not Open (docs/adr/0006) — Open promised an edit this window has
+never offered, and the row is the only place that promise is made. Window
+chrome is visual-verify.
 
 ## [PIPEBOARD-32] Opening the notes or the prep context shows the text in an editable window
 
 Typing is these fields' only input path (docs/adr/0003), so their window
 edits, autosaving through the existing store seams — `updateDetails` for the
 notes ([PIPEBOARD-12]), `updateStage` for the prep context ([PIPEBOARD-15]) —
-never a private write path. Window chrome is visual-verify.
+never a private write path. Their indicator rows keep **Open**: the
+affordance matches what the window does, which is why the job description's
+reads View instead ([PIPEBOARD-31], docs/adr/0006). Window chrome is
+visual-verify.
 
 ## [PIPEBOARD-33] Removing a long-text field's content requires confirmation before clearing it
 
@@ -274,6 +294,54 @@ Declining changes nothing. Confirmation everywhere is docs/adr/0003's rule —
 hand-typed notes are as costly to recreate as generated content; only Granola
 notes stay one-click, in their own slice. The needs-confirmation stance
 mirrors [PIPEBOARD-25]; the dialog chrome is visual-verify.
+
+## [PIPEBOARD-49] A long-text field's indicator row reports how many words the field holds
+
+The size half of docs/adr/0006's "start and size". Words, not characters: a
+posting is something a reader can picture at 1,200 words, and a character
+count is a number nobody has an intuition for. A word is a
+whitespace-separated run of the trimmed content, so the count survives the
+newline noise a PDF extraction carries — `"Senior iOS Engineer\n\nAcme,
+London"` is five words, because the blank line between them is one run of
+whitespace and not a word of its own.
+
+The label follows the shape the generated rows already use — the field's
+name, an em dash, the fact that identifies the content — so the job
+description reads "Job description — 1,240 words", the notes "Notes — 86
+words", the prep context "Prep context — 210 words". A count of one is
+singular: "Notes — 1 word". Thousands group by the user's locale, the way
+every other number in the app does.
+
+A pure helper beside `collapsesAtAppearance` in
+`src/LongText/LongTextField.swift` derives the label (docs/adr/0006), so the
+count is testable without views; the row's typography is visual-verify.
+
+## [PIPEBOARD-50] A long-text field's indicator row shows the start of the text it holds
+
+The snippet half of docs/adr/0006's "start and size", and the half that
+answers the question the old row could not: is this the right posting. It is
+the row's second line, beneath the label ([PIPEBOARD-49]), so it has the
+row's full width.
+
+The rule, contractually: take the content trimmed, collapse every run of
+whitespace — the newlines a PDF extraction is full of included — to a single
+space, then take the first 80 characters, cut back to the last whole word
+that fits, and close with an ellipsis. Eighty is about one line at the row's
+callout size in the detail form, and the cut at a word boundary keeps it
+from ending mid-word. Content of 80 characters or fewer once normalised
+shows whole, with no ellipsis. Worked: `"Senior iOS Engineer\n\nAcme,
+London. We are looking for someone to own our design system end to end."`
+normalises to 97 characters, whose first 80 end mid-word at "design s", so
+the snippet is "Senior iOS Engineer Acme, London. We are looking for someone
+to own our design…" — 78 characters plus the ellipsis.
+
+A job description extracted from a whole page opens with whatever the
+extraction stored, which may be nav text or a cookie line. The row reports
+that truthfully; making the extraction open at the posting is
+[PIPEBOARD-26]–[PIPEBOARD-28]'s job, not the row's (docs/adr/0006).
+
+Derived by the same pure helper as [PIPEBOARD-49], so the truncation rule is
+testable without views.
 
 ## [PIPEBOARD-35] Importing a job-posting link creates a draft Application with LLM-structured details
 

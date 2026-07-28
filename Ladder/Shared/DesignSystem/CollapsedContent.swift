@@ -14,7 +14,9 @@ extension ModelContext {
 
 struct IndicatorRow<Extras: View>: View {
     var label: String
+    var detail: String? = nil
     var icon: String
+    var openAffordance: String = "Open"
     var onOpen: () -> Void
     var onRemove: () -> Void
     @ViewBuilder var extras: () -> Extras
@@ -22,16 +24,24 @@ struct IndicatorRow<Extras: View>: View {
     var body: some View {
         HStack {
             Label {
-                Text(label)
-                    .font(.callout)
-                    .foregroundStyle(Color.ink)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label)
+                        .font(.callout)
+                        .foregroundStyle(Color.ink)
+                    if let detail {
+                        Text(detail)
+                            .font(.callout)
+                            .foregroundStyle(Color.inkSoft)
+                            .lineLimit(1)
+                    }
+                }
             } icon: {
                 Image(systemName: icon)
                     .foregroundStyle(Color.pine)
             }
             Spacer()
             extras()
-            Button("Open", action: onOpen)
+            Button(openAffordance, action: onOpen)
             Button("Remove", action: onRemove)
         }
     }
@@ -39,11 +49,12 @@ struct IndicatorRow<Extras: View>: View {
 
 extension IndicatorRow where Extras == EmptyView {
     init(
-        label: String, icon: String,
+        label: String, detail: String? = nil, icon: String, openAffordance: String = "Open",
         onOpen: @escaping () -> Void, onRemove: @escaping () -> Void
     ) {
         self.init(
-            label: label, icon: icon, onOpen: onOpen, onRemove: onRemove,
+            label: label, detail: detail, icon: icon, openAffordance: openAffordance,
+            onOpen: onOpen, onRemove: onRemove,
             extras: { EmptyView() })
     }
 }
@@ -76,7 +87,9 @@ struct ContentWindow<Model, Content: View>: View {
 #Preview("Indicator row") {
     Form {
         IndicatorRow(
-            label: "Notes set", icon: "note.text",
+            label: "Notes — 86 words",
+            detail: "Warm intro via Sam; they want the platform story up front…",
+            icon: "note.text",
             onOpen: {}, onRemove: {}
         ) {
             Button("Export…") {}

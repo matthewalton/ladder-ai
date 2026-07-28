@@ -92,7 +92,7 @@ evidence gaps surface in the tailor review. UI may label both plainly as
 _Avoid_: unmatched requirement, missing skill
 
 **Indicator row**:
-The collapsed presentation of long text content that is set — a row showing the content exists, with Open and Remove, never the text inline. The app-wide rule is docs/adr/0003; Granola notes established the pattern.
+The collapsed presentation of long text content that is set — a row identifying the content, with Open and Remove, never the text inline. Typed-or-imported content identifies itself by its opening snippet and its size; generated content by the date it was made (docs/adr/0006). The app-wide rule is docs/adr/0003; Granola notes established the pattern.
 _Avoid_: collapsed view, summary row, chip
 
 ## Flagged ambiguities

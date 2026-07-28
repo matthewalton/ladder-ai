@@ -87,9 +87,13 @@ struct StageFormView: View {
                 TextField("Meeting link", text: $meetingURLText)
                 Section("Prep context") {
                     if let stage, showsPrepContextIndicator {
+                        let indicator = LongTextField.indicator(
+                            name: "Prep context", text: stage.prepContext)
                         IndicatorRow(
-                            label: "Prep context set",
+                            label: indicator.label,
+                            detail: indicator.snippet,
                             icon: "text.alignleft",
+                            openAffordance: PrepContextEditWindow.openAffordance,
                             onOpen: {
                                 openWindow(
                                     id: PrepContextEditWindow.windowID,
