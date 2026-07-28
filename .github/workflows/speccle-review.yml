@@ -68,13 +68,17 @@ jobs:
           # `risk` measures from the merge base, which a shallow clone has no history to find.
           fetch-depth: 0
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
-          # This job installs nothing from the repo's manifest — it runs Speccle straight from
-          # npm. Left on, setup-node reads `packageManager` and caches for a package manager
-          # this job never installs.
-          package-manager-cache: false
+
+      # A global install, not `npx`. `npx` is `npm exec`, which validates *this* repo's
+      # `devEngines.packageManager` before it fetches anything — so a repo pinning pnpm, yarn or
+      # bun fails the run with an EBADDEVENGINES error naming Speccle, which never declared it
+      # (`onFail: download` does not rescue a name mismatch). `npm i -g` is exempt, and resolves
+      # the package once instead of on both steps below.
+      - name: Install Speccle
+        run: npm i -g speccle@0.22.0
 
       # `origin/` prefixes the base ref because checkout leaves it as a remote-tracking ref;
       # a bare branch name would not resolve.
@@ -83,7 +87,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >-
-          npx -y speccle@0.18.0 review run
+          speccle review run
           --pr ${{ steps.pr.outputs.number }}
           --base origin/${{ steps.pr.outputs.base }}
           ${{ github.event_name == 'issue_comment' && '--force' || '' }}
@@ -92,4 +96,4 @@ jobs:
       # the failing check. Whether that blocks the merge is branch protection — GitHub's, and
       # this repo's call to make, not Speccle's. It runs last so the findings post either way.
       - name: Risk gate
-        run: npx -y speccle@0.18.0 risk --base origin/${{ steps.pr.outputs.base }}
+        run: speccle risk --base origin/${{ steps.pr.outputs.base }}
