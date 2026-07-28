@@ -1,0 +1,1 @@
+{"at":"2026-07-28T09:39:37.909Z","score":3,"threshold":3,"humanRequired":true,"escalated":false,"signals":["spec-silent-change"],"verdict":{"neededHuman":false,"foundReal":true}}

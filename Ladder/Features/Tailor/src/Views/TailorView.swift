@@ -438,7 +438,8 @@ struct RelevanceLine: View {
           "rationale": "CI work maps directly to the JD's platform focus."
         }
         """.utf8),
-        validAchievementIDs: ["a1"]
+        validAchievementIDs: ["a1"],
+        matchedTagNames: []
     )
     let review = TailorReview(
         result: result, achievementsByID: ["a1": achievement],

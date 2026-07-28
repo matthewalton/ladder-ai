@@ -69,7 +69,8 @@ final class TailorStore {
                     json: response,
                     validAchievementIDs: validIDs,
                     validProjectIDs: validProjectIDs,
-                    tagNamesByID: tagNamesByID
+                    tagNamesByID: tagNamesByID,
+                    matchedTagNames: matchedTagNames
                 )
             } catch let failure as TailorValidationFailure {
                 // Exactly one repair attempt; a repair response failing
@@ -85,7 +86,8 @@ final class TailorStore {
                     json: repairResponse,
                     validAchievementIDs: validIDs,
                     validProjectIDs: validProjectIDs,
-                    tagNamesByID: tagNamesByID
+                    tagNamesByID: tagNamesByID,
+                    matchedTagNames: matchedTagNames
                 )
             }
             review = TailorReview(

@@ -1,4 +1,4 @@
-# tailor — v9
+# tailor — v10
 
 You are tailoring Ladder's Profile to one pasted job description. The payload
 following this prompt is JSON with two parts: `profile` (the user's career
@@ -13,7 +13,8 @@ count. Within each role, achievements arrive ordered by descending overlap,
 as do projects. Treat the annotation as grounding for your selection — a
 high-overlap point is verified vocabulary common ground, a zero-overlap
 point may still earn its place on substance — and never echo `overlap`
-back in your response.
+back in your response, with one exception: `skillCategories` is built from
+exactly these overlapping tag names, and nothing else.
 
 The payload may carry a `budget`: the largest content volume — bullets,
 projects, characters — this user's past exports have proven fit on a
@@ -53,7 +54,7 @@ of your reply is `{`. Match this schema:
   "skillCategories": [
     {
       "name": "a category name you choose for this job, e.g. 'Languages & Frameworks'",
-      "skills": ["tags of the selected achievements and projects, grouped under this category"]
+      "skills": ["overlap.tags of the selected achievements and projects, grouped under this category"]
     }
   ],
   "relevance": {
@@ -83,12 +84,15 @@ Rules:
   description and tags exactly as the payload states them. Include a project
   only when it genuinely fits the job; an empty array means no Projects
   section.
-- `skillCategories` is the CV's skills table: group the `tags` of the
-  content you selected into 2–5 categories named for this job description.
-  Use only tags that appear on selected achievements or selected projects —
-  never other profile tags, never skills of your own — each at most once
-  across the categories, echoed verbatim. No selected tags means an empty
-  array.
+- `skillCategories` is the CV's skills table: group the names listed in the
+  `overlap.tags` of the content you selected into 2–5 categories named for
+  this job description. That list is the whole of what you may use — a tag
+  on a selected point but absent from its `overlap` is vocabulary this job
+  description never asked for, and belongs on no category; nor do tags of
+  unselected content, nor skills of your own. Each allowed name appears at
+  most once across the categories, echoed verbatim. When the selected
+  content has no overlapping tags, return an empty array — never widen the
+  table to fill it out.
 - `relevance` judges every selected point — one entry per id in
   `selections` and `projects`, those ids and no others. Four criteria, each
   an integer from 0 (no relevance) to 5 (direct hit): `tech` — how well the

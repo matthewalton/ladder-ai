@@ -43,8 +43,8 @@ struct CVRenderTests {
         let globex = try #require(profile.roles.first(where: { $0.company == "Globex" }))
         let a1 = acme.orderedAchievements[0]
         let a3 = try #require(globex.orderedAchievements.first)
-        let result = try TailorResult(
-            json: Data("""
+        let result = try makeTailorResult(
+            json: """
             {
               "summary": "Senior engineer with platform-scale CI performance and analytics delivery behind them.",
               "selections": [
@@ -58,8 +58,9 @@ struct CVRenderTests {
               "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],
               "rationale": "CI work maps directly to the JD's platform focus."
             }
-            """.utf8),
-            validAchievementIDs: ["a1", "a2", "a3"]
+            """,
+            validAchievementIDs: ["a1", "a2", "a3"],
+            matchedTagNames: []
         )
         return TailorReview(result: result, achievementsByID: ["a1": a1, "a3": a3])
     }
@@ -126,8 +127,8 @@ struct CVRenderTests {
         let profileStore = try makeProfileStore()
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
-        let result = try TailorResult(
-            json: Data("""
+        let result = try makeTailorResult(
+            json: """
             {
               "summary": "CI-focused engineer.",
               "selections": [
@@ -137,8 +138,9 @@ struct CVRenderTests {
               "gaps": [],
               "rationale": "CI focus."
             }
-            """.utf8),
-            validAchievementIDs: ["a1", "a2", "a3"]
+            """,
+            validAchievementIDs: ["a1", "a2", "a3"],
+            matchedTagNames: []
         )
         let review = TailorReview(
             result: result, achievementsByID: ["a1": acme.orderedAchievements[0]]
@@ -268,8 +270,8 @@ struct CVRenderTests {
 
         let a1 = acme.orderedAchievements[0]
         let a3 = try #require(globex.orderedAchievements.first)
-        let result = try TailorResult(
-            json: Data("""
+        let result = try makeTailorResult(
+            json: """
             {
               "summary": "Senior engineer with platform-scale CI performance behind them.",
               "selections": [
@@ -287,12 +289,13 @@ struct CVRenderTests {
               "gaps": [],
               "rationale": "CI work maps directly to the JD's platform focus."
             }
-            """.utf8),
+            """,
             validAchievementIDs: ["a1", "a2", "a3"],
             tagNamesByID: [
                 "a1": a1.skills.map(\.name),
                 "a3": a3.skills.map(\.name),
-            ]
+            ],
+            matchedTagNames: ["CI/CD", "Swift", "SQL"]
         )
         let review = TailorReview(result: result, achievementsByID: ["a1": a1, "a3": a3])
 
@@ -348,8 +351,8 @@ struct CVRenderTests {
 
         let profile = try #require(profileStore.profile)
         let acme = try #require(profile.roles.first(where: { $0.company == "Acme" }))
-        let result = try TailorResult(
-            json: Data("""
+        let result = try makeTailorResult(
+            json: """
             {
               "summary": "Platform and mapping engineer.",
               "selections": [
@@ -363,9 +366,10 @@ struct CVRenderTests {
               "gaps": [],
               "rationale": "Platform and mapping work both fit."
             }
-            """.utf8),
+            """,
             validAchievementIDs: ["a1", "a2", "a3"],
-            validProjectIDs: ["p1", "p2"]
+            validProjectIDs: ["p1", "p2"],
+            matchedTagNames: []
         )
         let review = TailorReview(
             result: result,
@@ -505,8 +509,8 @@ struct CVRenderTests {
                 #""a\#(index)": {"tech": 3, "domain": 3, "seniority": 3, "impact": 3}"#
             )
         }
-        let result = try TailorResult(
-            json: Data("""
+        let result = try makeTailorResult(
+            json: """
             {
               "summary": "Everything-fits engineer.",
               "selections": [\(selections.joined(separator: ","))],
@@ -514,8 +518,9 @@ struct CVRenderTests {
               "gaps": [],
               "rationale": "Everything fits."
             }
-            """.utf8),
-            validAchievementIDs: Set(byID.keys)
+            """,
+            validAchievementIDs: Set(byID.keys),
+            matchedTagNames: []
         )
         let review = TailorReview(result: result, achievementsByID: byID)
         let profile = try #require(store.profile)
