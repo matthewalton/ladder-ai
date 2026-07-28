@@ -5,5 +5,5 @@ enum TailorError: Error, Equatable {
     case achievementsRequired
     case apiKeyRequired
     case resultInvalid
-    case requestFailed
+    case requestFailed(detail: String)
 }

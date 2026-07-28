@@ -79,7 +79,8 @@ final class TailorFlowStore {
                 confirmationNotes = try MatchReviewConfirmation.apply(
                     matchReview, to: application)
             } catch {
-                phase = .tailorFailed(.requestFailed)
+                phase = .tailorFailed(
+                    .requestFailed(detail: "saving the confirmed review failed"))
                 return
             }
         }
@@ -94,7 +95,7 @@ final class TailorFlowStore {
         case .failed(let error):
             phase = .tailorFailed(error)
         case .idle, .running:
-            phase = .tailorFailed(.requestFailed)
+            phase = .tailorFailed(.requestFailed(detail: "the tailor never completed"))
         }
     }
 

@@ -380,6 +380,9 @@ struct TailorFlowTests {
         #expect(urlRequest.value(forHTTPHeaderField: "x-api-key") == "sk-ant-live")
         #expect(urlRequest.value(forHTTPHeaderField: "anthropic-version") == "2023-06-01")
         #expect(urlRequest.value(forHTTPHeaderField: "content-type") == "application/json")
+        #expect(
+            urlRequest.timeoutInterval > 60,
+            "an unstreamed run outlives URLRequest's 60s default")
 
         let body = try #require(urlRequest.httpBody)
         let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])

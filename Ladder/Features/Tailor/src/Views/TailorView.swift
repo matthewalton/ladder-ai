@@ -215,8 +215,8 @@ struct TailorView: View {
             "Tailoring needs your Anthropic API key. Add it in Settings — it's stored only in your Keychain."
         case .resultInvalid:
             "The tailor result didn't come back in a shape Ladder could read, even after one repair. Nothing was changed."
-        case .requestFailed:
-            "The request couldn't be completed. Check your connection and try again."
+        case .requestFailed(let detail):
+            "The tailor request couldn't be completed (\(detail)). Check your connection and try again."
         }
     }
 

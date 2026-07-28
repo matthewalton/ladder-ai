@@ -4,6 +4,11 @@ import Foundation
 struct AnthropicIntelligenceService: IntelligenceService {
     static let model = "claude-sonnet-5"
     static let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
+    // URLRequest defaults to 60s, and because the response is not streamed no
+    // bytes arrive until generation finishes — so that default is a ceiling on
+    // the whole run, not an idle timeout. A tailor run on a thinking model
+    // routinely passes it.
+    static let timeout: TimeInterval = 300
 
     private let apiKey: String
     private let urlSession: URLSession
@@ -22,6 +27,7 @@ struct AnthropicIntelligenceService: IntelligenceService {
     static func urlRequest(for request: IntelligenceRequest, apiKey: String) throws -> URLRequest {
         var urlRequest = URLRequest(url: endpoint)
         urlRequest.httpMethod = "POST"
+        urlRequest.timeoutInterval = timeout
         urlRequest.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         urlRequest.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         urlRequest.setValue("application/json", forHTTPHeaderField: "content-type")
@@ -29,7 +35,9 @@ struct AnthropicIntelligenceService: IntelligenceService {
         encoder.outputFormatting = [.sortedKeys]
         urlRequest.httpBody = try encoder.encode(MessagesRequest(
             model: model,
-            maxTokens: 16000,
+            // Adaptive thinking is on by default on this model and draws from
+            // the same budget, so this is not headroom for the answer alone.
+            maxTokens: 32000,
             system: request.prompt,
             messages: [MessagesRequest.Message(role: "user", content: request.payload)]
         ))
