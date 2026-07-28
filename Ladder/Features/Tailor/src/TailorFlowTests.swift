@@ -562,6 +562,8 @@ struct TailorFlowTests {
         #expect(await service.recordedRequests.count == 1)
     }
 
+    /// "Incident response" tags a selected point but is deliberately absent
+    /// from `matchedTagNames`, so the intersection bound has something to drop.
     private func makeTaggedProfileStore() throws -> ProfileStore {
         let store = try makeProfileStore()
         let role = try #require(store.profile?.roles.first)
@@ -572,6 +574,10 @@ struct TailorFlowTests {
         return store
     }
 
+    /// Overlap ranks the payload, so matching only the first point's Tags
+    /// leaves a1–a3 in the profile's own order.
+    private var matchedTagNames: [String] { ["Swift", "CI"] }
+
     private var groupedResultJSON: Data {
         Data("""
         {
@@ -581,8 +587,8 @@ struct TailorFlowTests {
             {"achievementID": "a3", "bullet": "Led cross-team incident response for a critical payments outage"}
           ],
           "skillCategories": [
-            {"name": "Platform Engineering", "skills": ["Swift", "CI"]},
-            {"name": "Operations", "skills": ["Incident response"]}
+            {"name": "Languages", "skills": ["Swift"]},
+            {"name": "Delivery", "skills": ["CI"]}
           ],
           "relevance": {
             "a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4},
@@ -594,24 +600,24 @@ struct TailorFlowTests {
         """.utf8)
     }
 
-    @Test("[TAILOR-24] the tailor result groups the selected skills into named categories")
+    @Test("[TAILOR-24] the tailor result groups the selection's matched Tags into named skill categories")
     func resultCarriesSkillGrouping() async throws {
         let profileStore = try makeTaggedProfileStore()
         let service = FixtureIntelligenceService(returning: groupedResultJSON)
         let store = makeTailorStore(profileStore: profileStore, service: service)
 
-        await store.startRun(jobDetails)
+        await store.startRun(jobDetails, matchedTagNames: matchedTagNames)
 
         #expect(store.phase == .review)
         let review = try #require(store.review)
         #expect(review.skillCategories == [
-            SkillCategory(name: "Platform Engineering", skills: ["Swift", "CI"]),
-            SkillCategory(name: "Operations", skills: ["Incident response"]),
+            SkillCategory(name: "Languages", skills: ["Swift"]),
+            SkillCategory(name: "Delivery", skills: ["CI"]),
         ], "the grouping is carried verbatim (decisions/0009)")
         #expect(review.outcome.skillCategories == review.skillCategories)
     }
 
-    @Test("[TAILOR-24] a grouping naming a skill outside the selection's Tag union feeds the repair path")
+    @Test("[TAILOR-24] a grouping naming a skill on no selected point feeds the repair path")
     func groupingOutsideTagUnionFeedsRepair() async throws {
         let profileStore = try makeTaggedProfileStore()
         let invalid = Data("""
@@ -630,13 +636,94 @@ struct TailorFlowTests {
         let service = FixtureIntelligenceService(returning: [invalid, groupedResultJSON])
         let store = makeTailorStore(profileStore: profileStore, service: service)
 
-        await store.startRun(jobDetails)
+        await store.startRun(jobDetails, matchedTagNames: matchedTagNames)
 
-        // Kubernetes is in the JD but tags nothing selected — the grouping
-        // breaches the vocabulary bound.
         #expect(await service.recordedRequests.count == 2, "one repair request, no more")
         #expect(store.phase == .review, "a valid repair recovers the run")
-        #expect(store.review?.skillCategories.first?.name == "Platform Engineering")
+        #expect(store.review?.skillCategories.first?.name == "Languages")
+    }
+
+    @Test("[TAILOR-64] a skill category naming a Tag the confirmed Match never matched fails validation")
+    func groupingOutsideTheMatchFeedsRepair() async throws {
+        let profileStore = try makeTaggedProfileStore()
+        let service = FixtureIntelligenceService(
+            returning: [unmatchedGroupingJSON, groupedResultJSON])
+        let store = makeTailorStore(profileStore: profileStore, service: service)
+
+        await store.startRun(jobDetails, matchedTagNames: matchedTagNames)
+
+        let requests = await service.recordedRequests
+        #expect(requests.count == 2, "one repair request, no more")
+        let repair = try #require(requests.last)
+        #expect(repair.payload.contains("Incident response"), "the repair names the unmatched skill")
+        #expect(store.phase == .review, "a valid repair recovers the run")
+        #expect(store.review?.skillCategories.flatMap(\.skills) == ["Swift", "CI"])
+    }
+
+    @Test("[TAILOR-64] a repair still naming an unmatched Tag fails the run")
+    func repeatedUnmatchedGroupingFailsTheRun() async throws {
+        let profileStore = try makeTaggedProfileStore()
+        let service = FixtureIntelligenceService(returning: unmatchedGroupingJSON)
+        let store = makeTailorStore(profileStore: profileStore, service: service)
+
+        await store.startRun(jobDetails, matchedTagNames: matchedTagNames)
+
+        #expect(store.phase == .failed(.resultInvalid))
+        #expect(store.review == nil)
+        #expect(await service.recordedRequests.count == 2, "no second repair")
+    }
+
+    /// "Incident response" is on the selected a3 — legal under the old Tag
+    /// union, rejected now that the Match bounds the table.
+    private var unmatchedGroupingJSON: Data {
+        Data("""
+        {
+          "summary": "Platform-minded senior engineer.",
+          "selections": [
+            {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"},
+            {"achievementID": "a3", "bullet": "Led cross-team incident response for a critical payments outage"}
+          ],
+          "skillCategories": [
+            {"name": "Languages", "skills": ["Swift"]},
+            {"name": "Operations", "skills": ["Incident response"]}
+          ],
+          "relevance": {
+            "a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4},
+            "a3": {"tech": 2, "domain": 4, "seniority": 4, "impact": 5}
+          },
+          "gaps": [],
+          "rationale": "CI and incident work fit the platform focus."
+        }
+        """.utf8)
+    }
+
+    @Test("[TAILOR-65] a selection sharing no Tag with the confirmed Match carries no skill categories")
+    func emptyIntersectionCarriesNoSkillCategories() async throws {
+        let profileStore = try makeTaggedProfileStore()
+        let service = FixtureIntelligenceService.tailorFixture()
+        let store = makeTailorStore(profileStore: profileStore, service: service)
+
+        await store.startRun(jobDetails, matchedTagNames: ["Kubernetes"])
+
+        #expect(store.phase == .review)
+        let review = try #require(store.review)
+        #expect(review.items.contains { !$0.achievement.skills.isEmpty },
+            "the selected points do carry Tags — it is the intersection that is empty")
+        #expect(review.skillCategories.isEmpty)
+        #expect(review.outcome.skillCategories.isEmpty)
+        #expect(await service.recordedRequests.count == 1, "an empty table is valid, not a repairable failure")
+    }
+
+    @Test("[TAILOR-65] an empty intersection never falls back to the selection's Tag union")
+    func emptyIntersectionRefusesTheTagUnion() async throws {
+        let profileStore = try makeTaggedProfileStore()
+        let service = FixtureIntelligenceService(returning: groupedResultJSON)
+        let store = makeTailorStore(profileStore: profileStore, service: service)
+
+        await store.startRun(jobDetails, matchedTagNames: ["Kubernetes"])
+
+        #expect(store.phase == .failed(.resultInvalid))
+        #expect(await service.recordedRequests.count == 2, "the union grouping is rejected, then repaired once")
     }
 
     @Test("[TAILOR-60] a tailor result missing a selected point's relevance scores fails validation")

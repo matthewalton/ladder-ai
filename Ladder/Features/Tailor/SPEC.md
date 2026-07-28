@@ -23,7 +23,11 @@ implementation, and the retry-with-repair loop deferred here by
 [CVIMPORT-10]. It also owns the CV template's service passes: the per-CV
 skill grouping in the tailor result (decisions/0009) and the condense and
 trim passes cv-export's fit loop calls (decisions/0010) — cv-export renders
-what these return, never rewords anything itself.
+what these return, never rewords anything itself. Since ticket #196 that
+grouping is bounded by the Match rather than by the selection alone: a skill
+reaches the CV's skills table only when it is on selected content *and* in
+the confirmed Match's matched Tags, and an empty intersection means an empty
+table, never a fallback to the union (decisions/0018).
 
 Since ticket #162 slice 2 the slice also owns tailoring's first step, the JD
 scan (root `CONTEXT.md`): the intelligence service reads an Application's
@@ -254,16 +258,31 @@ fenced-but-valid result reaches review without consuming the single repair
 request (decisions/0004) on a formatting quirk. The prompt also forbids
 fences explicitly, but tolerance must not depend on the model obeying.
 
-## [TAILOR-24] The tailor result groups the selected skills into named categories
+## [TAILOR-24] The tailor result groups the selection's matched Tags into named skill categories
 
-The skill grouping (decisions/0009): the result schema — and
-`Prompts/tailor.md`, version-bumped — gains categories, each a service-chosen
-name over skills drawn from the selection's Tag union (the vocabulary bound
-CVExport decisions/0004 established; the union is now grouped, never dumped
-flat). A grouping naming a skill outside that union fails validation and
-feeds the repair path ([TAILOR-9]). The grouping is per-CV and transient —
-no `SkillTag` model change — and travels through the reviewed outcome
-verbatim for cv-export's skills table ([CVEXPORT-23]).
+The skill grouping (decisions/0009, bounded by decisions/0018): the result
+schema — and `Prompts/tailor.md`, version-bumped — gains categories, each a
+service-chosen name over skills drawn from the **intersection**: a skill may
+appear only when it is on selected content *and* in the confirmed Match's
+matched Tags. decisions/0009's union bound (the vocabulary bound CVExport
+decisions/0004 established, grouped rather than dumped flat) is tightened,
+not replaced — a skill on no selected point is still a stray, and both
+rejections feed the repair path ([TAILOR-9], [TAILOR-64]). Names compare
+case-insensitively, as everywhere else in the slice. No selected tags means
+an empty array; so does an intersection that comes out empty ([TAILOR-65]).
+The grouping stays per-CV and transient — no `SkillTag` model change — and
+travels through the reviewed outcome verbatim for cv-export's skills table
+([CVEXPORT-23], which needs no amendment: a subset of the selection's Tag
+union still comes from that union).
+
+`Prompts/tailor.md` version-bumps v9 → v10, and the bump carries a trap. v9
+tells the model to "never echo `overlap` back in your response" (lines
+14–16), and `overlap`'s tag names are exactly the JD-matched vocabulary the
+skills table must now be drawn from — the prohibition and the new bound
+contradict each other outright. v10 states the intersection bound *and*
+carves `skillCategories` out of that prohibition; changing only the
+`skillCategories` rule leaves the prompt telling the model two opposite
+things.
 
 ## [TAILOR-25] A condense pass returns the same selection with shortened bullet texts
 
@@ -636,3 +655,43 @@ Match review's confirmation left them ([TAILOR-49]), and the derived score
 ([TAILOR-41]) is identical before and after the tailor run. Relevance stats
 are per-point, vocabulary-blind, and die with the flow — nothing they carry
 reaches the store ([TAILOR-15]'s guarantee extends over them).
+
+## [TAILOR-64] A skill category naming a Tag the confirmed Match never matched fails validation
+
+The rejection that defends ticket #196 (decisions/0018). The skill named
+here *is* on selected content — under decisions/0009's union bound it was
+perfectly legal, however little the job description cared about it, which is
+exactly how JD-irrelevant skills reached the CV. It is now rejected the way
+a stray is ([TAILOR-24]), feeding the single repair ([TAILOR-9];
+decisions/0004); a second failure fails the run ([TAILOR-10]). The bound is
+enforced deterministically in Swift and never trusted to the prompt — v10
+instructs, validation guarantees.
+
+Names compare case-insensitively, consistent with the payload's overlap
+computation ([TAILOR-52]) and the existing stray check. The validating
+initialiser already receives both sides of the intersection — the confirmed
+Match's matched Tag names and the payload's per-id Tag names — so nothing
+new is plumbed through the flow.
+
+The canned fixture result is arranged so a selected point carries Tags that
+are *not* all matched, so the drop is proven rather than assumed: a fixture
+whose every selected Tag happened to be matched passes under the old bound
+and the new one alike and proves neither.
+
+## [TAILOR-65] When the selection shares no Tag with the confirmed Match, the tailor result carries no skill categories
+
+The degenerate case decisions/0018 settles outright: an empty intersection
+means an empty skills table, never a fallback to decisions/0009's union.
+Distinct from [TAILOR-24]'s "no selected tags" case — here the selected
+points do carry Tags, and every one of them is vocabulary this job
+description never asked for. It earns its own criterion because a backfill
+is the natural thing to reach for when the table comes out thin, and neither
+[TAILOR-24] nor [TAILOR-64] asserts that it must not happen.
+
+A thin or absent table is a true report that the Profile's vocabulary does
+not meet the job description, and the user has already seen that as the
+Match score ([TAILOR-41]) before confirming the review. The fix belongs in
+the Match review, where confirming suggestions moves gaps into matched Tags
+([TAILOR-49]) — never in a silent widening at result time. cv-export already
+renders a CV with no Skills section (CVExport decisions/0004), so nothing
+downstream needs amending.

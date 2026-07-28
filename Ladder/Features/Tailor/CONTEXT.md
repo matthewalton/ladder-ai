@@ -107,7 +107,9 @@ _Avoid_: final CV, tailored profile, export
 
 **Skill category**:
 A service-chosen name over a group of the selection's skills, proposed per
-tailor run for the CV's skills table (decisions/0009). Per-CV and transient —
+tailor run for the CV's skills table (decisions/0009). The skills grouped are
+the selection's Tags that the confirmed Match also matched — the intersection,
+never the selection's whole Tag union (decisions/0018). Per-CV and transient —
 never stored on `SkillTag`.
 _Avoid_: skill group, tag category, taxonomy
 

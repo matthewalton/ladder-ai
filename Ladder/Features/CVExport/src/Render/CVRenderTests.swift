@@ -292,7 +292,8 @@ struct CVRenderTests {
             tagNamesByID: [
                 "a1": a1.skills.map(\.name),
                 "a3": a3.skills.map(\.name),
-            ]
+            ],
+            matchedTagNames: ["CI/CD", "Swift", "SQL"]
         )
         let review = TailorReview(result: result, achievementsByID: ["a1": a1, "a3": a3])
 

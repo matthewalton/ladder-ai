@@ -10,6 +10,8 @@ the per-point relevance stats.
 - `Ladder/Shared/Services/` — the live `AnthropicIntelligenceService` lives there, not here
 - `Ladder/Features/CVExport/src/Application.swift` — cv-export owns `Application`; the `Match` model
   this slice persists is in this slice's `src/`
+- `Ladder/Features/CVExport/src/Render/CVRenderTests.swift` — cv-export's render tests build a
+  `TailorResult` directly, so a change to its validating initialiser's signature reaches them
 - `Prompts/tailor.md` and `Prompts/jd-scan.md`
 
 **Traps**

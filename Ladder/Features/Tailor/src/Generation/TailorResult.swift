@@ -36,7 +36,8 @@ struct TailorResult: Equatable, Sendable, Decodable {
         json: Data,
         validAchievementIDs: Set<String>,
         validProjectIDs: Set<String> = [],
-        tagNamesByID: [String: [String]] = [:]
+        tagNamesByID: [String: [String]] = [:],
+        matchedTagNames: [String] = []
     ) throws {
         let json = FencedJSON.stripped(from: json)
         do {
@@ -61,13 +62,13 @@ struct TailorResult: Equatable, Sendable, Decodable {
         let selectedIDs = selections.map(\.achievementID) + projects
         let allowedSkills = Set(
             selectedIDs.flatMap { tagNamesByID[$0] ?? [] }.map { $0.lowercased() }
-        )
+        ).intersection(matchedTagNames.map { $0.lowercased() })
         let strays = skillCategories
             .flatMap(\.skills)
             .filter { !allowedSkills.contains($0.lowercased()) }
         guard strays.isEmpty else {
             throw TailorValidationFailure(
-                reason: "skillCategories name skills not on the selected content: \(strays.joined(separator: ", ")). Group only the `tags` of the achievements and projects you selected."
+                reason: "skillCategories name skills outside the selected content's job-matched tags: \(strays.joined(separator: ", ")). Group only the names listed in the `overlap.tags` of the achievements and projects you selected."
             )
         }
         let unjudged = selectedIDs.filter { relevance[$0] == nil }
