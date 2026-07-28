@@ -47,7 +47,11 @@ targets:
         INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "Ladder looks for interviews for jobs you're tracking — nothing more. It only reads: no event is ever added or changed, and nothing about your calendar leaves this Mac."
         SWIFT_VERSION: '6.0'
         CODE_SIGN_STYLE: Automatic
-        CODE_SIGN_IDENTITY: '-'
+        # Ad-hoc ('-') re-signs to a new cdhash on every build, so the Keychain
+        # sees a different app each time and re-prompts for the login password
+        # before handing back the API key. A team-backed identity is stable.
+        DEVELOPMENT_TEAM: 38BGQ68R4K
+        CODE_SIGN_IDENTITY: Apple Development
         ENABLE_HARDENED_RUNTIME: YES
         # Pine as the app accent: macOS draws list selection and control
         # accents from this asset, not from SwiftUI .tint (DESIGN.md §2).
@@ -74,6 +78,7 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: '6.0'
+        DEVELOPMENT_TEAM: 38BGQ68R4K
         TEST_HOST: '$(BUILT_PRODUCTS_DIR)/Ladder.app/Contents/MacOS/Ladder'
         BUNDLE_LOADER: '$(TEST_HOST)'
 

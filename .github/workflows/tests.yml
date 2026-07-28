@@ -49,12 +49,19 @@ jobs:
         run: xcodegen generate
 
       # The same invocation `.speccle/config.json` records as the suite, and the same one
-      # `pnpm test` runs locally — one command, so a green CI run means what a green local
-      # run means. Ladder is on Swift Testing, so XCTest's summary reports "Executed 0
-      # tests" and the real result is the "Test run with N tests" line below it.
+      # `pnpm test` runs locally, save for the two signing overrides below — nothing else
+      # differs, so a green CI run still means what a green local run means. Ladder is on
+      # Swift Testing, so XCTest's summary reports "Executed 0 tests" and the real result
+      # is the "Test run with N tests" line below it.
+      #
+      # The runner holds neither the team's certificate nor its private key, so it signs
+      # ad-hoc. Locally the spec pins a team identity instead: an ad-hoc signature changes
+      # on every build, which makes the Keychain re-prompt for the API key each time.
       - name: Run the suite
         run: |
           xcodebuild -project Ladder.xcodeproj \
                      -scheme Ladder \
                      -destination 'platform=macOS' \
+                     CODE_SIGN_IDENTITY=- \
+                     DEVELOPMENT_TEAM="" \
                      test
