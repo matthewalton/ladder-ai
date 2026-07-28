@@ -857,3 +857,24 @@ struct TailorFlowTests {
             == RelevanceStats(tech: 4, domain: 5, seniority: 2, impact: 3))
     }
 }
+
+// MARK: - Helpers shared by the slices that build a TailorResult
+
+/// The seam that keeps `TailorResult`'s validating initialiser a Tailor concern:
+/// cv-export's render tests build results through this, so a new validation
+/// parameter lands here rather than across the feature boundary.
+func makeTailorResult(
+    json: String,
+    validAchievementIDs: Set<String>,
+    validProjectIDs: Set<String> = [],
+    tagNamesByID: [String: [String]] = [:],
+    matchedTagNames: [String]
+) throws -> TailorResult {
+    try TailorResult(
+        json: Data(json.utf8),
+        validAchievementIDs: validAchievementIDs,
+        validProjectIDs: validProjectIDs,
+        tagNamesByID: tagNamesByID,
+        matchedTagNames: matchedTagNames
+    )
+}

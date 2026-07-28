@@ -1,0 +1,8 @@
+{
+  "forbid": {
+    "path": "Ladder/Features/CVExport/**/*.swift",
+    "contains": "\\bTailorResult\\("
+  },
+  "message": "cv-export builds a TailorResult through Tailor's makeTailorResult fixture, never its validating initialiser",
+  "because": "PR #2: a new matchedTagNames parameter on the validating initialiser forced lockstep edits in CVRenderTests, across a feature boundary that has no business tracking that signature"
+}

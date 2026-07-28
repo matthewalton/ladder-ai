@@ -37,7 +37,7 @@ struct TailorResult: Equatable, Sendable, Decodable {
         validAchievementIDs: Set<String>,
         validProjectIDs: Set<String> = [],
         tagNamesByID: [String: [String]] = [:],
-        matchedTagNames: [String] = []
+        matchedTagNames: [String]
     ) throws {
         let json = FencedJSON.stripped(from: json)
         do {
