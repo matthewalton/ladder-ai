@@ -75,7 +75,10 @@ struct TailorView: View {
                     TailorReviewView(
                         review: review,
                         onCancel: { retry() },
-                        onDone: { dismiss() },
+                        onDone: {
+                            flow.requestDone()
+                            if flow.isDone { dismiss() }
+                        },
                         onExport: { compose(review: review) }
                     )
                 }
@@ -105,6 +108,21 @@ struct TailorView: View {
         .alert("The CV couldn't be exported.", isPresented: $exportFailed) {
             Button("OK", role: .cancel) {}
         }
+        .alert("Discard this tailored CV?", isPresented: confirmingDiscard) {
+            Button("Keep it open", role: .cancel) { flow.cancelDiscard() }
+            Button("Discard", role: .destructive) {
+                flow.confirmDiscard()
+                dismiss()
+            }
+        } message: {
+            Text(
+                "Nothing here has been saved yet. Getting it back means scanning the job description and tailoring again. The job's Match stays either way."
+            )
+        }
+    }
+
+    private var confirmingDiscard: Binding<Bool> {
+        Binding(get: { flow.isConfirmingDiscard }, set: { if !$0 { flow.cancelDiscard() } })
     }
 
     private func retry() {
@@ -330,7 +348,7 @@ struct TailorReviewView: View {
                 Spacer()
                 Button("Start over", action: onCancel)
                 Button("Done", action: onDone)
-                Button("Export CV…", action: onExport)
+                Button("Preview CV…", action: onExport)
                     .buttonStyle(.borderedProminent)
                     .tint(Color.pine)
             }

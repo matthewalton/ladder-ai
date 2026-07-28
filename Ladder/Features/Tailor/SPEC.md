@@ -695,3 +695,16 @@ the Match review, where confirming suggestions moves gaps into matched Tags
 ([TAILOR-49]) — never in a silent widening at result time. cv-export already
 renders a CV with no Skills section (CVExport decisions/0004), so nothing
 downstream needs amending.
+
+## [TAILOR-66] Leaving the tailor review is confirmed before the run is discarded
+
+The flow is transient (decisions/0001): closing the review discards the
+tailor result, the reviewed outcome and the relevance stats, and getting
+them back costs a fresh scan and a fresh tailor run — two service calls.
+Closing asks first, and only confirming ends the flow; declining returns to
+the review with the result intact. The Match survives either way, since the
+scan persisted it ([TAILOR-27]).
+
+The preview one step later already guards its own manual edits
+([CVEXPORT-62]) while the costlier step behind it did not. Starting over
+([TAILOR-1]'s flow re-run) is a deliberate discard and needs no second ask.

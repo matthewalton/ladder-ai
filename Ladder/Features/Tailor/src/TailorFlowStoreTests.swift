@@ -403,6 +403,79 @@ struct TailorFlowStoreTests {
         #expect(await service.recordedRequests.count == 1, "and no tailor request was sent ([TAILOR-45])")
     }
 
+    // MARK: - [TAILOR-66] leaving the review
+
+    @Test("[TAILOR-66] leaving the tailor review is confirmed before the run is discarded")
+    func leavingTheReviewAsksFirst() async throws {
+        let (profileStore, application) = try makeWorld()
+        let service = FixtureIntelligenceService(
+            returning: [try fixtureData("jd-scan"), try fixtureData("tailor-result")])
+        let flow = makeFlow(profileStore: profileStore, application: application, service: service)
+        await flow.start()
+        await flow.confirmMatchReview()
+        #expect(flow.review != nil)
+
+        flow.requestDone()
+
+        #expect(flow.isConfirmingDiscard)
+        #expect(!flow.isDone, "the flow does not end until the ask is answered")
+        #expect(flow.review != nil, "and the result is still there to go back to")
+    }
+
+    @Test("[TAILOR-66] declining returns to the review with the result intact")
+    func decliningKeepsTheResult() async throws {
+        let (profileStore, application) = try makeWorld()
+        let service = FixtureIntelligenceService(
+            returning: [try fixtureData("jd-scan"), try fixtureData("tailor-result")])
+        let flow = makeFlow(profileStore: profileStore, application: application, service: service)
+        await flow.start()
+        await flow.confirmMatchReview()
+        let bullets = try #require(flow.review).items.map(\.bullet)
+        flow.requestDone()
+
+        flow.cancelDiscard()
+
+        #expect(!flow.isConfirmingDiscard)
+        #expect(!flow.isDone)
+        #expect(try #require(flow.review).items.map(\.bullet) == bullets)
+        #expect(flow.phase == .review)
+    }
+
+    @Test("[TAILOR-66] confirming ends the flow and the Match survives it")
+    func confirmingEndsTheFlow() async throws {
+        let (profileStore, application) = try makeWorld()
+        let service = FixtureIntelligenceService(
+            returning: [try fixtureData("jd-scan"), try fixtureData("tailor-result")])
+        let flow = makeFlow(profileStore: profileStore, application: application, service: service)
+        await flow.start()
+        await flow.confirmMatchReview()
+        flow.requestDone()
+
+        flow.confirmDiscard()
+
+        #expect(flow.isDone)
+        #expect(!flow.isConfirmingDiscard)
+        let fresh = ModelContext(profileStore.container)
+        let match = try #require(try fresh.fetch(FetchDescriptor<Match>()).first)
+        #expect(
+            Set(match.matchedTags.map(\.name)) == ["Swift", "Kubernetes"],
+            "the scan persisted it ([TAILOR-27]); discarding the run never touches it")
+    }
+
+    @Test("[TAILOR-66] leaving before any result closes without asking")
+    func leavingWithNoResultDoesNotAsk() async throws {
+        let (profileStore, application) = try makeWorld()
+        let service = FixtureIntelligenceService(returning: [try fixtureData("jd-scan")])
+        let flow = makeFlow(profileStore: profileStore, application: application, service: service)
+        await flow.start()
+        #expect(flow.review == nil)
+
+        flow.requestDone()
+
+        #expect(!flow.isConfirmingDiscard, "there is nothing to lose yet")
+        #expect(flow.isDone)
+    }
+
     // MARK: - [TAILOR-52/53] the annotated, ordered payload
 
     private func decodedProfile(from json: String) throws -> [String: Any] {

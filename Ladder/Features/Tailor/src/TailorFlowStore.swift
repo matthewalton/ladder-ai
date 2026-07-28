@@ -16,6 +16,8 @@ final class TailorFlowStore {
     private(set) var phase: Phase = .scanning
     private(set) var matchReview: MatchReviewModel?
     private(set) var confirmationNotes: [String] = []
+    private(set) var isConfirmingDiscard = false
+    private(set) var isDone = false
 
     let scanStore: JDScanStore
     let tailorStore: TailorStore
@@ -105,6 +107,25 @@ final class TailorFlowStore {
 
     func retry() async {
         await start()
+    }
+
+    // MARK: - Leaving the review
+
+    func requestDone() {
+        if review == nil {
+            isDone = true
+        } else {
+            isConfirmingDiscard = true
+        }
+    }
+
+    func confirmDiscard() {
+        isConfirmingDiscard = false
+        isDone = true
+    }
+
+    func cancelDiscard() {
+        isConfirmingDiscard = false
     }
 
     private func fitHistoryBudget() -> ContentBudget? {
