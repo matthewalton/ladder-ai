@@ -18,6 +18,8 @@ Features are built with the Speccle skills, not ad-hoc. Start at `/feature`, whi
 
 Each feature slice owns its markdown contract; acceptance criteria live in the slice's `SPEC.md`, not in a global task list. Cross-cutting decisions become ADRs in `docs/adr/`; slice-local decisions go in the slice's `decisions/`. There is no DECISIONS.md. Each slice's own `CLAUDE.md` carries what that slice needs beyond this file — chiefly the edits a change there forces outside its folder.
 
+**Planning a UI slice settles what needs eyes.** When the work will draw anything, the plan says which screens and components must be looked at, and captures that under a `**Needs eyes**` heading in the slice's `CLAUDE.md` — one line per screen, naming what to check. That heading is the visual lens's brief at review time; `/review` fires the lens on any change set touching a view, and reads the heading to know how deep to go (`.speccle/lenses/visual.md`, ADR 0007). Plans that touch no view say so and skip it.
+
 ## Current phase: **4 — Intelligence**
 
 Hard gate: do not create or modify anything under `Ladder/Features/Journey/`. Phase gates are defined in ARCHITECTURE.md §4 and only the human advances them (by editing this line).

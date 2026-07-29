@@ -24,6 +24,15 @@ Profile/Applications sections.
   for a row here (docs/adr/0006 gave it a detail line and a configurable open-affordance label)
   defaults to today's behaviour, so those call sites stay untouched
 
+**Needs eyes**
+
+- The board with cards in every column — `scripts/snapshots.sh app`; the column layout and
+  card rhythm are what break, and `ImageRenderer` renders the board blank.
+- The Profile/Applications tab shell — only the tour shows it; `ImageRenderer` draws
+  `TabView` as the unavailable glyph.
+- Dragging a card between columns — no snapshot shows motion, so this one stays the
+  human's, every time.
+
 **Traps**
 
 - The migration criterion `[PIPEBOARD-2]` opens a copy of `LadderTests/Fixtures/Phase1Store/`.
