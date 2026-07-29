@@ -6,3 +6,6 @@ xcuserdata/
 *.xcuserstate
 .DS_Store
 node_modules
+
+# Rendered screens (LadderTests/SnapshotGallery.swift, LadderUITests/ScreenTour.swift)
+.snapshots/

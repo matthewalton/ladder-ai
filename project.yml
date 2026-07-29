@@ -82,6 +82,20 @@ targets:
         TEST_HOST: '$(BUILT_PRODUCTS_DIR)/Ladder.app/Contents/MacOS/Ladder'
         BUNDLE_LOADER: '$(TEST_HOST)'
 
+  LadderUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: LadderUITests
+    dependencies:
+      - target: Ladder
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: '6.0'
+        DEVELOPMENT_TEAM: 38BGQ68R4K
+        TEST_TARGET_NAME: Ladder
+
 schemes:
   Ladder:
     build:
@@ -90,3 +104,14 @@ schemes:
     test:
       targets:
         - LadderTests
+
+  # Its own scheme so `-scheme Ladder test` stays the fast headless suite —
+  # the tour launches a real window and cannot run unattended alongside it.
+  LadderUI:
+    build:
+      targets:
+        Ladder: all
+        LadderUITests: [test]
+    test:
+      targets:
+        - LadderUITests

@@ -35,6 +35,10 @@ xcodebuild -project Ladder.xcodeproj -scheme Ladder -destination 'platform=macOS
 
 # Tests (headless)
 xcodebuild -project Ladder.xcodeproj -scheme Ladder -destination 'platform=macOS' test
+
+# Render the UI to .snapshots/ so it can be looked at (ADR 0007)
+scripts/snapshots.sh views   # components, headless, ~20s
+scripts/snapshots.sh app     # the real app, driven and photographed, ~40s
 ```
 
 `project.yml` is the manifest. New source files go in the right feature folder and are picked up automatically by the folder-based target definition — but always run `xcodegen generate` + a build after adding files.
@@ -68,7 +72,9 @@ Ladder/
                     (Phase 4 slices are siblings — no umbrella Intelligence/)
     Journey/        Phase 5 (gated)
 Prompts/          versioned LLM prompt files (*.md) — canonical location (never TailorPrompts/)
-LadderTests/
+LadderTests/      unit suite + SnapshotGallery.swift (component renders, ADR 0007)
+LadderUITests/    ScreenTour.swift — drives the real app and photographs it (ADR 0007)
+scripts/
 docs/adr/
 ```
 
@@ -80,7 +86,7 @@ docs/adr/
 - Colors/fonts: only via `Palette.swift` / `Typography.swift` accessors. No raw hex or `.custom` fonts in views (Summit View exempt later, per DESIGN.md §3; the rendered CV's print template exempt per CVExport decisions/0007).
 - Dependencies: none without asking.
 - Comments: almost none. Names carry the meaning — never restate a declaration or body, never narrate steps, never write doc-comment summaries that repeat the signature, and never cite criteria/decisions for behaviour the code makes plain (traceability lives in SPEC.md, decisions/, and git history, not in source). A comment earns its place only by stating something the code cannot: a framework quirk, a hard-won trap, deliberately surprising test data. `// MARK:` markers are fine. `@Test("[TOKEN-n] …")` names are string literals, not comments — never strip them.
-- You cannot see rendered SwiftUI. For UI tasks: build cleanly, keep previews compiling (`#Preview` on every view), and list what the human should visually verify at the end of the session. Each slice's `CLAUDE.md` names the parts of that slice needing eyes.
+- Rendered UI can be seen, two ways (ADR 0007) — `scripts/snapshots.sh views` renders components headlessly into `.snapshots/`, light and dark; `scripts/snapshots.sh app` drives the real app and photographs each screen into `.snapshots/ui/`. Look at the PNGs before claiming a UI change works. Neither route covers motion, drag-and-drop, materials or vibrancy: keep `#Preview` on every view and still end a UI session with the list of what the human must check by eye. Each slice's `CLAUDE.md` names the parts of that slice needing eyes.
 
 ## Testing
 
