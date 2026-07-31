@@ -8,7 +8,7 @@ struct SettingsView: View {
     @State private var enteredKey = ""
     @State private var hasStoredKey = false
 
-    init(keyStore: any APIKeyStore = KeychainAPIKeyStore()) {
+    init(keyStore: any APIKeyStore = TourMode.keyStore()) {
         self.keyStore = keyStore
     }
 

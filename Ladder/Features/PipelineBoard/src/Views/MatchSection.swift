@@ -7,8 +7,8 @@ struct MatchSection: View {
 
     init(
         application: Application,
-        keyStore: any APIKeyStore = KeychainAPIKeyStore(),
-        makeIntelligence: ((String) -> any IntelligenceService)? = nil
+        keyStore: any APIKeyStore = TourMode.keyStore(),
+        makeIntelligence: ((String) -> any IntelligenceService)? = TourMode.intelligenceOverride()
     ) {
         if let makeIntelligence {
             _model = State(initialValue: MatchSectionModel(

@@ -12,8 +12,8 @@ struct JobImportSheet: View {
 
     init(
         pipelineStore: PipelineStore,
-        keyStore: any APIKeyStore = KeychainAPIKeyStore(),
-        makeIntelligence: ((String) -> any IntelligenceService)? = nil,
+        keyStore: any APIKeyStore = TourMode.keyStore(),
+        makeIntelligence: ((String) -> any IntelligenceService)? = TourMode.intelligenceOverride(),
         onCreated: @escaping (Application) -> Void = { _ in }
     ) {
         if let makeIntelligence {

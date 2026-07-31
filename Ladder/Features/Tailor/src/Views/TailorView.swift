@@ -21,8 +21,8 @@ struct TailorView: View {
     init(
         profileStore: ProfileStore,
         application: Application,
-        keyStore: any APIKeyStore = KeychainAPIKeyStore(),
-        makeIntelligence: ((String) -> any IntelligenceService)? = nil
+        keyStore: any APIKeyStore = TourMode.keyStore(),
+        makeIntelligence: ((String) -> any IntelligenceService)? = TourMode.intelligenceOverride()
     ) {
         self.profileStore = profileStore
         self.application = application

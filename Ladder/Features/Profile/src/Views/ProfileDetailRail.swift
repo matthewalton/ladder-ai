@@ -3,10 +3,8 @@ import SwiftUI
 struct ProfileDetailRail: View {
     @Bindable var store: ProfileStore
     @Binding var focus: ProfileFocus?
-    var keyStore: any APIKeyStore = KeychainAPIKeyStore()
-    var makeIntelligence: (String) -> any IntelligenceService = {
-        AnthropicIntelligenceService(apiKey: $0)
-    }
+    var keyStore: any APIKeyStore = TourMode.keyStore()
+    var makeIntelligence: (String) -> any IntelligenceService = TourMode.makeIntelligence()
 
     var body: some View {
         Group {

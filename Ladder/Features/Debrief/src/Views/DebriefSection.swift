@@ -13,8 +13,8 @@ struct DebriefSection: View {
     init(
         container: ModelContainer,
         stage: Stage,
-        keyStore: any APIKeyStore = KeychainAPIKeyStore(),
-        makeIntelligence: ((String) -> any IntelligenceService)? = nil
+        keyStore: any APIKeyStore = TourMode.keyStore(),
+        makeIntelligence: ((String) -> any IntelligenceService)? = TourMode.intelligenceOverride()
     ) {
         self.stage = stage
         let profileStore = ProfileStore(container: container)

@@ -9,8 +9,8 @@ struct ImportCVView: View {
 
     init(
         profileStore: ProfileStore,
-        keyStore: any APIKeyStore = KeychainAPIKeyStore(),
-        makeIntelligence: ((String) -> any IntelligenceService)? = nil
+        keyStore: any APIKeyStore = TourMode.keyStore(),
+        makeIntelligence: ((String) -> any IntelligenceService)? = TourMode.intelligenceOverride()
     ) {
         if let makeIntelligence {
             _store = State(initialValue: ImportStore(

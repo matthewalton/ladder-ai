@@ -12,8 +12,8 @@ struct JourneySection: View {
     init(
         container: ModelContainer,
         application: Application,
-        keyStore: any APIKeyStore = KeychainAPIKeyStore(),
-        makeIntelligence: ((String) -> any IntelligenceService)? = nil
+        keyStore: any APIKeyStore = TourMode.keyStore(),
+        makeIntelligence: ((String) -> any IntelligenceService)? = TourMode.intelligenceOverride()
     ) {
         self.application = application
         hasAPIKey = ((try? keyStore.readKey()) ?? nil)?.isEmpty == false

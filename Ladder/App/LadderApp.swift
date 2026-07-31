@@ -7,12 +7,6 @@ struct LadderApp: App {
     private let pipelineStore: PipelineStore
     private let calendarStore: CalendarSyncStore
 
-    /// UI tests drive this same app, so they launch it onto a throwaway store
-    /// and canned calendar — never the human's own (ADR 0004).
-    private static var isDrivenByUITest: Bool {
-        ProcessInfo.processInfo.arguments.contains("-LadderScratchStore")
-    }
-
     private static func scratchStoreURL() throws -> URL {
         let directory = URL.temporaryDirectory.appending(
             path: "LadderUITests", directoryHint: .isDirectory)
@@ -23,8 +17,12 @@ struct LadderApp: App {
 
     init() {
         do {
-            let storeURL = Self.isDrivenByUITest ? try Self.scratchStoreURL() : nil
-            store = try ProfileStore(container: ProfileStore.container(at: storeURL))
+            let storeURL = TourMode.isActive ? try Self.scratchStoreURL() : nil
+            let container = try ProfileStore.container(at: storeURL)
+            if TourMode.isActive, TourSeed.isRequested {
+                try TourSeed.plant(in: container)
+            }
+            store = ProfileStore(container: container)
             try store.load()
             pipelineStore = PipelineStore(container: store.container)
             try pipelineStore.load()
@@ -32,7 +30,9 @@ struct LadderApp: App {
             fatalError("Failed to open the Ladder store: \(error)")
         }
         let service: any CalendarSyncService =
-            Self.isDrivenByUITest ? FixtureCalendarSyncService() : EventKitCalendarSyncService()
+            TourMode.isActive
+            ? FixtureCalendarSyncService(events: TourSeed.isRequested ? TourSeed.calendarEvents() : [])
+            : EventKitCalendarSyncService()
         calendarStore = CalendarSyncStore(pipeline: pipelineStore, service: service)
         calendarStore.startObservingChanges()
         // Launch never prompts: scan only when access is already granted.
