@@ -43,7 +43,13 @@ Two traps, neither of which is a finding:
   them. Empty is the state, not a defect.
 
 If a screen the change affects is not in the gallery or the tour, **say so in the report** —
-an unrendered screen is an unchecked screen, and silence reads as "looked at, fine".
+an unrendered screen is an unchecked screen, and silence reads as "looked at, fine". And when
+the change set itself **introduces** the surface — a new screen, a new leaf component — its
+absence from the tour or gallery is a **major finding**, not a note (ADR 0008): this lens
+cannot look at it now and never will until the coverage exists. The fix is the coverage
+itself — a `testTour<Name>Section` in `ScreenTour.swift` plus its `tour_test` case in
+`scripts/snapshots.sh` for a screen, a `SnapshotGallery` entry for a component — and the
+route is `none`: this lens already guards it.
 
 ## How deep
 
