@@ -14,7 +14,11 @@ If a task conflicts with these docs, stop and flag it — do not silently deviat
 
 ## Workflow: Speccle
 
-Features are built with the Speccle skills, not ad-hoc. Start at `/feature`, which routes the work (new slice vs amendment vs carve) and hands off to the rest. The installed skills describe themselves — don't mirror their roster here, it only goes stale; `.speccle/config.json` pins the version.
+Features are built with the Speccle skills, not ad-hoc. Start at `/feature`, which routes the work (new slice vs amendment vs carve) and hands off to the rest. The installed skills describe themselves — don't mirror their roster here, it only goes stale.
+
+**`/feature` is the inner loop; `/review` is the outer one.** Review's unit is the change set, not the slice: it scores the change's risk, fans `.speccle/lenses/` over the diff, fixes only what that score permits, and lands one commit — it never pushes. On a pull request the same lenses run in CI (`.github/workflows/speccle-review.yml`, metered key) and `/address` acts on what they posted rather than deriving findings again. The checks-gate each implement session runs includes `.speccle/checks/` — this repo's own deterministic invariants, each one bought by a past finding — and `.speccle/remedies.jsonl` is why a finding that recurs gets the same answer twice.
+
+**Speccle is pinned in three places and they move together:** `.speccle/config.json` (skills and lenses), `package.json` (the CLI those skills call), and the CI workflow (the copy CI installs). `speccle doctor` is the only thing that checks all three — run it after any update and it must say "up to date". A CLI behind its skills does not fail loudly: an unknown subcommand prints a usage screen and exits 0, so a stage that never ran looks like one that did.
 
 Each feature slice owns its markdown contract; acceptance criteria live in the slice's `SPEC.md`, not in a global task list. Cross-cutting decisions become ADRs in `docs/adr/`; slice-local decisions go in the slice's `decisions/`. There is no DECISIONS.md. Each slice's own `CLAUDE.md` carries what that slice needs beyond this file — chiefly the edits a change there forces outside its folder.
 
