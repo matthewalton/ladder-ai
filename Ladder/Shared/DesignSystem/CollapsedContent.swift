@@ -22,24 +22,43 @@ struct IndicatorRow<Extras: View>: View {
     @ViewBuilder var extras: () -> Extras
 
     var body: some View {
-        HStack {
-            Label {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(label)
-                        .font(.callout)
-                        .foregroundStyle(Color.ink)
-                    if let detail {
-                        Text(detail)
-                            .font(.callout)
-                            .foregroundStyle(Color.inkSoft)
-                            .lineLimit(1)
-                    }
-                }
-            } icon: {
-                Image(systemName: icon)
-                    .foregroundStyle(Color.pine)
+        ViewThatFits(in: .horizontal) {
+            HStack {
+                content
+                Spacer()
+                actions
             }
-            Spacer()
+            VStack(alignment: .leading, spacing: 6) {
+                content
+                HStack {
+                    Spacer()
+                    actions
+                }
+            }
+        }
+    }
+
+    private var content: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.callout)
+                    .foregroundStyle(Color.ink)
+                if let detail {
+                    Text(detail)
+                        .font(.callout)
+                        .foregroundStyle(Color.inkSoft)
+                        .lineLimit(1)
+                }
+            }
+        } icon: {
+            Image(systemName: icon)
+                .foregroundStyle(Color.pine)
+        }
+    }
+
+    private var actions: some View {
+        HStack(spacing: 8) {
             extras()
             Button(openAffordance, action: onOpen)
             Button("Remove", action: onRemove)
@@ -69,6 +88,7 @@ struct ContentWindow<Model, Content: View>: View {
             if let model {
                 ScrollView {
                     content(model)
+                        .frame(maxWidth: 640, alignment: .leading)
                         .padding(20)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }

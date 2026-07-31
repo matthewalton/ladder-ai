@@ -8,7 +8,7 @@ struct GranolaNotesWindow: View {
     var transcriptID: PersistentIdentifier
 
     private var transcript: Transcript? {
-        ModelContext(container).model(for: transcriptID) as? Transcript
+        ModelContext(container).existingModel(transcriptID)
     }
 
     var body: some View {

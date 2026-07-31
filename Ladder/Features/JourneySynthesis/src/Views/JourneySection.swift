@@ -47,7 +47,7 @@ struct JourneySection: View {
             Section("Journey") {
                 if let narrative = application.journeyNarrative {
                     Text(narrative.text)
-                        .font(.callout)
+                        .font(.trailNarrative(.callout))
                         .foregroundStyle(Color.ink)
                         .textSelection(.enabled)
                     HStack {

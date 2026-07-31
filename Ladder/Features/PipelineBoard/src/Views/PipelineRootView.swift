@@ -118,6 +118,9 @@ struct PipelineRootView<SidebarFooter: View>: View {
                             ? nil
                             : { tailoringApplication = application }
                     )
+                    // Keyed so a selection switch never carries stale
+                    // collapse state across applications.
+                    .id(application.persistentModelID)
                     .inspectorColumnWidth(min: 280, ideal: 320)
                 } else {
                     Text("Select an application to see its trail.")

@@ -43,6 +43,11 @@ struct ProfilePageView: View {
                 .background(Color.paper)
         }
         .navigationTitle("Profile")
+        .onAppear {
+            // macOS focuses the name field with its text selected at launch,
+            // where any stray keystroke replaces the whole name.
+            DispatchQueue.main.async { NSApp.keyWindow?.makeFirstResponder(nil) }
+        }
         .toolbar {
             ToolbarItem {
                 Button("Import CV", systemImage: "arrow.down.document") {

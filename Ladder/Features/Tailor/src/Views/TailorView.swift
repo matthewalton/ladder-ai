@@ -94,7 +94,9 @@ struct TailorView: View {
                 await flow.start()
             }
         }
-        .frame(minWidth: 640, minHeight: 480)
+        // Sheets keep their presentation size, so the floor must already fit
+        // the preview phase's split panes.
+        .frame(minWidth: 780, minHeight: 560)
         .background(Color.paper)
         .fileExporter(
             isPresented: $isSavingPDF,

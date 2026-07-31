@@ -94,7 +94,7 @@ struct ApplicationDetailView: View {
             .listRowBackground(Color.paperRaised)
 
             Section("Details") {
-                TextField("Source — referral, LinkedIn, direct…", text: $source)
+                TextField("Source", text: $source, prompt: Text("Referral, LinkedIn, direct…"))
                     .onSubmit(saveDetails)
                 if let appliedAt = application.appliedAt {
                     LabeledContent("Applied") {
@@ -218,6 +218,8 @@ struct ApplicationDetailView: View {
                                 .foregroundStyle(
                                     stage.outcome == .passed ? Color.summitGold : Color.inkSoft)
                         }
+                        // A plain button ignores the Spacer gap without this.
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
