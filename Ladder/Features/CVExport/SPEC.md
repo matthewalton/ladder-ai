@@ -694,16 +694,16 @@ body text landing at roughly 8-point line boxes. Nothing the user could do made
 it bigger, because the split divider only trades width between the two panes
 (decisions/0015).
 
-The promise is at the **opening position**, deliberately, and not a hard floor.
-The divider still drags: handing width across to the editing surface takes the
-page pane down to its 520 floor, about 0.87 scale. That is the user choosing a
-smaller page, which is a different thing from being handed one they cannot
-read.
+The promise is stated at the **opening position** but holds everywhere, which
+is more than was asked for. `HSplitView` opens the leading pane at exactly its
+minimum, so the page pane's floor is also the width it opens at, and the
+divider can only ever widen it — the user cannot drag their way to a page too
+small to read (decisions/0015).
 
 Asserted against the pane's **width**, not the rendered scale. `PDFView` spends
 a few points of its own on chrome, so the scale it settles on is not
-deterministic to the point; the width the sheet's floor leaves the pane is. The
-assertion compares that width against the rendered CV's own page width
+deterministic to the point; the width the pane opens at is. The assertion
+compares that width against the rendered CV's own page width
 (`CVMetrics.pageSize`, 595.2), so it breaks if either the sheet's floor or a
 pane's minimum changes — which is the relationship that was violated, rather
 than any one number.

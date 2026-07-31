@@ -10,9 +10,9 @@ struct CVPreviewView: View {
     var body: some View {
         HSplitView {
             CVPagesView(data: model.pdfData)
-                .frame(minWidth: 420)
+                .frame(minWidth: TailorFlowSheetMetrics.pagePaneMinWidth)
             editor
-                .frame(minWidth: 320, idealWidth: 380)
+                .frame(minWidth: TailorFlowSheetMetrics.editorMinWidth)
         }
         .safeAreaInset(edge: .bottom) { footer }
         .background(Color.paper)
@@ -414,5 +414,7 @@ struct CVPagesView: NSViewRepresentable {
         onExport: {},
         onClose: {}
     )
-    .frame(width: 1000, height: 700)
+    // The canvas is pinned to the sheet's floor: a roomier one hid the pane
+    // being too narrow for A4 all the way through construction.
+    .frame(width: TailorFlowSheetMetrics.minWidth, height: TailorFlowSheetMetrics.minHeight)
 }

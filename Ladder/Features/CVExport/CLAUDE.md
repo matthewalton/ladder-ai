@@ -49,5 +49,9 @@ attaching something to an Application edits this file rather than copying the mo
   is the one place raw values are correct.
 - Preview code goes in `src/Preview/`, not beside the render files — `src/` already holds
   six files flat and the convention caps a flat folder at ten.
+- `HSplitView` opens its **leading** pane at exactly that pane's `minWidth` and gives the
+  trailing pane every remaining point; `idealWidth` on either is ignored. So a pane's floor
+  is the width it opens at, and sizing it by arithmetic over the sheet's width is wrong.
+  Measured, not assumed — see decisions/0015's **Correction**.
 
 Criteria token: `[CVEXPORT-n]`
