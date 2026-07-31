@@ -11,8 +11,11 @@ attaching something to an Application edits this file rather than copying the mo
 **Edits outside this folder** — a change here usually touches:
 
 - `Ladder/Features/Tailor/src/Views/TailorView.swift` — the flow's phase machine gains the
-  preview phase between review and export. A code-level touch only; no TAILOR criterion
+  preview phase between review and export, and the sheet's floor is sized for that phase
+  rather than the others (decisions/0015). A code-level touch only; no TAILOR criterion
   changes, the precedent [CVEXPORT-4]'s body already set.
+- `Ladder/Features/Tailor/CLAUDE.md` — sizing the sheet here changes how tailor's own review
+  screens are laid out, so what to check on them is briefed under that slice's **Needs eyes**.
 - `Ladder/Features/Tailor/src/TailorReview.swift` — `matchedTagNames` is readable so the
   preview can compute coverage against the confirmed Match ([CVEXPORT-38]). Same
   code-level-touch rule.
@@ -26,7 +29,9 @@ attaching something to an Application edits this file rather than copying the mo
 - The CV preview, three frames deep — `scripts/snapshots.sh app tailor` walks it to the role
   sections and the discard alert. What the frames answer: the page pane's legibility at the
   sheet's width, the ATS warning under each role's keep-toggle ([CVEXPORT-46]), and whether
-  Coverage still reads as a different number from the Match score (decisions/0011).
+  Coverage still reads as a different number from the Match score (decisions/0011). Legibility
+  is measured, not judged: the `.txt` recorded beside each frame carries the pane and page
+  widths, and the page is meant to clear A4 (decisions/0015).
 - The over-length state — the tour seed makes a one-page CV, so nothing renders the clay page
   label, the "about N pages over" copy, or the disabled Export. Stays the human's.
 - The "Not scored yet" line — only appears on a point added after the tailor run, which the

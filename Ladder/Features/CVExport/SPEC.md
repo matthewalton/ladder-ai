@@ -684,3 +684,45 @@ the in-memory edit set (decisions/0013). Correct on purpose: the model should
 learn what it missed whether or not this particular CV ships. Asserted by
 applying a Tag, discarding at close, and reading the Tag back off the
 Profile's pool and off the point it was applied to.
+
+## [CVEXPORT-64] When the CV preview opens, its page pane is at least as wide as the A4 page it renders
+
+What this retires: the tailor flow sheet declared a floor of 780 by 560, and a
+sheet is not user-resizable, so that floor was also its size. The page pane sat
+at its 420 minimum and the A4 page rendered 413.9 wide — about 0.70 scale, with
+body text landing at roughly 8-point line boxes. Nothing the user could do made
+it bigger, because the split divider only trades width between the two panes
+(decisions/0015).
+
+The promise is at the **opening position**, deliberately, and not a hard floor.
+The divider still drags: handing width across to the editing surface takes the
+page pane down to its 520 floor, about 0.87 scale. That is the user choosing a
+smaller page, which is a different thing from being handed one they cannot
+read.
+
+Asserted against the pane's **width**, not the rendered scale. `PDFView` spends
+a few points of its own on chrome, so the scale it settles on is not
+deterministic to the point; the width the sheet's floor leaves the pane is. The
+assertion compares that width against the rendered CV's own page width
+(`CVMetrics.pageSize`, 595.2), so it breaks if either the sheet's floor or a
+pane's minimum changes — which is the relationship that was violated, rather
+than any one number.
+
+## [CVEXPORT-65] The tailor flow sheet caps every phase but the CV preview at a fixed reading measure
+
+One sheet serves every phase and only the CV preview needs the width
+[CVEXPORT-64] buys it. The Match review, the tailor review, the fit report, the
+three progress states and both failure states cap their content at a 720-point
+reading measure and centre it, so the extra width becomes margin and those
+screens keep the line lengths they had at the old floor (decisions/0015).
+
+The cap is the default and the preview is the single exception. Written the
+other way round — as a list of the phases that take it — a phase added later
+would spend the full width until someone remembered to stop it.
+
+The centring is the half that fails quietly: a cap applied without it strands
+content against the left edge, and no existing frame would catch that, because
+the tour photographs neither the progress nor the failure states (Tailor's
+`CLAUDE.md` parks both as the human's). The shared container therefore carries a
+`SnapshotGallery` entry so it renders headlessly in light and dark, and that
+entry lands with this criterion rather than after it (ADR 0008).

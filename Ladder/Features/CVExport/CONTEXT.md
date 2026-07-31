@@ -24,6 +24,21 @@ will print, its coverage, its page count, and the editing surface over it
 (decisions/0010). What the user rules on before anything is written.
 _Avoid_: draft, proof, mockup, preflight
 
+**Page pane**:
+The CV preview's left half: the rendered CV itself, shown through PDFKit
+rather than a second arrangement of the same content that could drift from
+what exports. Sized so the A4 page clears full scale when the preview opens
+([CVEXPORT-64]); the split divider trades width between it and the editing
+surface beside it.
+_Avoid_: page view, document pane, preview pane, PDF pane
+
+**Reading measure**:
+The width text is held to so a line stays comfortable to read — 720 points
+here. Every phase of the tailor flow sheet but the CV preview is capped at it
+and centred, so the width the sheet spends on the preview becomes margin
+elsewhere instead of longer lines (decisions/0015).
+_Avoid_: content width, max width, column width, line length
+
 **Coverage**:
 How much of the confirmed Match the current selection carries — the matched
 Tags at least one selected point overlaps, and the matched Tags none does.

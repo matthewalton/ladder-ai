@@ -12,6 +12,14 @@ description. Nothing it collects is persisted in this slice — the
 `Application` model arrives with cv-export (decisions/0001).
 _Avoid_: New Application sheet (until an Application actually exists), JD form
 
+**Tailor flow sheet**:
+The sheet the run itself happens in — one presentation hosting every phase in
+turn: scanning, the Match review, tailoring, the tailor review, the CV preview
+(cv-export's) and the fit report. Not user-resizable, so the floor it declares
+is also its size; cv-export sizes it for the CV preview and every other phase
+declines the extra width (cv-export decisions/0015).
+_Avoid_: tailor sheet (that is the entry sheet above), tailor modal, tailor window
+
 **Tailor run**:
 One invocation of tailoring: payload built from the Profile plus the pasted
 job description, sent through `IntelligenceService`, validated into a tailor
