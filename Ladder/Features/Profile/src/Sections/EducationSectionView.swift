@@ -20,6 +20,8 @@ struct EducationSectionView: View {
                 Text("Where did you learn the ropes?")
                     .font(.trailNarrative(.body))
                     .foregroundStyle(Color.inkSoft)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 16)
             } else {
                 ForEach(profile.orderedEducation, id: \.persistentModelID) { education in
                     EducationRowView(

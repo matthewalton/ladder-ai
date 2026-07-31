@@ -20,7 +20,7 @@ final class ScreenTour: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 30), "app window never appeared")
         record(window, app, named: "01-create-profile")
 
-        let create = window.buttons["Create profile"]
+        let create = window.buttons["Create Profile"]
         XCTAssertTrue(create.waitForExistence(timeout: 10))
         type("Alex Climber", into: window.textFields.element(boundBy: 0))
         type("Staff Engineer", into: window.textFields.element(boundBy: 1))

@@ -63,6 +63,7 @@ struct ApplicationCardView: View {
 
             Text("\(PipelineStore.daysOnTrail(for: application, asOf: .now)) days on trail")
                 .trailMetadata()
+                .foregroundStyle(Color.inkSoft)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)

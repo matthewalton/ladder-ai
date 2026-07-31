@@ -14,7 +14,7 @@ struct DebriefWindow: View {
     var body: some View {
         ContentWindow(
             model: resolvedDebrief,
-            goneMessage: "This debrief is no longer on the Stage."
+            goneMessage: "This debrief is no longer on the stage."
         ) { debrief in
             VStack(alignment: .leading, spacing: 8) {
                 Text("Debrief — \(debrief.generatedAt.formatted(date: .long, time: .omitted))")

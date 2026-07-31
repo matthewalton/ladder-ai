@@ -14,7 +14,7 @@ struct PrepPackWindow: View {
     var body: some View {
         ContentWindow(
             model: resolvedPack,
-            goneMessage: "This prep pack is no longer on the Stage."
+            goneMessage: "This prep pack is no longer on the stage."
         ) { pack in
             VStack(alignment: .leading, spacing: 8) {
                 Text("Prep pack — \(pack.generatedAt.formatted(date: .long, time: .omitted))")

@@ -25,7 +25,7 @@ struct CreateProfileView: View {
             }
             .frame(maxWidth: 360)
 
-            Button("Create profile") {
+            Button("Create Profile") {
                 do {
                     try store.createProfile(name: name, headline: headline)
                 } catch {

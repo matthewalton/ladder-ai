@@ -14,7 +14,7 @@ struct ProfileRootView: View {
     }
 }
 
-#Preview("Create profile") {
+#Preview("Create Profile") {
     let store = try! ProfileStore(container: ProfileStore.container(inMemory: true))
     return ProfileRootView(store: store)
 }

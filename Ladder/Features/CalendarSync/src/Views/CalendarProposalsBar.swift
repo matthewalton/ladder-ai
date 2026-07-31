@@ -91,7 +91,6 @@ struct CalendarProposalsBar: View {
                 .foregroundStyle(Color.inkSoft)
             Spacer()
         }
-        .padding(10)
     }
 
     private var deniedExplainer: some View {
@@ -109,7 +108,6 @@ struct CalendarProposalsBar: View {
                     .font(.callout)
             }
         }
-        .padding(10)
     }
 }
 

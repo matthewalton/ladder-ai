@@ -20,6 +20,8 @@ struct ProjectsSectionView: View {
                 Text("Side quests count. Add what you've built.")
                     .font(.trailNarrative(.body))
                     .foregroundStyle(Color.inkSoft)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 16)
             } else {
                 ForEach(profile.orderedProjects, id: \.persistentModelID) { project in
                     ProjectItemView(store: store, project: project, focus: $focus)

@@ -171,11 +171,11 @@ struct ApplicationDetailView: View {
                 }
             } header: {
                 HStack {
-                    Text("Job Description")
+                    Text("Job description")
                     Spacer()
                     Menu {
-                        Button("From File…") { isPickingJDFile = true }
-                        Button("From Link…") {
+                        Button("From file…") { isPickingJDFile = true }
+                        Button("From link…") {
                             jdLinkText = ""
                             isEnteringJDLink = true
                         }
@@ -221,7 +221,7 @@ struct ApplicationDetailView: View {
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
-                        Button("Delete Stage", role: .destructive) {
+                        Button("Delete stage", role: .destructive) {
                             try? store.deleteStage(stage)
                         }
                     }
@@ -233,7 +233,7 @@ struct ApplicationDetailView: View {
                     Button {
                         isAddingStage = true
                     } label: {
-                        Label("Add Stage", systemImage: "plus")
+                        Label("Add stage", systemImage: "plus")
                             .labelStyle(.iconOnly)
                     }
                     .buttonStyle(.plain)

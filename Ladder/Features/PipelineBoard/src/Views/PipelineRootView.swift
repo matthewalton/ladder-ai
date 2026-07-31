@@ -83,7 +83,7 @@ struct PipelineRootView<SidebarFooter: View>: View {
                         Button {
                             isImporting = true
                         } label: {
-                            Label("Create Application", systemImage: "doc.badge.plus")
+                            Label("Create application", systemImage: "doc.badge.plus")
                                 .labelStyle(.titleAndIcon)
                         }
                         .buttonStyle(.borderedProminent)
@@ -142,7 +142,7 @@ struct PipelineRootView<SidebarFooter: View>: View {
             Text("Paste a job posting's link or drop its PDF — Ladder files the application and starts your CV.")
                 .font(.callout)
                 .foregroundStyle(Color.inkSoft)
-            Button("Create Application") {
+            Button("Create application") {
                 isImporting = true
             }
             .buttonStyle(.borderedProminent)

@@ -19,7 +19,7 @@ struct ApplicationTimelineView: View {
                     .foregroundStyle(Color.inkSoft)
 
                 if entries.isEmpty {
-                    Text("No dated activity yet. Add a Stage or an applied date to draw the line.")
+                    Text("No dated activity yet. Add a stage or an applied date to draw the line.")
                         .font(.trailNarrative(.callout))
                         .foregroundStyle(Color.inkSoft)
                         .padding(.top, 16)
