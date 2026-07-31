@@ -225,12 +225,13 @@ final class ScreenTour: XCTestCase {
         let export = sheet.buttons["Export CV…"]
         XCTAssertTrue(export.waitForExistence(timeout: 20), "the CV preview never appeared")
         record(window, app, named: "22-cv-preview")
+        recordPreviewEditing(window, app, sheet: sheet)
 
         export.click()
         // The save panel is the sandbox's out-of-process one — it may never
         // surface in the tree, and Escape still reaches it.
         if app.buttons["Save"].waitForExistence(timeout: 15) {
-            record(window, app, named: "22b-save-panel")
+            record(window, app, named: "22c-save-panel")
             app.buttons["Cancel"].firstMatch.click()
         } else {
             app.typeKey(.escape, modifierFlags: [])
@@ -241,6 +242,55 @@ final class ScreenTour: XCTestCase {
         record(window, app, named: "23-fit-report")
         done.click()
         XCTAssertTrue(sheet.waitForNonExistence(timeout: 10))
+    }
+
+    private func recordPreviewEditing(
+        _ window: XCUIElement, _ app: XCUIApplication, sheet: XCUIElement
+    ) {
+        // Stopping at the first bullet's tag entry frames the whole editing
+        // unit at once: keep-toggle, ATS warning, reword field, relevance, tags.
+        XCTAssertTrue(scrollPreviewEditor(sheet, to: sheet.buttons["Tag"].firstMatch),
+                      "the first bullet row never scrolled into view")
+        record(window, app, named: "22a-cv-preview-roles")
+
+        let toggle = roleKeepToggle(in: sheet)
+        XCTAssertTrue(toggle.isHittable, "the role keep-toggle scrolled out of reach")
+        toggle.click()
+        sheet.buttons["Close"].click()
+        // The alert also mints Touch Bar buttons, which cannot be clicked —
+        // scope to the window so those never match.
+        let keepEditing = window.buttons["Keep editing"].firstMatch
+        XCTAssertTrue(keepEditing.waitForExistence(timeout: 10), "the discard alert never appeared")
+        record(window, app, named: "22b-cv-preview-discard")
+        keepEditing.click()
+
+        // Put the edit back so the export below still composes the CV the rest
+        // of the tour was photographed against.
+        let restored = roleKeepToggle(in: sheet)
+        XCTAssertTrue(scrollPreviewEditor(sheet, to: restored), "the role keep-toggle went away")
+        restored.click()
+    }
+
+    private func roleKeepToggle(in sheet: XCUIElement) -> XCUIElement {
+        sheet.checkBoxes["Show this role on the CV"].firstMatch
+    }
+
+    /// The footer floats over the list, so `isHittable` goes true on a row still
+    /// hidden behind it — a click there lands on the footer instead.
+    private func scrollPreviewEditor(_ sheet: XCUIElement, to target: XCUIElement) -> Bool {
+        let editor = sheet.outlines.firstMatch
+        guard editor.waitForExistence(timeout: 10) else { return false }
+        let footerDepth = 60.0
+        for _ in 0..<30 {
+            if target.exists {
+                let clear = editor.frame.maxY - footerDepth
+                if target.frame.minY >= editor.frame.minY, target.frame.maxY <= clear {
+                    return true
+                }
+            }
+            editor.scroll(byDeltaX: 0, deltaY: -100)
+        }
+        return false
     }
 
     private func tourJobImport(_ window: XCUIElement, _ app: XCUIApplication) {

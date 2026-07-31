@@ -21,6 +21,19 @@ attaching something to an Application edits this file rather than copying the mo
 - `Prompts/rescore.md` — the re-score pass's versioned prompt ([CVEXPORT-55]). Prompts live
   there, never in the slice.
 
+**Needs eyes**
+
+- The CV preview, three frames deep — `scripts/snapshots.sh app tailor` walks it to the role
+  sections and the discard alert. What the frames answer: the page pane's legibility at the
+  sheet's width, the ATS warning under each role's keep-toggle ([CVEXPORT-46]), and whether
+  Coverage still reads as a different number from the Match score (decisions/0011).
+- The over-length state — the tour seed makes a one-page CV, so nothing renders the clay page
+  label, the "about N pages over" copy, or the disabled Export. Stays the human's.
+- The "Not scored yet" line — only appears on a point added after the tailor run, which the
+  tour never adds. Stays the human's.
+- `PDFView` scroll and zoom behaviour, and the sheet's phase transitions — no snapshot shows
+  motion or live scrolling.
+
 **Traps**
 
 - Render tests assert content by **extracting text from the rendered PDF with PDFKit** —
