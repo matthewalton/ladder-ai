@@ -18,7 +18,7 @@ struct FitReportTests {
                 ),
             ],
             gaps: [
-                "The JD asks for Kubernetes; nothing on file mentions it",
+                "The JD asks for GraphQL; nothing on file mentions it",
                 "No people-management experience on file",
             ],
             rationale: "CI and incident-response work map directly to the JD's platform-reliability focus."
@@ -30,7 +30,7 @@ struct FitReportTests {
         let report = FitReport(outcome: outcome)
 
         #expect(report.gaps == [
-            "The JD asks for Kubernetes; nothing on file mentions it",
+            "The JD asks for GraphQL; nothing on file mentions it",
             "No people-management experience on file",
         ], "verbatim, in the reviewed outcome's order")
     }

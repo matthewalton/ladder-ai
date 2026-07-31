@@ -162,7 +162,7 @@ struct TailorFlowTests {
         await store.startRun(jobDetails)
 
         let review = try #require(store.review)
-        #expect(review.gaps == ["The JD asks for Kubernetes; nothing on file mentions it"])
+        #expect(review.gaps == ["The JD asks for GraphQL; nothing on file mentions it"])
     }
 
     @Test("[TAILOR-7] the tailor result carries the service's selection rationale")

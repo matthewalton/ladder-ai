@@ -15,6 +15,6 @@
     "a1": { "tech": 5, "domain": 4, "seniority": 3, "impact": 4 },
     "a3": { "tech": 2, "domain": 4, "seniority": 4, "impact": 5 }
   },
-  "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],
+  "gaps": ["The JD asks for GraphQL; nothing on file mentions it"],
   "rationale": "CI and incident-response work map directly to the JD's platform-reliability focus; the sync engine achievement is a weaker fit."
 }

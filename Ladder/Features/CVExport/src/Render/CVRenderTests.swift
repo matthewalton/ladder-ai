@@ -55,7 +55,7 @@ struct CVRenderTests {
                 "a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4},
                 "a3": {"tech": 3, "domain": 4, "seniority": 3, "impact": 4}
               },
-              "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],
+              "gaps": ["The JD asks for GraphQL; nothing on file mentions it"],
               "rationale": "CI work maps directly to the JD's platform focus."
             }
             """,

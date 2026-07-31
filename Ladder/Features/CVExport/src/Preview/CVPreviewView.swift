@@ -365,22 +365,20 @@ struct CVPagesView: NSViewRepresentable {
         to: role, text: "Cut CI build times across every product target")
     try! profileStore.tag(achievement, skillNamed: "CI/CD")
     let profile = profileStore.profile!
-    let result = try! TailorResult(
-        json: Data("""
-        {
-          "summary": "Senior engineer focused on CI performance at platform scale.",
-          "selections": [
-            {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
-          ],
-          "skillCategories": [{"name": "Platform Engineering", "skills": ["CI/CD"]}],
-          "relevance": {"a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4}},
-          "gaps": ["The JD asks for Kubernetes; nothing on file mentions it"],
-          "rationale": "CI work maps directly to the JD's platform focus."
-        }
-        """.utf8),
-        validAchievementIDs: ["a1"],
-        tagNamesByID: ["a1": ["CI/CD"]],
-        matchedTagNames: ["CI/CD", "Kubernetes"]
+    let result = try! JSONDecoder().decode(
+        TailorResult.self,
+        from: Data("""
+            {
+              "summary": "Senior engineer focused on CI performance at platform scale.",
+              "selections": [
+                {"achievementID": "a1", "bullet": "Drove CI build times down across every product target"}
+              ],
+              "skillCategories": [{"name": "Platform Engineering", "skills": ["CI/CD"]}],
+              "relevance": {"a1": {"tech": 5, "domain": 4, "seniority": 3, "impact": 4}},
+              "gaps": ["The JD asks for GraphQL; nothing on file mentions it"],
+              "rationale": "CI work maps directly to the JD's platform focus."
+            }
+            """.utf8)
     )
     let review = TailorReview(
         result: result, achievementsByID: ["a1": achievement],

@@ -74,7 +74,7 @@ struct FitReportView: View {
                         text: "Drove CI build times down across every product target"
                     )
                 ],
-                gaps: ["The JD asks for Kubernetes; nothing on file mentions it"],
+                gaps: ["The JD asks for GraphQL; nothing on file mentions it"],
                 rationale: "CI work maps directly to the JD's platform focus — the strongest achievements on file are exactly the ones this role screens for."
             )
         ),
