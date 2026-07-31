@@ -41,6 +41,7 @@ xcodebuild -project Ladder.xcodeproj -scheme Ladder -destination 'platform=macOS
 # Render the UI to .snapshots/ so it can be looked at (ADR 0007)
 scripts/snapshots.sh views   # components, headless, ~20s
 scripts/snapshots.sh app     # the real app, driven and photographed, ~40s
+scripts/snapshots.sh app stage-sheet tailor   # only those tour sections (list in the script)
 ```
 
 `project.yml` is the manifest. New source files go in the right feature folder and are picked up automatically by the folder-based target definition — but always run `xcodegen generate` + a build after adding files.

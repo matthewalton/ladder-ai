@@ -9,6 +9,10 @@ import XCTest
 /// Two tours: the first run on an empty store, and the seeded walk across the
 /// whole flow — board, detail, timeline, stage sheet, generation windows, the
 /// tailor run to its fit report — on `-LadderTourSeed` data.
+///
+/// Each seeded section also stands alone as its own test, so a change to one
+/// screen can be photographed without walking the rest:
+/// `scripts/snapshots.sh app stage-sheet` (see the script for section names).
 @MainActor
 final class ScreenTour: XCTestCase {
     override func setUp() {
@@ -39,13 +43,7 @@ final class ScreenTour: XCTestCase {
     }
 
     func testTourTheSeededApp() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-LadderScratchStore", "-LadderTourSeed"]
-        app.launch()
-
-        let window = mainWindow(of: app)
-        XCTAssertTrue(window.waitForExistence(timeout: 60), "app window never appeared")
-        XCTAssertTrue(window.staticTexts["Alex Climber"].waitForExistence(timeout: 10))
+        let (window, app) = launchSeeded()
         record(window, app, named: "10-profile")
 
         tourPipeline(window, app)
@@ -56,9 +54,64 @@ final class ScreenTour: XCTestCase {
         tourSettings(app)
     }
 
-    private func tourPipeline(_ window: XCUIElement, _ app: XCUIApplication) {
+    // MARK: - Section tours
+    // The same walk, one section at a time — each seats itself on the seeded
+    // store first. Targeted by `scripts/snapshots.sh app <section…>`.
+
+    func testTourPipelineSection() throws {
+        let (window, app) = launchSeeded()
+        tourPipeline(window, app)
+    }
+
+    func testTourStageSheetSection() throws {
+        let (window, app) = launchSeeded()
+        tourStageSheet(window, app)
+    }
+
+    func testTourJourneySection() throws {
+        let (window, app) = launchSeeded()
+        tourJourney(window, app)
+    }
+
+    func testTourTailorFlowSection() throws {
+        let (window, app) = launchSeeded()
+        tourTailorFlow(window, app)
+    }
+
+    func testTourJobImportSection() throws {
+        let (window, app) = launchSeeded()
+        tourJobImport(window, app)
+    }
+
+    func testTourSettingsSection() throws {
+        let (_, app) = launchSeeded()
+        tourSettings(app)
+    }
+
+    private func launchSeeded() -> (XCUIElement, XCUIApplication) {
+        let app = XCUIApplication()
+        app.launchArguments = ["-LadderScratchStore", "-LadderTourSeed"]
+        app.launch()
+
+        let window = mainWindow(of: app)
+        XCTAssertTrue(window.waitForExistence(timeout: 60), "app window never appeared")
+        XCTAssertTrue(window.staticTexts["Alex Climber"].waitForExistence(timeout: 10))
+        return (window, app)
+    }
+
+    private func openApplications(_ window: XCUIElement) {
         window.radioButtons["Applications"].click()
         XCTAssertTrue(sidebarRow("Summit Labs", in: window).waitForExistence(timeout: 10))
+    }
+
+    private func openSummitLabs(_ window: XCUIElement) {
+        openApplications(window)
+        sidebarRow("Summit Labs", in: window).click()
+        XCTAssertTrue(window.staticTexts["Platform Engineer"].waitForExistence(timeout: 10))
+    }
+
+    private func tourPipeline(_ window: XCUIElement, _ app: XCUIApplication) {
+        openApplications(window)
         record(window, app, named: "11-board")
 
         let board = window.scrollViews.containing(.staticText, identifier: "DRAFT").firstMatch
@@ -88,6 +141,7 @@ final class ScreenTour: XCTestCase {
     }
 
     private func tourJourney(_ window: XCUIElement, _ app: XCUIApplication) {
+        openSummitLabs(window)
         let generateJourney = window.buttons["Generate"].firstMatch
         reveal(generateJourney, in: inspectorScrollView(of: window))
         generateJourney.click()
@@ -100,6 +154,7 @@ final class ScreenTour: XCTestCase {
     }
 
     private func tourStageSheet(_ window: XCUIElement, _ app: XCUIApplication) {
+        openSummitLabs(window)
         let stageRow = window.buttons
             .matching(NSPredicate(format: "label BEGINSWITH 'Technical'")).firstMatch
         reveal(stageRow, in: inspectorScrollView(of: window))
@@ -150,6 +205,7 @@ final class ScreenTour: XCTestCase {
     }
 
     private func tourTailorFlow(_ window: XCUIElement, _ app: XCUIApplication) {
+        openApplications(window)
         sidebarRow("Alpine Systems", in: window).click()
         let createCV = window.buttons["Create CV"]
         XCTAssertTrue(createCV.waitForExistence(timeout: 10))
@@ -188,6 +244,7 @@ final class ScreenTour: XCTestCase {
     }
 
     private func tourJobImport(_ window: XCUIElement, _ app: XCUIApplication) {
+        openApplications(window)
         window.buttons["Create application"].firstMatch.click()
         let sheet = window.sheets.firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 10), "the job import sheet never opened")

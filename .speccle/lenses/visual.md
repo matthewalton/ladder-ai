@@ -25,11 +25,14 @@ the one thing this lens exists not to do, and the local `/review` will do it pro
 ```sh
 scripts/snapshots.sh views   # components → .snapshots/, light and dark, ~20s
 scripts/snapshots.sh app     # the real app, driven and photographed → .snapshots/ui/, ~40s
+scripts/snapshots.sh app stage-sheet tailor   # only those tour sections (list in the script)
 ```
 
 Run `views` when the change is a component; run `app` when it changes a screen, the shell, or
-anything reached by navigating. Run both when unsure. **Then read the PNGs** — they are images,
-open them.
+anything reached by navigating. Run both when unsure. When the change set touches only one or
+two screens, name their sections instead of walking everything — but a section run **wipes
+`.snapshots/ui/` first**, so what remains afterwards is only what was just rendered. **Then
+read the PNGs** — they are images, open them.
 
 Two traps, neither of which is a finding:
 
