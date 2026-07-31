@@ -8,9 +8,10 @@ allowed-tools: Read(/${CLAUDE_PLUGIN_ROOT}/skills/*/references/**)
 
 Turn a feature request — in whatever form it arrives — into a plan the rest of the
 pipeline can execute unattended: the **route**, the **feature folder**, the **feature
-key**, the scope, and every open decision settled and written down. This is stage 1
-of the `feature` pipeline and its one human gate; it is also useful alone — a plan is
-a cheap thing to be wrong about out loud.
+key**, the scope, and every open decision settled and written down. This is the first
+stage of the `feature` pipeline and its one human gate — it shares its session with
+`spec-feature`, which lands the per-behaviour decisions this skill settles. It is also
+useful alone: a plan is a cheap thing to be wrong about out loud.
 
 The folder shape and key rules this skill plans against are fixed by the convention,
 bundled beside this skill. Read `${CLAUDE_SKILL_DIR}/references/convention.md` before
@@ -110,15 +111,41 @@ the end:
   in the plan summary, explicitly marked "to write on approval". Writing them is the
   pipeline's first act after the gate.
 
-## 6. End with the plan summary
+## 6. Ask the repo's plan lenses
+
+A repo may keep **plan lenses** in `.speccle/lenses/plan/` — its own judgement about
+the shape of a slice, one markdown prompt each. Most repos keep none, and then this
+step is nothing: look, find no lens, move on without a word about it.
+
+Where there are lenses, fan out one subagent per lens, in parallel, before you write
+the summary. Each prompt carries the lens file verbatim, the plan as it stands — route,
+folder, key, scope, and every key decision with how it was settled — and whatever
+markdown the slice already has: `CONTEXT.md`, `CLAUDE.md`, `decisions/`, and `SPEC.md`
+on an amend. There is no diff at plan time; do not invent one, and do not send a lens
+looking at code.
+
+Two names never go to a subagent. `README.md` in that directory is the scaffold's own
+documentation, not a lens. And the lenses in `.speccle/lenses/` itself belong to
+`review` — they judge a change set, and there is no change set here.
+
+**A finding is advice, never a veto.** It cannot fail the plan, and it cannot quietly
+rewrite it. Where one is plainly right, revise the plan and say so, naming the lens;
+where it is arguable, carry it into the summary and let the human rule. Do not reopen
+§4 to ask about it — a lens is not a new question, it is a comment on the answers. A
+lens that finds nothing is the common result, and it earns no line anywhere.
+
+## 7. End with the plan summary
 
 One screen, easy to read: the route, the feature folder, the key, the scope (in and
 out), and each key decision — how it was settled (from the input, agreed, or
-defaulted) and where it was captured. No jargon the reader has to decode; the summary
-is the thing the human approves, so it must be readable in one pass.
+defaulted) and where it was captured. Then what the plan lenses found, if any ran and
+any found something — each finding in a line or two, with the lens that raised it. No
+jargon the reader has to decode; the summary is the thing the human approves, so it
+must be readable in one pass.
 
-In the `feature` pipeline the summary becomes the approval gate — the orchestrator
-owns those mechanics. Standalone, hand it back and stop: the plan is the deliverable.
+In the `feature` pipeline the summary becomes the approval gate — `feature` owns those
+mechanics, and the spec is drafted in this same session once the gate passes.
+Standalone, hand it back and stop: the plan is the deliverable.
 
 This skill drafts no criteria and writes no code — its only files are the decision
 records above. A plan that turns out wrong at the spec or implement stage is revised

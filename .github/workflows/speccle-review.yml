@@ -78,7 +78,7 @@ jobs:
       # (`onFail: download` does not rescue a name mismatch). `npm i -g` is exempt, and resolves
       # the package once instead of on both steps below.
       - name: Install Speccle
-        run: npm i -g speccle@0.22.0
+        run: npm i -g speccle@0.31.0
 
       # `origin/` prefixes the base ref because checkout leaves it as a remote-tracking ref;
       # a bare branch name would not resolve.
