@@ -39,7 +39,8 @@ struct AnthropicIntelligenceService: IntelligenceService {
             // the same budget, so this is not headroom for the answer alone.
             maxTokens: 32000,
             system: request.prompt,
-            messages: [MessagesRequest.Message(role: "user", content: request.payload)]
+            messages: [MessagesRequest.Message(role: "user", content: request.payload)],
+            thinking: request.narrateThinking ? .summarized : nil
         ))
         return urlRequest
     }
@@ -54,12 +55,14 @@ struct AnthropicIntelligenceService: IntelligenceService {
         return try Self.responseText(from: data)
     }
 
-    static func assembledText(fromEventBytes data: Data) throws -> Data {
+    static func assembledText(
+        fromEventBytes data: Data, onDelta: (IntelligenceDelta) -> Void = { _ in }
+    ) throws -> Data {
         var reply = StreamedReply()
         for line in String(decoding: data, as: UTF8.self).split(
             separator: "\n", omittingEmptySubsequences: false
         ) {
-            reply.consume(line: line)
+            if let delta = reply.consume(line: line) { onDelta(delta) }
         }
         return try reply.assembled()
     }
@@ -68,14 +71,23 @@ struct AnthropicIntelligenceService: IntelligenceService {
         private var text = ""
         private var stopReason: String?
 
-        mutating func consume(line: some StringProtocol) {
-            guard line.hasPrefix("data:") else { return }
+        mutating func consume(line: some StringProtocol) -> IntelligenceDelta? {
+            guard line.hasPrefix("data:") else { return nil }
             guard let event = try? JSONDecoder().decode(
                 StreamEvent.self, from: Data(line.dropFirst("data:".count).utf8)
-            ) else { return }
+            ) else { return nil }
             if let reason = event.delta?.stopReason { stopReason = reason }
-            guard event.delta?.type == "text_delta", let piece = event.delta?.text else { return }
-            text += piece
+            switch event.delta?.type {
+            case "text_delta":
+                guard let piece = event.delta?.text else { return nil }
+                text += piece
+                return .text(piece)
+            case "thinking_delta":
+                guard let piece = event.delta?.thinking else { return nil }
+                return .narration(piece)
+            default:
+                return nil
+            }
         }
 
         func assembled() throws -> Data {
@@ -104,16 +116,25 @@ private struct MessagesRequest: Encodable {
         var content: String
     }
 
+    struct Thinking: Encodable {
+        var type: String
+        var display: String
+
+        static let summarized = Thinking(type: "adaptive", display: "summarized")
+    }
+
     var model: String
     var maxTokens: Int
     var system: String
     var messages: [Message]
+    var thinking: Thinking?
 
     enum CodingKeys: String, CodingKey {
         case model
         case maxTokens = "max_tokens"
         case system
         case messages
+        case thinking
     }
 }
 
@@ -121,11 +142,13 @@ private struct StreamEvent: Decodable {
     struct Delta: Decodable {
         var type: String?
         var text: String?
+        var thinking: String?
         var stopReason: String?
 
         enum CodingKeys: String, CodingKey {
             case type
             case text
+            case thinking
             case stopReason = "stop_reason"
         }
     }

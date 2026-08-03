@@ -225,6 +225,23 @@ struct JDScanFlowTests {
         #expect(repair.payload.contains(#""matched": [],"#), "the repair carries the invalid response")
     }
 
+    @Test("[TAILOR-69] the JD scan opts into narration, its repair included")
+    func scanOptsIntoNarration() async throws {
+        let (_, application) = try makeWorld()
+        let missingGaps = Data(#"{"matched": [], "suggestions": []}"#.utf8)
+        let valid = Data(#"{"matched": ["Swift"], "gaps": [], "suggestions": []}"#.utf8)
+        let service = FixtureIntelligenceService(returning: [missingGaps, valid])
+        let store = makeScanStore(service: service)
+
+        await store.scan(application)
+
+        let optedIn = await service.recordedRequests.map(\.narrateThinking)
+
+        #expect(
+            optedIn == [true, true],
+            "the scan is one of the two waits long enough to wonder whether anything is happening")
+    }
+
     @Test("[TAILOR-31] a fenced-but-valid scan response consumes no repair")
     func fencedResponseConsumesNoRepair() async throws {
         let (_, application) = try makeWorld()

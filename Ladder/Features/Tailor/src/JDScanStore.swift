@@ -73,7 +73,8 @@ final class JDScanStore {
             let prompt = try JDScanPrompt.text(from: bundle)
             let payload = Self.payload(jobDescription: application.jobDescription, pool: pool)
             let service = makeIntelligence(key)
-            let request = IntelligenceRequest(prompt: prompt, payload: payload)
+            let request = IntelligenceRequest(
+                prompt: prompt, payload: payload, narrateThinking: true)
             let response: Data
             do {
                 response = try await service.complete(request)
@@ -90,7 +91,8 @@ final class JDScanStore {
                 // validation fails the scan.
                 let repair = IntelligenceRequest(
                     prompt: prompt,
-                    payload: Self.repairPayload(original: payload, response: response, failure: failure)
+                    payload: Self.repairPayload(original: payload, response: response, failure: failure),
+                    narrateThinking: true
                 )
                 let repairResponse: Data
                 do {

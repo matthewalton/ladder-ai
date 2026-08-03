@@ -61,7 +61,8 @@ final class TailorStore {
             let validIDs = Set(payload.achievementsByID.keys)
             let validProjectIDs = Set(payload.projectsByID.keys)
             let tagNamesByID = payload.tagNamesByID
-            let request = IntelligenceRequest(prompt: prompt, payload: payload.json)
+            let request = IntelligenceRequest(
+                prompt: prompt, payload: payload.json, narrateThinking: true)
             let response = try await service.complete(request)
             let result: TailorResult
             do {
@@ -79,7 +80,8 @@ final class TailorStore {
                     prompt: prompt,
                     payload: Self.repairPayload(
                         original: payload.json, response: response, failure: failure
-                    )
+                    ),
+                    narrateThinking: true
                 )
                 let repairResponse = try await service.complete(repair)
                 result = try TailorResult(

@@ -535,6 +535,82 @@ struct TailorFlowTests {
         }
     }
 
+    @Test("[TAILOR-69] a request opting into narration asks the model to summarize its thinking")
+    func narratedRequestAsksForSummarizedThinking() throws {
+        let request = IntelligenceRequest(
+            prompt: "the tailor prompt", payload: "the payload", narrateThinking: true)
+
+        let urlRequest = try AnthropicIntelligenceService.urlRequest(for: request, apiKey: "sk-ant-live")
+
+        let body = try #require(urlRequest.httpBody)
+        let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let thinking = try #require(json["thinking"] as? [String: Any])
+        #expect(thinking["type"] as? String == "adaptive")
+        #expect(
+            thinking["display"] as? String == "summarized",
+            "display asks for the summary; the thinking itself runs either way (ADR 0009)")
+    }
+
+    @Test("[TAILOR-69] narration reaches the caller as its own deltas, beside the text")
+    func narrationDeltasReachTheCallerBesideTheText() throws {
+        let narrated = #"""
+        event: content_block_start
+        data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Reliability leads the JD, "}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"so the outage work goes first."}}
+
+        event: content_block_stop
+        data: {"type":"content_block_stop","index":0}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"{\"selected\":[\"a1\"],"}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\"summary\":\"Staff engineer\"}"}}
+
+        event: message_delta
+        data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}
+        """#
+        var arrived: [IntelligenceDelta] = []
+
+        let assembled = try AnthropicIntelligenceService.assembledText(
+            fromEventBytes: Data(narrated.utf8), onDelta: { arrived.append($0) })
+
+        #expect(
+            arrived == [
+                .narration("Reliability leads the JD, "),
+                .narration("so the outage work goes first."),
+                .text(#"{"selected":["a1"],"#),
+                .text(#""summary":"Staff engineer"}"#),
+            ],
+            "both kinds arrive in the order the stream carried them")
+        #expect(
+            assembled == Data(#"{"selected":["a1"],"summary":"Staff engineer"}"#.utf8),
+            "narration is never parsed, never validated, and never reaches a result")
+    }
+
+    @Test("[TAILOR-69] the tailor run opts into narration, its repair included")
+    func tailorRunOptsIntoNarration() async throws {
+        let fixtureURL = try #require(
+            Bundle.main.url(forResource: "tailor-result", withExtension: "json", subdirectory: "Fixtures")
+        )
+        let validJSON = try Data(contentsOf: fixtureURL)
+        let service = FixtureIntelligenceService(returning: [malformedResponse, validJSON])
+        let store = makeTailorStore(profileStore: try makeProfileStore(), service: service)
+
+        await store.startRun(jobDetails)
+
+        let optedIn = await service.recordedRequests.map(\.narrateThinking)
+
+        #expect(
+            optedIn == [true, true],
+            "the run is one of the two waits long enough to wonder whether anything is happening")
+    }
+
     @Test("[TAILOR-19] the tailor payload carries projects, education, and interests")
     func payloadCarriesNewProfileSections() async throws {
         let profileStore = try makeProfileStore()
