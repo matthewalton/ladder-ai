@@ -7,7 +7,11 @@ the per-point relevance stats.
 
 **Edits outside this folder** — a change here usually touches:
 
-- `Ladder/Shared/Services/` — the live `AnthropicIntelligenceService` lives there, not here
+- `Ladder/Shared/Services/` — the live `AnthropicIntelligenceService` lives there, not here.
+  `IntelligenceService.swift` holds the seam itself: the protocol, its streaming default, and
+  `IntelligenceRequest`. Both are shared ground — nine slices call through them (ADR 0009)
+- `Ladder/Features/CVImport/SPEC.md` — [CVIMPORT-19]'s truncation guard is this slice's stop-reason
+  handling seen from import; changing where that signal is read reaches its body
 - `Ladder/Features/CVExport/src/Application.swift` — cv-export owns `Application`; the `Match` model
   this slice persists is in this slice's `src/`
 - `Ladder/Features/CVExport/src/Render/CVRenderTests.swift` — cv-export's render tests build a
@@ -43,7 +47,11 @@ the per-point relevance stats.
 - This is the slice that turned live API access on. Tests still never reach the network: the
   live service is tested at its **request-building seam**, the flow with
   `FixtureIntelligenceService`, and the Keychain store is faked behind its protocol
-  everywhere except its own round-trip test.
+  everywhere except its own round-trip test. The stream reader is the same rule one layer
+  down — it is fed **recorded event bytes**, never a connection, which is also how a
+  truncated or malformed event sequence gets exercised on purpose.
+- A new `IntelligenceService` conformer needs no streaming code: the protocol extension's
+  default returns the whole result (ADR 0009). Only the live service overrides it.
 - The repair loop runs **once**. A second failure is a failure, not another retry.
 
 Criteria token: `[TAILOR-n]`

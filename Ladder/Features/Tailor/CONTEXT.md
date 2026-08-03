@@ -143,3 +143,15 @@ _Avoid_: retry, second attempt, re-roll
 The user's Anthropic key, entered in Settings and stored only as a Keychain
 generic-password item behind the key-store protocol.
 _Avoid_: token, credential, secret
+
+**Delta**:
+One increment of a streamed reply, carrying either result text or narration.
+The text deltas of a reply accumulate into exactly what an unstreamed
+response returned whole ([TAILOR-67]).
+_Avoid_: chunk, token, fragment, packet, event
+
+**Narration**:
+The model's own summarized account of its thinking, asked for per request and
+arriving as its own deltas ([TAILOR-69]). Distinct from the result: narration
+is never parsed, never validated, and never reaches a tailor result.
+_Avoid_: reasoning, thinking text, commentary, progress

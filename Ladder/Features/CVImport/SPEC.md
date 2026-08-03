@@ -155,17 +155,20 @@ own truncation reason ([CVIMPORT-19]).
 
 ## [CVIMPORT-19] A response cut off at the model's token limit fails the import with a truncation reason
 
-The guard lives in the shared `AnthropicIntelligenceService`: the Messages
-response's `stop_reason` is decoded alongside the content blocks, and
+The guard lives in the shared `AnthropicIntelligenceService`: a stop reason of
 `"max_tokens"` throws `LiveServiceError.truncated` before any text is returned
 — truncated JSON never reaches proposal validation, so the failure cannot
-masquerade as "the response was not valid JSON" ([CVIMPORT-17]).
+masquerade as "the response was not valid JSON" ([CVIMPORT-17]). Since the
+service began streaming (Tailor decisions/0019), that signal arrives on its
+own event near the end of the stream rather than on a whole-response envelope,
+so the reader holds the accumulated text until it has seen it ([TAILOR-68]).
+Where the signal is read has moved; the promise here has not.
 
 The import store maps the throw to its own `ImportError.responseTruncated`
 (decisions/0006), distinct from `requestFailed` ([CVIMPORT-16]): the
 failed-state message names the length problem — the CV may be too long to
 import whole — because "check your connection and try again" is wrong advice
-when a retry would truncate again at the same 16k cap. The Profile is
+when a retry would truncate again at the same cap. The Profile is
 unchanged and no review is offered, as with every failed import.
 
 ## [CVIMPORT-20] Confirming the review replaces the Profile's content with the included items

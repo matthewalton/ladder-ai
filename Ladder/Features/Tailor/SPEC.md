@@ -220,6 +220,10 @@ latest Sonnet (decisions/0003; exact model ID verified against current API
 docs at implement time). The prompt travels as the system prompt, the payload
 as the user message.
 
+The body also asks for the reply to arrive as a stream (`"stream": true`,
+decisions/0019). Every live request streams; what varies per request is
+whether it also asks for narration ([TAILOR-69], [TAILOR-70]).
+
 ## [TAILOR-19] The tailor payload carries projects, education and interests
 
 Beyond roles: each project serializes as one unit — stable `p…` id, name,
@@ -708,3 +712,72 @@ scan persisted it ([TAILOR-27]).
 The preview one step later already guards its own manual edits
 ([CVEXPORT-62]) while the costlier step behind it did not. Starting over
 ([TAILOR-1]'s flow re-run) is a deliberate discard and needs no second ask.
+
+## [TAILOR-67] When a live reply arrives in pieces, the run assembles them into one complete result
+
+The Messages API returns server-sent events; the text the caller receives is
+the accumulation of the reply's text deltas, in arrival order. Callers see no
+difference — the same JSON reaches the same validation it reached when the
+response was fetched whole, so every slice through this seam is unaffected
+(ADR 0009).
+
+Tests never open a connection. The reader is fed recorded event bytes
+directly and asserted on what it assembles, which also lets a malformed or
+truncated event sequence be exercised deliberately.
+
+## [TAILOR-68] When a streamed reply is cut off at the model's token limit, the run fails before any text reaches the caller
+
+The stop reason arrives on its own event near the end of the stream rather
+than on a whole-response envelope (decisions/0019), so the reader holds the
+accumulated text until it has seen that event. A stop reason of `max_tokens`
+throws `LiveServiceError.truncated` and the accumulated text is discarded
+unreturned.
+
+The promise is the one [CVIMPORT-19] already depends on and is unchanged by
+streaming: truncated JSON never reaches validation, so a length failure can
+never masquerade as the generic invalid-JSON reason ([CVIMPORT-17]). Only
+where the signal is read has moved.
+
+## [TAILOR-69] When a run opts into narration, the live request asks the model to summarize its thinking
+
+Narration is per request, not per service (ADR 0009): the request carries
+`thinking` as adaptive with `display` set to `summarized`, and the reply's
+thinking deltas are surfaced to the caller alongside the text deltas.
+
+The tailor run and the JD scan opt in — they are the two waits long enough
+for a person to wonder whether anything is happening. Nothing in this slice
+reads the narration yet; the surface that will is Baton #234, and this
+criterion exists so that work finds the text already flowing.
+
+## [TAILOR-70] When a run does not opt into narration, the live request carries no thinking instruction
+
+The default. Import, tag suggestions, rescore, debrief, prep, journey and the
+condense and trim passes all leave it unset, so their request bodies gain
+nothing but the stream field ([TAILOR-17]).
+
+Thinking still happens on the pinned model and is billed the same either way
+— asking for a summary changes what comes back, not what the model does — so
+the cost of narration is summary output tokens, and this criterion is what
+keeps the seven callers that would never display them from paying.
+
+## [TAILOR-71] When a service cannot stream, a streamed run still returns its complete result
+
+The seam's streaming method has a default that ignores the delta callback and
+returns the whole result (ADR 0009). The fixture service, the tour service
+and the test doubles inherit it unedited; only the live service overrides it.
+
+This is what keeps the amendment additive: a caller may stream against any
+service without asking which kind it holds, and a conformer that has nothing
+to stream needs no code.
+
+## [TAILOR-72] When nothing arrives for sixty seconds, the live request fails
+
+Streaming changes what the interval measures. Unstreamed, no bytes arrived
+until generation finished, so the interval was a ceiling on the whole run and
+a legitimate multi-minute run tripped it — the reason it was raised to 300
+seconds as a stopgap. Streamed, arriving bytes reset it, so it measures
+silence instead and returns to 60 (decisions/0019).
+
+Sixty seconds of total silence is a dead connection, not a slow run. The
+interval is set on the built request, so it is asserted at the same
+request-building seam as [TAILOR-17], with no connection opened.
