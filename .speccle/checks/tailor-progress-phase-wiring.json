@@ -1,0 +1,9 @@
+{
+  "when": { "path": "Ladder/Features/Tailor/src/Views/TailorView.swift" },
+  "require": {
+    "path": "Ladder/Features/Tailor/src/Views/TailorView.swift",
+    "contains": "(?=[\\s\\S]*case \\.scanning:\\s*TailorProgressView\\(step: \\.scanning\\))(?=[\\s\\S]*case \\.tailoring:\\s*TailorProgressView\\(step: \\.tailoring\\))(?=[\\s\\S]*else if isComposing \\{\\s*TailorProgressView\\(step: \\.composing\\))"
+  },
+  "message": "each tailor phase must render its own progress step — .scanning → step .scanning, .tailoring → step .tailoring, isComposing → step .composing. Keep each arm wired to its matching step",
+  "because": "review of 2dd0af5: nothing reaches this switch — no test constructs TailorView, and SnapshotGallery renders TailorProgressView(step:) directly over Step.allCases — so swapping two arms leaves the sheet saying \"Laying your CV out…\" while it scans, with the whole suite green"
+}

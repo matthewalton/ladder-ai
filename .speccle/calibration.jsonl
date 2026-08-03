@@ -1,3 +1,4 @@
 {"at":"2026-07-28T09:39:37.909Z","score":3,"threshold":3,"humanRequired":true,"escalated":false,"signals":["spec-silent-change"],"verdict":{"neededHuman":false,"foundReal":true}}
 {"at":"2026-08-03T10:29:44.574Z","base":"origin/main","score":3,"threshold":3,"humanRequired":true,"escalated":false,"signals":["spec-silent-change"],"verdict":{"neededHuman":true,"foundReal":true}}
 {"at":"2026-08-03T13:37:27.831Z","score":3,"threshold":3,"humanRequired":true,"escalated":false,"signals":["spec-silent-change"],"verdict":{"neededHuman":false,"foundReal":true}}
+{"at":"2026-08-03T14:19:44.948Z","score":0,"threshold":3,"humanRequired":false,"escalated":false,"signals":[],"verdict":{"neededHuman":false,"foundReal":true}}
