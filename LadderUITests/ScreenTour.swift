@@ -88,9 +88,25 @@ final class ScreenTour: XCTestCase {
         tourSettings(app)
     }
 
+    /// The only section that launches twice: the two failure arms need stores
+    /// that contradict each other — one profile with nothing to select from,
+    /// one with everything but no key.
+    func testTourTailorFailureSection() throws {
+        let (bareWindow, bareApp) = launch(with: ["-LadderTourBareSeed"])
+        tourTailorRefusal(bareWindow, bareApp)
+        bareApp.terminate()
+
+        let (keylessWindow, keylessApp) = launch(with: ["-LadderTourSeed", "-LadderTourNoKey"])
+        tourTailorKeyRefusal(keylessWindow, keylessApp)
+    }
+
     private func launchSeeded() -> (XCUIElement, XCUIApplication) {
+        launch(with: ["-LadderTourSeed"])
+    }
+
+    private func launch(with arguments: [String]) -> (XCUIElement, XCUIApplication) {
         let app = XCUIApplication()
-        app.launchArguments = ["-LadderScratchStore", "-LadderTourSeed"]
+        app.launchArguments = ["-LadderScratchStore"] + arguments
         app.launch()
 
         let window = mainWindow(of: app)
@@ -241,6 +257,42 @@ final class ScreenTour: XCTestCase {
         XCTAssertTrue(done.waitForExistence(timeout: 15), "the fit report never appeared")
         record(window, app, named: "23-fit-report")
         done.click()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 10))
+    }
+
+    /// On the bare seed the flow refuses before it scans, so this arm offers a
+    /// retry rather than the key's route to Settings.
+    private func tourTailorRefusal(_ window: XCUIElement, _ app: XCUIApplication) {
+        let sheet = startTailorRun(in: window)
+        XCTAssertTrue(sheet.buttons["Try again"].waitForExistence(timeout: 15),
+                      "the tailor refusal never appeared")
+        record(window, app, named: "26-tailor-failed-nothing-to-select")
+        closeSheet(sheet)
+    }
+
+    private func tourTailorKeyRefusal(_ window: XCUIElement, _ app: XCUIApplication) {
+        let sheet = startTailorRun(in: window)
+        XCTAssertTrue(sheet.buttons["Open Settings…"].waitForExistence(timeout: 15),
+                      "the scan's key refusal never appeared")
+        record(window, app, named: "27-scan-failed-needs-key")
+        closeSheet(sheet)
+    }
+
+    /// Alpine Systems is the one application both seeds carry, so a failure arm
+    /// can reach a tailor run without the rest of the seeded board existing.
+    private func startTailorRun(in window: XCUIElement) -> XCUIElement {
+        window.radioButtons["Applications"].click()
+        let row = sidebarRow("Alpine Systems", in: window)
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "Alpine Systems never appeared")
+        row.click()
+        let createCV = window.buttons["Create CV"]
+        XCTAssertTrue(createCV.waitForExistence(timeout: 10), "Create CV never appeared")
+        createCV.click()
+        return window.sheets.firstMatch
+    }
+
+    private func closeSheet(_ sheet: XCUIElement) {
+        sheet.buttons["Close"].click()
         XCTAssertTrue(sheet.waitForNonExistence(timeout: 10))
     }
 

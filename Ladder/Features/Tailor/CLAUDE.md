@@ -13,6 +13,11 @@ the per-point relevance stats.
 - `Ladder/Features/CVExport/src/Render/CVRenderTests.swift` — cv-export's render tests build a
   `TailorResult` directly, so a change to its validating initialiser's signature reaches them
 - `Prompts/tailor.md` and `Prompts/jd-scan.md`
+- The machinery that photographs this slice's dead ends (ADR 0008) — `LadderTests/SnapshotGallery.swift`
+  renders `TailorProgressView` for each of its `Step` cases, and `LadderUITests/ScreenTour.swift`
+  plus its `tailor-failure` case in `scripts/snapshots.sh` drive the two failure arms. Reaching
+  those arms is what `TourSeed.plantBare` and `-LadderTourNoKey` exist for; changing the phase
+  machine's refusals reaches all of them.
 
 **Needs eyes**
 
@@ -21,10 +26,17 @@ the per-point relevance stats.
   preview, not for these (cv-export decisions/0015), so what the frames answer is whether the
   capped reading measure still reads as a deliberate column and not as content stranded at one
   edge. Each frame's `.txt` beside it carries the measured widths.
-- The scan and tailor failure screens — nothing renders them: the tour's fixture service
-  answers every prompt, so the flow never enters a failed phase. Stays the human's.
-- The three progress states — the tour steps past each one waiting on the screen that follows,
-  so no frame catches them. Stays the human's.
+- The two failure screens — `scripts/snapshots.sh app tailor-failure` records them as
+  `26-tailor-failed-nothing-to-select` (the retry arm, on a Profile with nothing to select
+  from) and `27-scan-failed-needs-key` (the `SettingsLink` arm, on an empty key). What the
+  frames answer is whether a single centred line still reads as placed rather than adrift in
+  a sheet sized for the CV preview.
+- The three progress states — `scripts/snapshots.sh views` writes them as
+  `tailor-progress-scanning`, `-tailoring` and `-composing`, light and dark. The yellow glyph
+  above the text is `ImageRenderer`'s stand-in for `ProgressView`, which is AppKit-backed and
+  never draws headlessly; what the frames answer is where the centred text lands, so a
+  regression to leading alignment shows up as text stranded at the measure's left edge. The
+  spinner itself stays the human's.
 
 **Traps**
 

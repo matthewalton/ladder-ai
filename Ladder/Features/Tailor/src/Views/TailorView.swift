@@ -46,7 +46,7 @@ struct TailorView: View {
         ReadingMeasureView(spendsFullWidth: previewSpendingFullWidth != nil) {
             switch flow.phase {
             case .scanning:
-                progress("Scanning the job description against your tags…")
+                TailorProgressView(step: .scanning)
             case .matchReview:
                 if let model = flow.matchReview {
                     MatchReviewView(
@@ -59,12 +59,12 @@ struct TailorView: View {
                     )
                 }
             case .tailoring:
-                progress("Matching your points to the job…")
+                TailorProgressView(step: .tailoring)
             case .review:
                 if let export {
                     FitReportView(report: export.fitReport, onDone: { dismiss() })
                 } else if isComposing {
-                    progress("Laying your CV out…")
+                    TailorProgressView(step: .composing)
                 } else if let preview = previewSpendingFullWidth {
                     CVPreviewView(
                         model: preview,
@@ -191,16 +191,6 @@ struct TailorView: View {
         return name.isEmpty ? "CV" : name
     }
 
-    private func progress(_ message: String) -> some View {
-        VStack(spacing: 12) {
-            ProgressView()
-            Text(message)
-                .font(.callout)
-                .foregroundStyle(Color.inkSoft)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
     private func failed(_ message: String, needsKey: Bool) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
@@ -260,6 +250,28 @@ struct TailorView: View {
         case .resultInvalid:
             "The scan result didn't come back in a shape Ladder could read, even after one repair. Nothing was changed."
         }
+    }
+}
+
+/// The waiting screen for all three long passes. Its copy lives on `Step` so
+/// the gallery renders the strings the sheet actually shows, not a paraphrase.
+struct TailorProgressView: View {
+    enum Step: String, CaseIterable {
+        case scanning = "Scanning the job description against your tags…"
+        case tailoring = "Matching your points to the job…"
+        case composing = "Laying your CV out…"
+    }
+
+    var step: Step
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            Text(step.rawValue)
+                .font(.callout)
+                .foregroundStyle(Color.inkSoft)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

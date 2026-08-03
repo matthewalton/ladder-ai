@@ -19,8 +19,12 @@ struct LadderApp: App {
         do {
             let storeURL = TourMode.isActive ? try Self.scratchStoreURL() : nil
             let container = try ProfileStore.container(at: storeURL)
-            if TourMode.isActive, TourSeed.isRequested {
-                try TourSeed.plant(in: container)
+            if TourMode.isActive {
+                if TourSeed.isRequested {
+                    try TourSeed.plant(in: container)
+                } else if TourSeed.isBareRequested {
+                    try TourSeed.plantBare(in: container)
+                }
             }
             store = ProfileStore(container: container)
             try store.load()

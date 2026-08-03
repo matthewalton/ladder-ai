@@ -41,8 +41,9 @@ attaching something to an Application edits this file rather than copying the mo
   widths, and the page is meant to clear A4 (decisions/0015).
 - The reading measure the other phases sit in — `scripts/snapshots.sh views` writes it as
   `reading-measure`, light and dark. What the frames answer is whether the capped column reads
-  as deliberate rather than as content stranded at one edge; the phases wearing it are briefed
-  under Tailor's own **Needs eyes**, and every tour frame's `.txt` carries the measured column.
+  as deliberate rather than as content stranded at one edge. It no longer stands in for the
+  phases themselves: each one is now rendered under Tailor's own **Needs eyes**, and every tour
+  frame's `.txt` carries the measured column.
 - The over-length state — the tour seed makes a one-page CV, so nothing renders the clay page
   label, the "about N pages over" copy, or the disabled Export. Stays the human's.
 - The "Not scored yet" line — only appears on a point added after the tailor run, which the

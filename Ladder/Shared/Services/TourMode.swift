@@ -7,8 +7,13 @@ enum TourMode {
         ProcessInfo.processInfo.arguments.contains("-LadderScratchStore")
     }
 
+    private static var withholdsKey: Bool {
+        ProcessInfo.processInfo.arguments.contains("-LadderTourNoKey")
+    }
+
     static func keyStore() -> any APIKeyStore {
-        isActive ? InMemoryAPIKeyStore(key: "sk-tour") : KeychainAPIKeyStore()
+        guard isActive else { return KeychainAPIKeyStore() }
+        return InMemoryAPIKeyStore(key: withholdsKey ? "" : "sk-tour")
     }
 
     static func makeIntelligence() -> (String) -> any IntelligenceService {

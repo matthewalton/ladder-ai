@@ -66,6 +66,17 @@ struct SnapshotGallery {
             named: "reading-measure", width: TailorFlowSheetMetrics.minWidth
         )
 
+        // On plain paper, not a card: these sit straight on the sheet, and the
+        // cap only shows itself here by where the centred text lands.
+        for step in TailorProgressView.Step.allCases {
+            try gallery.write(
+                ReadingMeasureView {
+                    TailorProgressView(step: step).frame(height: 220)
+                },
+                named: "tailor-progress-\(step)", width: TailorFlowSheetMetrics.minWidth
+            )
+        }
+
         print("Gallery written to \(gallery.directory.path)")
     }
 

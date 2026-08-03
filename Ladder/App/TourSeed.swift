@@ -10,6 +10,10 @@ enum TourSeed {
         ProcessInfo.processInfo.arguments.contains("-LadderTourSeed")
     }
 
+    static var isBareRequested: Bool {
+        ProcessInfo.processInfo.arguments.contains("-LadderTourBareSeed")
+    }
+
     static let notesOverview = """
         ## Payments outage
         - Walked through the incident timeline and on-call rotation
@@ -23,6 +27,28 @@ enum TourSeed {
     static func plant(in container: ModelContainer) throws {
         try plantProfile(in: container)
         try plantPipeline(in: container)
+    }
+
+    /// A separate seed rather than a variant of the one above, which cannot be
+    /// reshaped without breaking the tour's generation steps. This one exists
+    /// only so `TailorFlowStore.start()` refuses before it scans.
+    static func plantBare(in container: ModelContainer) throws {
+        let store = ProfileStore(container: container)
+        try store.load()
+        try store.createProfile(
+            name: "Alex Climber", headline: "Staff Engineer — platform & reliability")
+        try store.addRole(company: "Acme", title: "Senior Engineer", start: days(-1400), end: nil)
+
+        let context = ModelContext(container)
+        context.insert(
+            Application(
+                company: "Alpine Systems", roleTitle: "Staff iOS Engineer",
+                jobDescription: """
+                    Alpine Systems builds avalanche-forecasting tools used by mountain rescue \
+                    teams. Swift, SwiftUI, GraphQL, team leadership.
+                    """,
+                status: .draft, createdAt: days(-2)))
+        try context.save()
     }
 
     static func calendarEvents() -> [CalendarEvent] {
