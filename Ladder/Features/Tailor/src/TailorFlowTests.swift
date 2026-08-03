@@ -551,6 +551,27 @@ struct TailorFlowTests {
             "display asks for the summary; the thinking itself runs either way (ADR 0009)")
     }
 
+    @Test("[TAILOR-70] a request that does not opt into narration carries no thinking instruction")
+    func unnarratedRequestCarriesNoThinkingInstruction() throws {
+        let request = IntelligenceRequest(prompt: "the tailor prompt", payload: "the payload")
+
+        #expect(
+            request.narrateThinking == false,
+            "unset is the default, which is how import, tag suggestions, rescore, debrief, prep, journey and the fit passes all stay out")
+
+        let urlRequest = try AnthropicIntelligenceService.urlRequest(for: request, apiKey: "sk-ant-live")
+
+        let body = try #require(urlRequest.httpBody)
+        let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+        #expect(
+            !json.keys.contains("thinking"),
+            "the key is absent rather than null — thinking runs either way, and only the summary is billed")
+        #expect(
+            json["model"] as? String == "claude-sonnet-5",
+            "the rest of the body is what it always was")
+        #expect(json["system"] as? String == "the tailor prompt")
+    }
+
     @Test("[TAILOR-69] narration reaches the caller as its own deltas, beside the text")
     func narrationDeltasReachTheCallerBesideTheText() throws {
         let narrated = #"""

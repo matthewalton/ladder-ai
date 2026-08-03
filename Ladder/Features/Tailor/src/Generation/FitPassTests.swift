@@ -106,4 +106,18 @@ struct FitPassTests {
             try await failingRunner.trim(self.items, jobDescription: "JD")
         }
     }
+
+    @Test("[TAILOR-70] neither fit pass opts into narration")
+    func fitPassesLeaveNarrationUnset() async throws {
+        let service = FixtureIntelligenceService(
+            returning: [condensedJSON, Data(#"{"keep": ["b1", "b3"]}"#.utf8)])
+        let runner = FitPassRunner(service: service)
+
+        _ = try await runner.condense(items)
+        _ = try await runner.trim(items, jobDescription: "Platform reliability role")
+
+        #expect(
+            await service.recordedRequests.map(\.narrateThinking) == [false, false],
+            "neither pass is a wait anyone watches, so neither pays for summary tokens")
+    }
 }
