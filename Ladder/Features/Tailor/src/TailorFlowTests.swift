@@ -395,6 +395,79 @@ struct TailorFlowTests {
         #expect(messages.first?["content"] as? String == "the payload", "the payload travels as the user message")
     }
 
+    @Test("[TAILOR-67] a live reply arriving in pieces assembles into one complete result")
+    func streamedTextDeltasAssembleInArrivalOrder() throws {
+        // Recorded Messages API events, never a connection. Adaptive thinking
+        // is on by default on the pinned model, so a real reply opens with a
+        // thinking block before the text one.
+        let recorded = #"""
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_01","role":"assistant","content":[]}}
+
+        event: content_block_start
+        data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"The JD leans on reliability, so I will lead with the outage work."}}
+
+        event: content_block_stop
+        data: {"type":"content_block_stop","index":0}
+
+        event: content_block_start
+        data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}
+
+        event: ping
+        data: {"type":"ping"}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"{\"selected\":"}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"[\"a1\",\"a3\"],"}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\"summary\":\"Staff engineer\"}"}}
+
+        event: content_block_stop
+        data: {"type":"content_block_stop","index":1}
+
+        event: message_delta
+        data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}
+
+        event: message_stop
+        data: {"type":"message_stop"}
+        """#
+
+        let assembled = try AnthropicIntelligenceService.assembledText(fromEventBytes: Data(recorded.utf8))
+
+        #expect(
+            assembled == Data(#"{"selected":["a1","a3"],"summary":"Staff engineer"}"#.utf8),
+            "the text deltas concatenate in arrival order")
+        let text = String(decoding: assembled, as: UTF8.self)
+        #expect(!text.contains("The JD leans on"), "narration never reaches the result")
+        #expect(
+            (try? JSONSerialization.jsonObject(with: assembled)) != nil,
+            "the same JSON reaches the same validation it reached when the response was fetched whole")
+    }
+
+    @Test("[TAILOR-67] a stream that carries no text fails as an empty response")
+    func streamWithoutTextDeltasFailsEmpty() throws {
+        let thinkingOnly = #"""
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_02","role":"assistant","content":[]}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Weighing the options."}}
+
+        event: message_stop
+        data: {"type":"message_stop"}
+        """#
+
+        #expect(throws: AnthropicIntelligenceService.LiveServiceError.emptyResponse) {
+            try AnthropicIntelligenceService.assembledText(fromEventBytes: Data(thinkingOnly.utf8))
+        }
+    }
+
     @Test("[TAILOR-19] the tailor payload carries projects, education, and interests")
     func payloadCarriesNewProfileSections() async throws {
         let profileStore = try makeProfileStore()

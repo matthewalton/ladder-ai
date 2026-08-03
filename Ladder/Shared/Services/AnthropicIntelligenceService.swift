@@ -54,6 +54,34 @@ struct AnthropicIntelligenceService: IntelligenceService {
         return try Self.responseText(from: data)
     }
 
+    static func assembledText(fromEventBytes data: Data) throws -> Data {
+        var reply = StreamedReply()
+        for line in String(decoding: data, as: UTF8.self).split(
+            separator: "\n", omittingEmptySubsequences: false
+        ) {
+            reply.consume(line: line)
+        }
+        return try reply.assembled()
+    }
+
+    struct StreamedReply {
+        private var text = ""
+
+        mutating func consume(line: some StringProtocol) {
+            guard line.hasPrefix("data:") else { return }
+            let event = try? JSONDecoder().decode(
+                StreamEvent.self, from: Data(line.dropFirst("data:".count).utf8)
+            )
+            guard event?.delta?.type == "text_delta", let piece = event?.delta?.text else { return }
+            text += piece
+        }
+
+        func assembled() throws -> Data {
+            guard !text.isEmpty else { throw LiveServiceError.emptyResponse }
+            return Data(text.utf8)
+        }
+    }
+
     static func responseText(from data: Data) throws -> Data {
         let decoded = try JSONDecoder().decode(MessagesResponse.self, from: data)
         guard decoded.stopReason != "max_tokens" else {
@@ -84,6 +112,15 @@ private struct MessagesRequest: Encodable {
         case system
         case messages
     }
+}
+
+private struct StreamEvent: Decodable {
+    struct Delta: Decodable {
+        var type: String?
+        var text: String?
+    }
+
+    var delta: Delta?
 }
 
 private struct MessagesResponse: Decodable {
