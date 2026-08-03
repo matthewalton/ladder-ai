@@ -66,17 +66,20 @@ struct AnthropicIntelligenceService: IntelligenceService {
 
     struct StreamedReply {
         private var text = ""
+        private var stopReason: String?
 
         mutating func consume(line: some StringProtocol) {
             guard line.hasPrefix("data:") else { return }
-            let event = try? JSONDecoder().decode(
+            guard let event = try? JSONDecoder().decode(
                 StreamEvent.self, from: Data(line.dropFirst("data:".count).utf8)
-            )
-            guard event?.delta?.type == "text_delta", let piece = event?.delta?.text else { return }
+            ) else { return }
+            if let reason = event.delta?.stopReason { stopReason = reason }
+            guard event.delta?.type == "text_delta", let piece = event.delta?.text else { return }
             text += piece
         }
 
         func assembled() throws -> Data {
+            guard stopReason != "max_tokens" else { throw LiveServiceError.truncated }
             guard !text.isEmpty else { throw LiveServiceError.emptyResponse }
             return Data(text.utf8)
         }
@@ -118,6 +121,13 @@ private struct StreamEvent: Decodable {
     struct Delta: Decodable {
         var type: String?
         var text: String?
+        var stopReason: String?
+
+        enum CodingKeys: String, CodingKey {
+            case type
+            case text
+            case stopReason = "stop_reason"
+        }
     }
 
     var delta: Delta?

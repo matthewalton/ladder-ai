@@ -468,6 +468,73 @@ struct TailorFlowTests {
         }
     }
 
+    /// The stop reason arrives near the end of the stream, after every text
+    /// delta it disqualifies — so a reader that returned on content_block_stop
+    /// would hand truncated JSON on before ever seeing it.
+    private func cutOffStream(stopReason: String) -> Data {
+        Data(#"""
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_03","role":"assistant","content":[]}}
+
+        event: content_block_start
+        data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\"selected\":[\"a1\","}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"\"a3\"],\"summ"}}
+
+        event: content_block_stop
+        data: {"type":"content_block_stop","index":0}
+
+        event: message_delta
+        data: {"type":"message_delta","delta":{"stop_reason":"\#(stopReason)"}}
+
+        event: message_stop
+        data: {"type":"message_stop"}
+        """#.utf8)
+    }
+
+    @Test("[TAILOR-68] a streamed reply cut off at the token limit fails before any text is returned")
+    func streamStoppedAtMaxTokensThrowsTruncated() throws {
+        #expect(throws: AnthropicIntelligenceService.LiveServiceError.truncated) {
+            try AnthropicIntelligenceService.assembledText(
+                fromEventBytes: cutOffStream(stopReason: "max_tokens"))
+        }
+    }
+
+    @Test("[TAILOR-68] the stop reason, not the shape of the text, is what marks a reply cut off")
+    func truncationIsToldByTheStopReasonAloneAndNotByParsing() throws {
+        let assembled = try AnthropicIntelligenceService.assembledText(
+            fromEventBytes: cutOffStream(stopReason: "end_turn"))
+
+        #expect(
+            (try? JSONSerialization.jsonObject(with: assembled)) == nil,
+            "the same half-written text arrives either way, so only the stop reason separates them")
+    }
+
+    @Test("[TAILOR-68] a reply that spends its whole budget before any text still fails as truncated")
+    func maxTokensBeforeAnyTextFailsAsTruncatedRatherThanEmpty() throws {
+        let thinkingToTheCap = #"""
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_04","role":"assistant","content":[]}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Weighing every achievement in turn."}}
+
+        event: message_delta
+        data: {"type":"message_delta","delta":{"stop_reason":"max_tokens"}}
+
+        event: message_stop
+        data: {"type":"message_stop"}
+        """#
+
+        #expect(throws: AnthropicIntelligenceService.LiveServiceError.truncated) {
+            try AnthropicIntelligenceService.assembledText(fromEventBytes: Data(thinkingToTheCap.utf8))
+        }
+    }
+
     @Test("[TAILOR-19] the tailor payload carries projects, education, and interests")
     func payloadCarriesNewProfileSections() async throws {
         let profileStore = try makeProfileStore()
