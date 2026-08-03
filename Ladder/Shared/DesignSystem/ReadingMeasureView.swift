@@ -1,22 +1,20 @@
 import SwiftUI
 
-/// The tailor flow sheet is as wide as the CV preview needs, and every other
-/// phase declines that width. Capping is the default rather than something a
-/// phase opts into, so a phase added later is held to the measure without
-/// anyone remembering to list it.
+enum ReadingMeasure {
+    static let width: CGFloat = 720
+}
+
 struct ReadingMeasureView<Content: View>: View {
     var spendsFullWidth = false
     @ViewBuilder var content: Content
 
     var cappedWidth: CGFloat? {
-        spendsFullWidth ? nil : TailorFlowSheetMetrics.readingMeasure
+        spendsFullWidth ? nil : ReadingMeasure.width
     }
 
     var body: some View {
         content
             .frame(maxWidth: cappedWidth ?? .infinity, maxHeight: .infinity)
-            // The outer frame is what centres the capped content. Drop it and
-            // the cap still holds, but every phase strands at the leading edge.
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -37,8 +35,6 @@ struct ReadingMeasureView<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.paperRaised)
     }
-    .frame(
-        width: TailorFlowSheetMetrics.minWidth,
-        height: TailorFlowSheetMetrics.minHeight)
+    .frame(width: 1100, height: 640)
     .background(Color.paper)
 }

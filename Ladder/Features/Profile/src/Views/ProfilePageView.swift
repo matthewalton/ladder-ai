@@ -24,7 +24,7 @@ struct ProfilePageView: View {
                         ProjectsSectionView(store: store, profile: profile, focus: $focus)
                         InterestsSectionView(store: store, profile: profile)
                     }
-                    .frame(maxWidth: 720, alignment: .leading)
+                    .frame(maxWidth: ReadingMeasure.width, alignment: .leading)
                     .padding(28)
                     .frame(maxWidth: .infinity)
                 }

@@ -1,0 +1,9 @@
+{
+  "when": { "path": "Ladder/Features/Tailor/src/Views/TailorView.swift" },
+  "require": {
+    "path": "Ladder/Features/Tailor/src/Views/TailorView.swift",
+    "contains": "ReadingMeasureView\\(spendsFullWidth: previewSpendingFullWidth != nil\\)"
+  },
+  "message": "the tailor sheet wraps its phases in ReadingMeasureView(spendsFullWidth: previewSpendingFullWidth != nil) — keep the flag positive and fed by that one property, so the CV preview stays the single phase that declines the cap",
+  "because": "review of 0927ea6: no test reaches this call site, so inverting the flag caps the CV preview at 720 — leaving its page pane 380 points against A4's 595.2 and undoing [CVEXPORT-64] — with the whole suite green"
+}

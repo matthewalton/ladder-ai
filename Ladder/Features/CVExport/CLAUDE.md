@@ -26,6 +26,10 @@ attaching something to an Application edits this file rather than copying the mo
 - `LadderTests/SnapshotGallery.swift` — the `reading-measure` entry that renders
   `ReadingMeasureView` headlessly ([CVEXPORT-65], ADR 0008). A component this slice adds is
   photographed from there; the gallery itself belongs to no slice.
+- `Ladder/Shared/DesignSystem/ReadingMeasureView.swift` — the capped, centred column
+  [CVEXPORT-65] dresses the tailor phases in, and the `ReadingMeasure.width` they share with
+  the Profile page. Generic layout, so it lives with the other shared containers; the
+  criterion is still this slice's, so its tests stay in `src/`.
 
 **Needs eyes**
 
@@ -54,8 +58,8 @@ attaching something to an Application edits this file rather than copying the mo
   test touches the real save panel.
 - The print template is exempt from the `Palette` / `Typography` rule (decisions/0007) — it
   is the one place raw values are correct.
-- Preview code goes in `src/Preview/`, not beside the render files — `src/` now holds ten
-  files flat, which is the convention's cap. The next file to land here groups the folder.
+- Preview code goes in `src/Preview/`, not beside the render files — `src/` holds nine files
+  flat against a cap of ten. The file after next groups the folder.
 - `HSplitView` opens its **leading** pane at exactly that pane's `minWidth` and gives the
   trailing pane every remaining point; `idealWidth` on either is ignored. So a pane's floor
   is the width it opens at, and sizing it by arithmetic over the sheet's width is wrong.
