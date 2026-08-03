@@ -381,9 +381,6 @@ struct TailorFlowTests {
         #expect(urlRequest.value(forHTTPHeaderField: "x-api-key") == "sk-ant-live")
         #expect(urlRequest.value(forHTTPHeaderField: "anthropic-version") == "2023-06-01")
         #expect(urlRequest.value(forHTTPHeaderField: "content-type") == "application/json")
-        #expect(
-            urlRequest.timeoutInterval > 60,
-            "an unstreamed run outlives URLRequest's 60s default")
 
         let body = try #require(urlRequest.httpBody)
         let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
@@ -395,6 +392,17 @@ struct TailorFlowTests {
         #expect(messages.count == 1)
         #expect(messages.first?["role"] as? String == "user")
         #expect(messages.first?["content"] as? String == "the payload", "the payload travels as the user message")
+    }
+
+    @Test("[TAILOR-72] sixty seconds of silence fails the live request")
+    func liveRequestFailsAfterSixtySecondsOfSilence() throws {
+        let request = IntelligenceRequest(prompt: "the tailor prompt", payload: "the payload")
+
+        let urlRequest = try AnthropicIntelligenceService.urlRequest(for: request, apiKey: "sk-ant-live")
+
+        #expect(
+            urlRequest.timeoutInterval == 60,
+            "arriving bytes reset the interval, so a streamed run measures silence (decisions/0019)")
     }
 
     @Test("[TAILOR-67] a live reply arriving in pieces assembles into one complete result")

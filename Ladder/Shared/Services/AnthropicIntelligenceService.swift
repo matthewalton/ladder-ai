@@ -4,11 +4,10 @@ import Foundation
 struct AnthropicIntelligenceService: IntelligenceService {
     static let model = "claude-sonnet-5"
     static let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
-    // URLRequest defaults to 60s, and because the response is not streamed no
-    // bytes arrive until generation finishes — so that default is a ceiling on
-    // the whole run, not an idle timeout. A tailor run on a thinking model
-    // routinely passes it.
-    static let timeout: TimeInterval = 300
+    // URLSession restarts this each time bytes arrive, so on a streamed reply
+    // it measures silence rather than the run's length — which is why a value
+    // no multi-minute run could survive unstreamed is safe here.
+    static let timeout: TimeInterval = 60
 
     private let apiKey: String
     private let urlSession: URLSession
