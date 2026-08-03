@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import Synchronization
 import Testing
 
 @testable import Ladder
@@ -387,6 +388,7 @@ struct TailorFlowTests {
         let body = try #require(urlRequest.httpBody)
         let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
         #expect(json["model"] as? String == "claude-sonnet-5", "the pinned Sonnet model (decisions/0003)")
+        #expect(json["stream"] as? Bool == true, "every live request streams (decisions/0019)")
         #expect(json["system"] as? String == "the tailor prompt", "the prompt travels as the system prompt")
         #expect((json["max_tokens"] as? Int ?? 0) > 0)
         let messages = try #require(json["messages"] as? [[String: Any]])
@@ -630,6 +632,58 @@ struct TailorFlowTests {
         #expect(
             optedIn == [true, true],
             "the run is one of the two waits long enough to wonder whether anything is happening")
+    }
+
+    @Test("[TAILOR-71] a service that cannot stream returns its complete result to a streamed run")
+    func nonStreamingServiceStillReturnsItsWholeResult() async throws {
+        let whole = Data(#"{"selected":["a1","a3"],"summary":"Staff engineer"}"#.utf8)
+        let fixture = FixtureIntelligenceService(returning: whole)
+        let service: any IntelligenceService = fixture
+        let arrived = Mutex<[IntelligenceDelta]>([])
+
+        let result = try await service.complete(
+            IntelligenceRequest(prompt: "the tailor prompt", payload: "the payload"),
+            onDelta: { delta in arrived.withLock { $0.append(delta) } }
+        )
+
+        #expect(result == whole, "the whole result, in one piece")
+        #expect(
+            arrived.withLock { $0 }.isEmpty,
+            "there is nothing to stream, so the callback never fires")
+        let recorded = try #require(await fixture.recordedRequests.first)
+        #expect(
+            recorded.payload == "the payload",
+            "the default answers by way of complete rather than inventing a reply of its own")
+    }
+
+    @Test("[TAILOR-71] a conformer with nothing to stream needs no streaming code")
+    func conformerWithNothingToStreamWritesNoStreamingCode() async throws {
+        let answer = Data(#"{"keep":["a2"]}"#.utf8)
+        let service: any IntelligenceService = OneAnswerService(answer: answer)
+        let arrived = Mutex<[IntelligenceDelta]>([])
+
+        let result = try await service.complete(
+            IntelligenceRequest(prompt: "the trim prompt", payload: "the payload"),
+            onDelta: { delta in arrived.withLock { $0.append(delta) } }
+        )
+
+        #expect(result == answer, "a caller streams against it without asking which kind it holds")
+        #expect(arrived.withLock { $0 }.isEmpty)
+    }
+
+    @Test("[TAILOR-71] the tour service answers a streamed run from its canned fixtures")
+    func tourServiceInheritsTheDefaultUnedited() async throws {
+        let promptURL = try #require(
+            Bundle.main.url(forResource: "tailor", withExtension: "md", subdirectory: "Prompts"))
+        let request = IntelligenceRequest(
+            prompt: try String(contentsOf: promptURL, encoding: .utf8), payload: "{}")
+        let service: any IntelligenceService = TourIntelligenceService()
+
+        let result = try await service.complete(request, onDelta: { _ in })
+
+        #expect(
+            (try? JSONSerialization.jsonObject(with: result)) != nil,
+            "a toured app reaches its fixtures, never the network, streamed or not")
     }
 
     @Test("[TAILOR-19] the tailor payload carries projects, education, and interests")
@@ -1096,6 +1150,12 @@ struct TailorFlowTests {
         #expect(review.relevanceStats(for: selected)
             == RelevanceStats(tech: 4, domain: 5, seniority: 2, impact: 3))
     }
+}
+
+private struct OneAnswerService: IntelligenceService {
+    let answer: Data
+
+    func complete(_ request: IntelligenceRequest) async throws -> Data { answer }
 }
 
 // MARK: - Helpers shared by the slices that build a TailorResult

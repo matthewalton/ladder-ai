@@ -13,4 +13,17 @@ enum IntelligenceDelta: Equatable, Sendable {
 
 protocol IntelligenceService: Sendable {
     func complete(_ request: IntelligenceRequest) async throws -> Data
+    func complete(
+        _ request: IntelligenceRequest,
+        onDelta: @Sendable (IntelligenceDelta) -> Void
+    ) async throws -> Data
+}
+
+extension IntelligenceService {
+    func complete(
+        _ request: IntelligenceRequest,
+        onDelta: @Sendable (IntelligenceDelta) -> Void
+    ) async throws -> Data {
+        try await complete(request)
+    }
 }

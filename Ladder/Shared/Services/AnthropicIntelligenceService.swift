@@ -40,19 +40,31 @@ struct AnthropicIntelligenceService: IntelligenceService {
             maxTokens: 32000,
             system: request.prompt,
             messages: [MessagesRequest.Message(role: "user", content: request.payload)],
-            thinking: request.narrateThinking ? .summarized : nil
+            thinking: request.narrateThinking ? .summarized : nil,
+            stream: true
         ))
         return urlRequest
     }
 
     func complete(_ request: IntelligenceRequest) async throws -> Data {
+        try await complete(request, onDelta: { _ in })
+    }
+
+    func complete(
+        _ request: IntelligenceRequest,
+        onDelta: @Sendable (IntelligenceDelta) -> Void
+    ) async throws -> Data {
         let urlRequest = try Self.urlRequest(for: request, apiKey: apiKey)
-        let (data, response) = try await urlSession.data(for: urlRequest)
+        let (bytes, response) = try await urlSession.bytes(for: urlRequest)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw LiveServiceError.httpFailure(status: status)
         }
-        return try Self.responseText(from: data)
+        var reply = StreamedReply()
+        for try await line in bytes.lines {
+            if let delta = reply.consume(line: line) { onDelta(delta) }
+        }
+        return try reply.assembled()
     }
 
     static func assembledText(
@@ -128,6 +140,7 @@ private struct MessagesRequest: Encodable {
     var system: String
     var messages: [Message]
     var thinking: Thinking?
+    var stream: Bool
 
     enum CodingKeys: String, CodingKey {
         case model
@@ -135,6 +148,7 @@ private struct MessagesRequest: Encodable {
         case system
         case messages
         case thinking
+        case stream
     }
 }
 
