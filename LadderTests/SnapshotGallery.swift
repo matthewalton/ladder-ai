@@ -47,6 +47,25 @@ struct SnapshotGallery {
             named: "indicator-rows", width: 420
         )
 
+        try gallery.write(
+            ReadingMeasureView {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Why these were selected")
+                        .font(.headline)
+                        .foregroundStyle(Color.ink)
+                    Text(
+                        "CI work maps directly to the JD's platform focus, and the two incident-response points carry the on-call requirement the scan ranked highest."
+                    )
+                    .font(.callout)
+                    .foregroundStyle(Color.ink)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.paperRaised)
+            },
+            named: "reading-measure", width: TailorFlowSheetMetrics.minWidth
+        )
+
         print("Gallery written to \(gallery.directory.path)")
     }
 

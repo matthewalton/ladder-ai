@@ -9,6 +9,8 @@ enum TailorFlowSheetMetrics {
     static let pagePaneMinWidth: CGFloat = 620
     static let editorMinWidth: CGFloat = 340
 
+    static let readingMeasure: CGFloat = 720
+
     /// `HSplitView` opens the leading pane at exactly its minimum and hands the
     /// trailing pane every remaining point; an `idealWidth` on either is
     /// ignored. So the page pane's floor is also the width it opens at, and the

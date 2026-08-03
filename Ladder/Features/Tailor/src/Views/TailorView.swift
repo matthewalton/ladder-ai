@@ -43,7 +43,7 @@ struct TailorView: View {
     }
 
     var body: some View {
-        Group {
+        ReadingMeasureView(spendsFullWidth: isShowingCVPreview) {
             switch flow.phase {
             case .scanning:
                 progress("Scanning the job description against your tags…")
@@ -65,7 +65,7 @@ struct TailorView: View {
                     FitReportView(report: export.fitReport, onDone: { dismiss() })
                 } else if isComposing {
                     progress("Laying your CV out…")
-                } else if let preview {
+                } else if isShowingCVPreview, let preview {
                     CVPreviewView(
                         model: preview,
                         onExport: { runExport(preview) },
@@ -121,6 +121,11 @@ struct TailorView: View {
                 "Nothing here has been saved yet. Getting it back means scanning the job description and tailoring again. The job's Match stays either way."
             )
         }
+    }
+
+    private var isShowingCVPreview: Bool {
+        guard case .review = flow.phase, export == nil, !isComposing else { return false }
+        return preview != nil
     }
 
     private var confirmingDiscard: Binding<Bool> {

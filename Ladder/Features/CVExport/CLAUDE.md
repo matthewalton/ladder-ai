@@ -23,6 +23,9 @@ attaching something to an Application edits this file rather than copying the mo
   preview's Tag write goes through ([CVEXPORT-54]); this slice never mints a `SkillTag`.
 - `Prompts/rescore.md` — the re-score pass's versioned prompt ([CVEXPORT-55]). Prompts live
   there, never in the slice.
+- `LadderTests/SnapshotGallery.swift` — the `reading-measure` entry that renders
+  `ReadingMeasureView` headlessly ([CVEXPORT-65], ADR 0008). A component this slice adds is
+  photographed from there; the gallery itself belongs to no slice.
 
 **Needs eyes**
 
@@ -32,6 +35,10 @@ attaching something to an Application edits this file rather than copying the mo
   Coverage still reads as a different number from the Match score (decisions/0011). Legibility
   is measured, not judged: the `.txt` recorded beside each frame carries the pane and page
   widths, and the page is meant to clear A4 (decisions/0015).
+- The reading measure the other phases sit in — `scripts/snapshots.sh views` writes it as
+  `reading-measure`, light and dark. What the frames answer is whether the capped column reads
+  as deliberate rather than as content stranded at one edge; the phases wearing it are briefed
+  under Tailor's own **Needs eyes**, and every tour frame's `.txt` carries the measured column.
 - The over-length state — the tour seed makes a one-page CV, so nothing renders the clay page
   label, the "about N pages over" copy, or the disabled Export. Stays the human's.
 - The "Not scored yet" line — only appears on a point added after the tailor run, which the
@@ -47,8 +54,8 @@ attaching something to an Application edits this file rather than copying the mo
   test touches the real save panel.
 - The print template is exempt from the `Palette` / `Typography` rule (decisions/0007) — it
   is the one place raw values are correct.
-- Preview code goes in `src/Preview/`, not beside the render files — `src/` already holds
-  six files flat and the convention caps a flat folder at ten.
+- Preview code goes in `src/Preview/`, not beside the render files — `src/` now holds ten
+  files flat, which is the convention's cap. The next file to land here groups the folder.
 - `HSplitView` opens its **leading** pane at exactly that pane's `minWidth` and gives the
   trailing pane every remaining point; `idealWidth` on either is ignored. So a pane's floor
   is the width it opens at, and sizing it by arithmetic over the sheet's width is wrong.
