@@ -4,3 +4,4 @@
 {"at":"2026-08-03T14:19:44.948Z","score":0,"threshold":3,"humanRequired":false,"escalated":false,"signals":[],"verdict":{"neededHuman":false,"foundReal":true}}
 {"at":"2026-08-04T08:37:05.284Z","base":"origin/main","score":0,"threshold":3,"humanRequired":false,"escalated":false,"signals":[],"verdict":{"neededHuman":true,"foundReal":true}}
 {"at":"2026-08-04T10:01:24.832Z","base":"origin/main","score":3,"threshold":3,"humanRequired":true,"escalated":false,"signals":["spec-silent-change"],"verdict":{"neededHuman":true,"foundReal":true}}
+{"at":"2026-08-04T10:27:28.846Z","score":3,"threshold":3,"humanRequired":true,"escalated":false,"signals":["spec-silent-change"],"verdict":{"neededHuman":false,"foundReal":true}}

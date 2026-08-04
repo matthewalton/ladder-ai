@@ -6,7 +6,8 @@
 #   scripts/snapshots.sh app <section…>        just those sections of the tour
 #   scripts/snapshots.sh                       both
 #
-# Sections: first-run seeded pipeline stage-sheet journey tailor tailor-failure job-import settings
+# Sections: first-run seeded pipeline stage-sheet journey tailor tailor-failure
+#           cv-import-failure tag-failure job-import settings
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -31,6 +32,8 @@ tour_test() {
     journey)     echo testTourJourneySection ;;
     tailor)      echo testTourTailorFlowSection ;;
     tailor-failure) echo testTourTailorFailureSection ;;
+    cv-import-failure) echo testTourCVImportFailureSection ;;
+    tag-failure) echo testTourTagSuggestionFailureSection ;;
     job-import)  echo testTourJobImportSection ;;
     settings)    echo testTourSettingsSection ;;
     *) return 1 ;;
@@ -40,9 +43,9 @@ tour_test() {
 render_app() {
   local sections=("$@")
   if [ ${#sections[@]} -eq 0 ]; then
-    # tailor-failure sits outside the seeded walk — it launches its own stores —
-    # so the full sweep has to name it.
-    sections=(first-run seeded tailor-failure)
+    # The failure sections sit outside the seeded walk — each launches its own
+    # stores — so the full sweep has to name them.
+    sections=(first-run seeded tailor-failure cv-import-failure tag-failure)
     echo "→ touring the running app into .snapshots/ui/"
   else
     echo "→ touring ${sections[*]} into .snapshots/ui/"
@@ -51,7 +54,7 @@ render_app() {
   for section in "${sections[@]}"; do
     if ! method=$(tour_test "$section"); then
       echo "unknown tour section: $section" >&2
-      echo "sections: first-run seeded pipeline stage-sheet journey tailor tailor-failure job-import settings" >&2
+      echo "sections: first-run seeded pipeline stage-sheet journey tailor tailor-failure cv-import-failure tag-failure job-import settings" >&2
       exit 2
     fi
     only+=("-only-testing:LadderUITests/ScreenTour/$method")

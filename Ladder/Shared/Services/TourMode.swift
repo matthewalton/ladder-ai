@@ -11,6 +11,21 @@ enum TourMode {
         ProcessInfo.processInfo.arguments.contains("-LadderTourNoKey")
     }
 
+    private static var refusesRequests: Bool {
+        ProcessInfo.processInfo.arguments.contains("-LadderTourServiceFails")
+    }
+
+    /// The import sheet opens on a drop zone, and XCUITest can drive neither a
+    /// drag nor the sandbox's out-of-process open panel — so the one step the
+    /// tour cannot take is choosing the file. Everything after it is real.
+    static var importsBundledCV: Bool {
+        isActive && ProcessInfo.processInfo.arguments.contains("-LadderTourImportCV")
+    }
+
+    static func bundledCV() -> URL? {
+        Bundle.main.url(forResource: "sample-cv", withExtension: "pdf", subdirectory: "Fixtures")
+    }
+
     static func keyStore() -> any APIKeyStore {
         guard isActive else { return KeychainAPIKeyStore() }
         return InMemoryAPIKeyStore(key: withholdsKey ? "" : "sk-tour")
@@ -21,7 +36,11 @@ enum TourMode {
     }
 
     static func intelligenceOverride() -> ((String) -> any IntelligenceService)? {
-        isActive ? { _ in TourIntelligenceService() } : nil
+        guard isActive else { return nil }
+        let failure: AnthropicIntelligenceService.LiveServiceError? = refusesRequests
+            ? .serviceError(type: "overloaded_error", message: "Overloaded")
+            : nil
+        return { _ in TourIntelligenceService(failure: failure) }
     }
 }
 
@@ -32,7 +51,14 @@ actor TourIntelligenceService: IntelligenceService {
         let detail: String
     }
 
+    private let failure: AnthropicIntelligenceService.LiveServiceError?
+
+    init(failure: AnthropicIntelligenceService.LiveServiceError? = nil) {
+        self.failure = failure
+    }
+
     func complete(_ request: IntelligenceRequest) async throws -> Data {
+        if let failure { throw failure }
         guard let answer = Self.answers.first(where: { $0.prompt == request.prompt }) else {
             throw UnansweredRequest(detail: "no tour answer matches the request's prompt")
         }

@@ -51,6 +51,10 @@ struct ImportCVView: View {
         }
         .frame(minWidth: 560, minHeight: 440)
         .background(Color.paper)
+        .task {
+            guard TourMode.importsBundledCV, let url = TourMode.bundledCV() else { return }
+            await store.startImport(of: url)
+        }
         .confirmationDialog(
             "Importing replaces your current Profile",
             isPresented: Binding(

@@ -88,9 +88,9 @@ final class ScreenTour: XCTestCase {
         tourSettings(app)
     }
 
-    /// The only section that launches twice: the two failure arms need stores
-    /// that contradict each other — one profile with nothing to select from,
-    /// one with everything but no key.
+    /// Launches twice: the two failure arms need stores that contradict each
+    /// other — one profile with nothing to select from, one with everything but
+    /// no key. The two sections below launch twice for the same reason.
     func testTourTailorFailureSection() throws {
         let (bareWindow, bareApp) = launch(with: ["-LadderTourBareSeed"])
         tourTailorRefusal(bareWindow, bareApp)
@@ -98,6 +98,26 @@ final class ScreenTour: XCTestCase {
 
         let (keylessWindow, keylessApp) = launch(with: ["-LadderTourSeed", "-LadderTourNoKey"])
         tourTailorKeyRefusal(keylessWindow, keylessApp)
+    }
+
+    func testTourCVImportFailureSection() throws {
+        let (keylessWindow, keylessApp) = launch(
+            with: ["-LadderTourSeed", "-LadderTourImportCV", "-LadderTourNoKey"])
+        tourCVImportKeyRefusal(keylessWindow, keylessApp)
+        keylessApp.terminate()
+
+        let (window, app) = launch(
+            with: ["-LadderTourSeed", "-LadderTourImportCV", "-LadderTourServiceFails"])
+        tourCVImportRequestFailure(window, app)
+    }
+
+    func testTourTagSuggestionFailureSection() throws {
+        let (keylessWindow, keylessApp) = launch(with: ["-LadderTourSeed", "-LadderTourNoKey"])
+        tourTagSuggestionKeyRefusal(keylessWindow, keylessApp)
+        keylessApp.terminate()
+
+        let (window, app) = launch(with: ["-LadderTourSeed", "-LadderTourServiceFails"])
+        tourTagSuggestionRequestFailure(window, app)
     }
 
     private func launchSeeded() -> (XCUIElement, XCUIApplication) {
@@ -294,6 +314,60 @@ final class ScreenTour: XCTestCase {
     private func closeSheet(_ sheet: XCUIElement) {
         sheet.buttons["Close"].click()
         XCTAssertTrue(sheet.waitForNonExistence(timeout: 10))
+    }
+
+    /// The key is read before the file is, so this arm never reaches the CV the
+    /// launch flag hands the sheet.
+    private func tourCVImportKeyRefusal(_ window: XCUIElement, _ app: XCUIApplication) {
+        let sheet = openCVImport(in: window)
+        XCTAssertTrue(sheet.buttons["Open Settings…"].waitForExistence(timeout: 15),
+                      "the import's key refusal never appeared")
+        record(window, app, named: "28-cv-import-failed-needs-key")
+        closeSheet(sheet)
+    }
+
+    private func tourCVImportRequestFailure(_ window: XCUIElement, _ app: XCUIApplication) {
+        let sheet = openCVImport(in: window)
+        XCTAssertTrue(sheet.buttons["Try again"].waitForExistence(timeout: 30),
+                      "the import's request failure never appeared")
+        record(window, app, named: "29-cv-import-failed-request")
+        closeSheet(sheet)
+    }
+
+    private func openCVImport(in window: XCUIElement) -> XCUIElement {
+        let importCV = window.buttons["Import CV"]
+        XCTAssertTrue(importCV.waitForExistence(timeout: 10), "Import CV never appeared")
+        importCV.click()
+        return window.sheets.firstMatch
+    }
+
+    private func tourTagSuggestionKeyRefusal(_ window: XCUIElement, _ app: XCUIApplication) {
+        requestTagSuggestions(in: window)
+        XCTAssertTrue(
+            window.staticTexts.matching(text(beginning: "Add your API key in Settings"))
+                .firstMatch.waitForExistence(timeout: 15),
+            "the suggestion's key refusal never appeared")
+        record(window, app, named: "30-tag-suggestion-needs-key")
+    }
+
+    private func tourTagSuggestionRequestFailure(_ window: XCUIElement, _ app: XCUIApplication) {
+        requestTagSuggestions(in: window)
+        XCTAssertTrue(
+            window.staticTexts.matching(text(beginning: "The request failed"))
+                .firstMatch.waitForExistence(timeout: 30),
+            "the suggestion's request failure never appeared")
+        record(window, app, named: "31-tag-suggestion-request-failed")
+    }
+
+    /// The rail only offers suggestions for whatever is focused, and a point is
+    /// focused by tapping its row.
+    private func requestTagSuggestions(in window: XCUIElement) {
+        let point = window.staticTexts["Led incident response for the payments outage"].firstMatch
+        XCTAssertTrue(point.waitForExistence(timeout: 10), "the seeded point never appeared")
+        point.click()
+        let suggest = window.buttons["Suggest tags"].firstMatch
+        XCTAssertTrue(suggest.waitForExistence(timeout: 10), "Suggest tags never appeared")
+        suggest.click()
     }
 
     private func recordPreviewEditing(

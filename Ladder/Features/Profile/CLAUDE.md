@@ -15,5 +15,17 @@ this file. A model that is never registered there persists nowhere.
 - `src/ProfilePersistenceTests.swift` owns the `temporaryStoreURL()` / `removeStore(at:)`
   helpers the whole repo's persistence criteria use.
 - Live LLM access exists only in the Tag suggestion flow; the rest of the slice is offline.
+- The machinery that photographs that flow's failures (ADR 0008) — `LadderUITests/ScreenTour.swift`
+  plus its `tag-failure` case in `scripts/snapshots.sh`, which focuses a seeded point and asks for
+  suggestions against an empty key (`-LadderTourNoKey`) and a refusing service
+  (`-LadderTourServiceFails`).
+
+**Needs eyes**
+
+- The tag-suggestion failure caption, at the rail's real 300pt width —
+  `scripts/snapshots.sh app tag-failure` records it as `30-tag-suggestion-needs-key` and
+  `31-tag-suggestion-request-failed`. What the frames answer is whether a clay caption under the
+  button still reads as attached to it once the message wraps: the request arm carries the
+  service's own words, so the rail is the narrowest place any live failure copy has to survive.
 
 Criteria token: `[PROFILE-n]`
