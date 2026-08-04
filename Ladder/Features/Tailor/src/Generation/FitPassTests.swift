@@ -118,6 +118,6 @@ struct FitPassTests {
 
         #expect(
             await service.recordedRequests.map(\.narrateThinking) == [false, false],
-            "neither pass is a wait anyone watches, so neither pays for summary tokens")
+            "neither pass is a wait anyone watches, so neither asks for narration")
     }
 }

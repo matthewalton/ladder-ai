@@ -751,14 +751,13 @@ criterion exists so that work finds the text already flowing.
 
 ## [TAILOR-70] When a run does not opt into narration, the live request carries no thinking instruction
 
-The default. Import, tag suggestions, rescore, debrief, prep, journey and the
-condense and trim passes all leave it unset, so their request bodies gain
-nothing but the stream field ([TAILOR-17]).
+The default. Every caller but the tailor run and the JD scan leaves it unset,
+so their request bodies gain nothing but the stream field ([TAILOR-17]).
 
 Thinking still happens on the pinned model and is billed the same either way
-— asking for a summary changes what comes back, not what the model does — so
-the cost of narration is summary output tokens, and this criterion is what
-keeps the seven callers that would never display them from paying.
+— `display` asks for a summary of thinking that already ran, and changes
+nothing about what the model does. So the default is not a saving. It is the
+narrower request: a run asks for narration only where a surface will read it.
 
 ## [TAILOR-71] When a service cannot stream, a streamed run still returns its complete result
 

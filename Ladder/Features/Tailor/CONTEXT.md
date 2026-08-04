@@ -148,7 +148,8 @@ _Avoid_: token, credential, secret
 One increment of a streamed reply, carrying either result text or narration.
 The text deltas of a reply accumulate into exactly what an unstreamed
 response returned whole ([TAILOR-67]).
-_Avoid_: chunk, token, fragment, packet, event
+_Avoid_: chunk, token, fragment, packet, event (the SSE event is the carrier,
+not the Delta)
 
 **Narration**:
 The model's own summarized account of its thinking, asked for per request and

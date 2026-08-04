@@ -1,0 +1,9 @@
+{
+  "when": { "path": "Ladder/Shared/Services/AnthropicIntelligenceService.swift" },
+  "require": {
+    "path": "Ladder/Shared/Services/AnthropicIntelligenceService.swift",
+    "contains": "urlRequest\\.timeoutInterval = timeout"
+  },
+  "message": "the built request must assign timeoutInterval from the timeout constant — keep the assignment, so the idle timeout [TAILOR-72] promises is the one that ships",
+  "because": "review of c670043: URLRequest(url:) already defaults timeoutInterval to 60, the exact value [TAILOR-72] asserts, so deleting the assignment leaves that test green and silently restores a default nobody chose"
+}

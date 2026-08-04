@@ -108,17 +108,6 @@ struct AnthropicIntelligenceService: IntelligenceService {
         }
     }
 
-    static func responseText(from data: Data) throws -> Data {
-        let decoded = try JSONDecoder().decode(MessagesResponse.self, from: data)
-        guard decoded.stopReason != "max_tokens" else {
-            throw LiveServiceError.truncated
-        }
-        // Adaptive thinking can put thinking blocks before the text block.
-        guard let text = decoded.content.first(where: { $0.type == "text" })?.text else {
-            throw LiveServiceError.emptyResponse
-        }
-        return Data(text.utf8)
-    }
 }
 
 private struct MessagesRequest: Encodable {
@@ -167,19 +156,4 @@ private struct StreamEvent: Decodable {
     }
 
     var delta: Delta?
-}
-
-private struct MessagesResponse: Decodable {
-    struct ContentBlock: Decodable {
-        var type: String
-        var text: String?
-    }
-
-    var content: [ContentBlock]
-    var stopReason: String?
-
-    enum CodingKeys: String, CodingKey {
-        case content
-        case stopReason = "stop_reason"
-    }
 }

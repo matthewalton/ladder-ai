@@ -767,17 +767,29 @@ struct CVImportFlowTests {
 
     @Test("[CVIMPORT-19] the service throws truncated on a max_tokens stop, before returning any text")
     func serviceThrowsTruncatedOnMaxTokensStop() throws {
-        let truncated = Data(
-            #"{"content":[{"type":"text","text":"{\"roles\":[{\"compa"}],"stop_reason":"max_tokens"}"#.utf8
-        )
+        let truncated = Data(#"""
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\"roles\":[{\"compa"}}
+
+        event: message_delta
+        data: {"type":"message_delta","delta":{"stop_reason":"max_tokens"}}
+        """#.utf8)
+
         #expect(throws: AnthropicIntelligenceService.LiveServiceError.truncated) {
-            try AnthropicIntelligenceService.responseText(from: truncated)
+            try AnthropicIntelligenceService.assembledText(fromEventBytes: truncated)
         }
 
-        let complete = Data(
-            #"{"content":[{"type":"text","text":"{}"}],"stop_reason":"end_turn"}"#.utf8
-        )
-        #expect(try AnthropicIntelligenceService.responseText(from: complete) == Data("{}".utf8))
+        let complete = Data(#"""
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{}"}}
+
+        event: message_delta
+        data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}
+        """#.utf8)
+
+        #expect(
+            try AnthropicIntelligenceService.assembledText(fromEventBytes: complete)
+                == Data("{}".utf8))
     }
 }
 

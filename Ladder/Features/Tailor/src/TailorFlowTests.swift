@@ -686,9 +686,18 @@ struct TailorFlowTests {
         let request = IntelligenceRequest(
             prompt: try String(contentsOf: promptURL, encoding: .utf8), payload: "{}")
         let service: any IntelligenceService = TourIntelligenceService()
+        let arrived = Mutex<[IntelligenceDelta]>([])
 
-        let result = try await service.complete(request, onDelta: { _ in })
+        let result = try await service.complete(
+            request, onDelta: { delta in arrived.withLock { $0.append(delta) } })
 
+        let unstreamed = try await service.complete(request)
+        #expect(
+            result == unstreamed,
+            "the default hands back exactly what the tour service answers unstreamed")
+        #expect(
+            arrived.withLock { $0 }.isEmpty,
+            "there is nothing to stream, so the callback never fires")
         #expect(
             (try? JSONSerialization.jsonObject(with: result)) != nil,
             "a toured app reaches its fixtures, never the network, streamed or not")

@@ -41,12 +41,11 @@ Two additive changes to shared ground. Neither breaks an existing caller.
    true the built request carries `thinking` as adaptive with `display` set to
    summarized; when false the request is unchanged from today. Thinking already
    runs on the pinned model and is billed the same either way — `display`
-   controls visibility only — so the cost of the flag is summary output tokens,
-   paid only where a surface will read them.
+   controls visibility only — so the flag costs nothing extra. It asks for
+   narration on the wire, and is set only where a surface will read it.
 
-The tailor and JD-scan passes set the flag. The other seven callers — import,
-tags, rescore, debrief, prep, journey, condense/trim — do not, and their
-requests go out byte-identical to today.
+The tailor and JD-scan passes set the flag. Every other caller leaves it unset,
+and their requests go out byte-identical to today.
 
 ## Consequences
 
