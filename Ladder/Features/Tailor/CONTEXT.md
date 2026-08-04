@@ -162,3 +162,17 @@ The event that marks a streamed reply finished — `message_stop`, or a stop
 reason on `message_delta`. Either will do; a reply that ends without one is
 incomplete however complete its text looks (decisions/0020).
 _Avoid_: end event, final event, close, done marker
+
+**Detail**:
+What a live failure says went wrong, in Ladder's words, carried by the error
+itself (decisions/0021). Written to be read mid-sentence inside parentheses,
+so it is a clause and not a sentence. Never the service's own text
+(decisions/0023).
+_Avoid_: error message, reason string, description
+
+**Advice**:
+The sentence after the Detail telling the user what to do about that cause —
+wait, open Settings, or nothing. Carried by the error beside the Detail
+(decisions/0022) and derived from whether that cause is worth retrying. A
+cause with nothing useful to say carries none rather than a filler.
+_Avoid_: guidance, hint, recovery text, call to action, next step

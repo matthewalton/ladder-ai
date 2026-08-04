@@ -32,6 +32,11 @@ Profile/Applications sections.
   `TabView` as the unavailable glyph.
 - Dragging a card between columns — no snapshot shows motion, so this one stays the
   human's, every time.
+- The Match section's live-failure arm, on a service that refuses — never photographed, and
+  the only one of the five surfaces showing live failure copy that sits inside a column
+  rather than a sheet or a rail. What the frame answers is whether the Detail and the Advice
+  (Tailor decisions/0022) still read as one block at a card's width, which is narrower than
+  either failure sheet.
 
 **Traps**
 

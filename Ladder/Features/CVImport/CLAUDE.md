@@ -27,8 +27,9 @@ On-device text extraction (PDF/docx) → proposal → review → merge into the 
   records them as `28-cv-import-failed-needs-key` (the `SettingsLink` arm) and
   `29-cv-import-failed-request` (the retry arm, on a service that refuses). What the frames
   answer is whether the message still reads as one centred block against the two buttons below
-  it, and how a long interpolated detail wraps — `message(for:)` puts the service's own words
-  mid-sentence, inside parentheses, so the sentence has to survive whatever arrives there.
+  it, and how the Detail wraps — `message(for:)` puts it mid-sentence, inside parentheses, and
+  the Advice follows as its own sentence (Tailor decisions/0022). Both are Ladder's words now,
+  never the service's (Tailor decisions/0023), so what varies is length, not tone.
 - Not covered: the drop zone's own hover and drag-target states, which no frame reaches.
 
 Criteria token: `[CVIMPORT-n]`

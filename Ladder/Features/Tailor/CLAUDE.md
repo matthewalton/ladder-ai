@@ -34,11 +34,18 @@ the per-point relevance stats.
   preview, not for these (cv-export decisions/0015), so what the frames answer is whether the
   capped reading measure still reads as a deliberate column and not as content stranded at one
   edge. Each frame's `.txt` beside it carries the measured widths.
-- The two failure screens — `scripts/snapshots.sh app tailor-failure` records them as
+- The two refusal screens — `scripts/snapshots.sh app tailor-failure` records them as
   `26-tailor-failed-nothing-to-select` (the retry arm, on a Profile with nothing to select
   from) and `27-scan-failed-needs-key` (the `SettingsLink` arm, on an empty key). What the
   frames answer is whether a single centred line still reads as placed rather than adrift in
   a sheet sized for the CV preview.
+- The two live-failure arms of the same sheet — the tailor request and the JD scan, each on
+  a service that refuses. Neither had ever been photographed: the section above reaches the
+  refusals, which never touch `LiveServiceError`, so the sheet's Detail and Advice went
+  unseen while three other slices' equivalents were covered. What the frames answer is
+  whether two sentences — the Detail mid-parentheses, then the Advice after it — still read
+  as one centred block at this sheet's width, where the same copy has the most room and so
+  wraps least like the rail's.
 - The three progress states — `scripts/snapshots.sh views` writes them as
   `tailor-progress-scanning`, `-tailoring` and `-composing`, light and dark. The yellow glyph
   above the text is `ImageRenderer`'s stand-in for `ProgressView`, which is AppKit-backed and

@@ -808,10 +808,10 @@ them through the `requestFailed(detail:)` it already has rather than a new
 store-level case — `truncated` earns its own case by being the one failure a
 retry cannot fix. The copy for each case belongs to `LiveServiceError` itself
 (decisions/0021), so a store asks the error how it reads rather than deciding
-again; a case with no copy does not compile. Callers interpolate the detail
-mid-sentence — import renders `The import request couldn't be completed (…).
-Check your connection and try again.` — so the wording has to read inside
-parentheses.
+again; a case with no copy does not compile. The Detail is interpolated
+mid-sentence, inside parentheses, so it has to read as a clause; the Advice
+follows as its own sentence and says what to do about this cause
+([TAILOR-75]). The service's own words are not among them ([TAILOR-76]).
 
 Deltas are the other channel and this criterion does not govern them, as with
 [TAILOR-68]: a caller watching them has already seen whatever text arrived
@@ -834,8 +834,82 @@ the sequence with no error at all, that otherwise hands a fragment back as a
 finished reply.
 
 [TAILOR-68] keeps precedence over this: a reply cut off at the token limit
-fails as truncated, so the advice the user gets still names the length problem
+fails as truncated, so the Advice the user gets still names the length problem
 rather than the connection. Failure copy reaches the user the way [TAILOR-73]
-describes, from the error's own `detail`.
+describes, from the error's own Detail and Advice.
 
 Tests never open a connection here either; a recorded reply simply stops.
+
+## [TAILOR-75] When a live request fails, the advice on screen follows what actually went wrong
+
+Until now it did not. Four of the five screens showing a live failure ended
+the same way — *"Check your connection and try again."* — whatever the cause,
+so an overloaded service sent the user to check a connection that was working.
+The fifth, the Profile rail, gave no advice at all, and the same failure
+therefore read differently depending on which screen the user was standing on.
+
+The Advice belongs to the error, beside the Detail that decisions/0021 already
+moved there (decisions/0022). The switch over `self` is exhaustive, so a new
+case without Advice does not compile — the same guarantee that keeps a case
+from shipping without a Detail.
+
+What the Advice says is decided by whether the cause is worth retrying:
+
+- a busy service or a rate limit — wait, then try again
+- a key that was refused or lacks permission — open Settings
+- a request that was malformed or too large — trying again will not help
+
+Advice is optional per case. A cause with nothing useful to say carries none
+rather than a filler, because "try again" on a failure a retry cannot fix is
+the same defect this criterion removes, one step quieter.
+
+## [TAILOR-76] When the service reports a failure, the reason on screen is Ladder's wording for that error type
+
+The screen used to read *"the service reported overloaded_error: Overloaded"* —
+the API's own type name in the middle of an English sentence, and beside it a
+third party's prose, rendered however long it arrived and whatever it said.
+
+The error types are a closed, documented set, so each maps to a sentence
+Ladder wrote (decisions/0023). `serviceError` keeps carrying the type, which
+now chooses the copy instead of being printed; the `message` beside it is
+decoded and discarded.
+
+This is what closes the unbounded-text problem: there is no third-party text
+on the screen to truncate, strip of newlines, or wrap. Bounding it was the
+alternative, and it would have left the hole open for exactly the message
+nobody has read yet.
+
+Ladder keeps no log, so the type genuinely goes nowhere once it has chosen the
+sentence. That trade is argued in decisions/0023 — a machine token in a human
+sentence is paid by every user on every failure, and the diagnosis it buys is
+paid to nobody.
+
+## [TAILOR-77] When the service reports an error type Ladder does not recognise, the reason on screen says only that the service reported an error
+
+The set is closed today and Anthropic may add to it tomorrow. An unmapped type
+renders a general sentence rather than falling back to the service's own words
+— falling back would reopen [TAILOR-76]'s hole in the one case where what
+arrives is least predictable.
+
+The general sentence is true and says nothing a stranger wrote. A type added
+later reads this way until Ladder maps it, which is a copy improvement and
+never a failure.
+
+## [TAILOR-78] The same live failure reads the same way on every screen that shows it
+
+Five surfaces show one: the import sheet, the tailor sheet's own two arms —
+the tailor request and the JD scan — the Match section on the board, and the
+Profile rail. Each asks the error for its Detail and its Advice and writes
+neither, so they agree because there is only one copy, not because five
+authors kept four sentences in step.
+
+The rail is the interesting one. It is the narrowest place this copy has to
+survive, and it is the screen that gave no Advice at all — so it changes most,
+and it is where a second sentence is most likely to wrap badly.
+
+Three of the five had never been photographed. The tour reaches the tailor
+sheet's *refusals* — nothing to select from, no key — and neither of those
+touches a live failure, so the tailor request arm, the scan arm and the Match
+section have shown this copy to no automated eye. The frames land with this
+criterion, not after it (ADR 0008); `TourMode` already injects a refusing
+service, which is how the two covered screens reach theirs.

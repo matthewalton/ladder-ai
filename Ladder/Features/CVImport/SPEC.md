@@ -167,9 +167,11 @@ Where the signal is read has moved; the promise here has not.
 The import store maps the throw to its own `ImportError.responseTruncated`
 (decisions/0006), distinct from `requestFailed` ([CVIMPORT-16]): the
 failed-state message names the length problem — the CV may be too long to
-import whole — because "check your connection and try again" is wrong advice
-when a retry would truncate again at the same cap. The Profile is
-unchanged and no review is offered, as with every failed import.
+import whole — because advice to retry is wrong when a retry would truncate
+again at the same cap. That reasoning has since been generalised: every live
+failure's advice now follows its own cause rather than a fixed tail
+(Tailor [TAILOR-75]), and this case is the one that argued for it first. The
+Profile is unchanged and no review is offered, as with every failed import.
 
 ## [CVIMPORT-20] Confirming the review replaces the Profile's content with the included items
 

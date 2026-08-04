@@ -25,7 +25,9 @@ this file. A model that is never registered there persists nowhere.
 - The tag-suggestion failure caption, at the rail's real 300pt width —
   `scripts/snapshots.sh app tag-failure` records it as `30-tag-suggestion-needs-key` and
   `31-tag-suggestion-request-failed`. What the frames answer is whether a clay caption under the
-  button still reads as attached to it once the message wraps: the request arm carries the
-  service's own words, so the rail is the narrowest place any live failure copy has to survive.
+  button still reads as attached to it once the message wraps. The rail is the narrowest place
+  any live failure copy has to survive, and the request arm now carries two sentences where it
+  carried one — the Detail, then the Advice the rail never used to give at all (Tailor
+  decisions/0022).
 
 Criteria token: `[PROFILE-n]`
