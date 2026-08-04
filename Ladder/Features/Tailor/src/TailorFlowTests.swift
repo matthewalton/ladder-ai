@@ -478,6 +478,39 @@ struct TailorFlowTests {
         }
     }
 
+    @Test("[TAILOR-67] a line separator inside a delta is content, not a frame boundary")
+    func unicodeLineSeparatorInsideADeltaSurvivesTheSplit() throws {
+        // U+2028 is legal unescaped inside a JSON string and routine in text
+        // pasted out of a PDF, so a CV or JD can carry one into the reply.
+        let separator = "\u{2028}"
+        let recorded = #"""
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\"summary\":\"one\#(separator)two\"}"}}
+
+        data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}
+        """#
+
+        let assembled = try AnthropicIntelligenceService.assembledText(
+            fromEventBytes: Data(recorded.utf8))
+
+        #expect(
+            assembled == Data(#"{"summary":"one\#(separator)two"}"#.utf8),
+            "splitting on bytes keeps the separator inside the delta it belongs to")
+    }
+
+    @Test("[TAILOR-67] a reply framed with CRLF assembles the same as one framed with LF")
+    func carriageReturnsAreStrippedFromFrames() throws {
+        let crlf = [
+            #"data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\"ok\":true}"}}"#,
+            "",
+            #"data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}"#,
+        ].joined(separator: "\r\n")
+
+        let assembled = try AnthropicIntelligenceService.assembledText(
+            fromEventBytes: Data(crlf.utf8))
+
+        #expect(assembled == Data(#"{"ok":true}"#.utf8), "SSE frames on CR, LF or CRLF alike")
+    }
+
     /// The stop reason arrives near the end of the stream, after every text
     /// delta it disqualifies — so a reader that returned on content_block_stop
     /// would hand truncated JSON on before ever seeing it.

@@ -725,13 +725,19 @@ Tests never open a connection. The reader is fed recorded event bytes
 directly and asserted on what it assembles, which also lets a malformed or
 truncated event sequence be exercised deliberately.
 
-## [TAILOR-68] When a streamed reply is cut off at the model's token limit, the run fails before any text reaches the caller
+## [TAILOR-68] When a streamed reply is cut off at the model's token limit, the run returns none of it
 
 The stop reason arrives on its own event near the end of the stream rather
 than on a whole-response envelope (decisions/0019), so the reader holds the
 accumulated text until it has seen that event. A stop reason of `max_tokens`
 throws `LiveServiceError.truncated` and the accumulated text is discarded
 unreturned.
+
+Deltas are the other channel and this criterion does not govern them: a caller
+watching them has already seen the text pieces by the time the throw lands.
+Nothing reads them yet, and whether the waiting surface holds them back is
+settled with that surface (Baton #234). What is promised here is the returned
+result, and no part of a cut-off reply is ever returned.
 
 The promise is the one [CVIMPORT-19] already depends on and is unchanged by
 streaming: truncated JSON never reaches validation, so a length failure can

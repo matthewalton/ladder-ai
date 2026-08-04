@@ -60,9 +60,10 @@ struct AnthropicIntelligenceService: IntelligenceService {
             throw LiveServiceError.httpFailure(status: status)
         }
         var reply = StreamedReply()
-        for try await line in bytes.lines {
-            if let delta = reply.consume(line: line) { onDelta(delta) }
+        for try await byte in bytes {
+            if let delta = reply.consume(byte: byte) { onDelta(delta) }
         }
+        if let delta = reply.flush() { onDelta(delta) }
         return try reply.assembled()
     }
 
@@ -70,22 +71,39 @@ struct AnthropicIntelligenceService: IntelligenceService {
         fromEventBytes data: Data, onDelta: (IntelligenceDelta) -> Void = { _ in }
     ) throws -> Data {
         var reply = StreamedReply()
-        for line in String(decoding: data, as: UTF8.self).split(
-            separator: "\n", omittingEmptySubsequences: false
-        ) {
-            if let delta = reply.consume(line: line) { onDelta(delta) }
+        for byte in data {
+            if let delta = reply.consume(byte: byte) { onDelta(delta) }
         }
+        if let delta = reply.flush() { onDelta(delta) }
         return try reply.assembled()
     }
 
     struct StreamedReply {
+        // Server-sent events frame on CR, LF or CRLF and nothing else. Splitting
+        // the bytes rather than the Characters keeps U+2028 and its kin — legal
+        // unescaped inside a JSON string, and routine in text pasted out of a
+        // PDF — from being taken for a frame boundary and losing that delta.
+        private static let dataPrefix = Array("data:".utf8)
+
         private var text = ""
         private var stopReason: String?
+        private var line: [UInt8] = []
 
-        mutating func consume(line: some StringProtocol) -> IntelligenceDelta? {
-            guard line.hasPrefix("data:") else { return nil }
+        mutating func consume(byte: UInt8) -> IntelligenceDelta? {
+            guard byte == UInt8(ascii: "\n") else {
+                line.append(byte)
+                return nil
+            }
+            return flush()
+        }
+
+        mutating func flush() -> IntelligenceDelta? {
+            defer { line.removeAll(keepingCapacity: true) }
+            var frame = line
+            if frame.last == UInt8(ascii: "\r") { frame.removeLast() }
+            guard frame.starts(with: Self.dataPrefix) else { return nil }
             guard let event = try? JSONDecoder().decode(
-                StreamEvent.self, from: Data(line.dropFirst("data:".count).utf8)
+                StreamEvent.self, from: Data(frame.dropFirst(Self.dataPrefix.count))
             ) else { return nil }
             if let reason = event.delta?.stopReason { stopReason = reason }
             switch event.delta?.type {

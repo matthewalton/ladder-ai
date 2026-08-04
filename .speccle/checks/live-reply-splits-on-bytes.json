@@ -1,0 +1,9 @@
+{
+  "when": { "path": "Ladder/Shared/Services/AnthropicIntelligenceService.swift" },
+  "forbid": {
+    "path": "Ladder/Shared/Services/AnthropicIntelligenceService.swift",
+    "contains": "bytes\\.lines"
+  },
+  "message": "the live reader frames the reply on bytes, never on Characters — keep complete() feeding StreamedReply.consume(byte:), so it and the recorded-bytes test seam stay one parser",
+  "because": "review of c670043: bytes.lines is AsyncLineSequence, which breaks on U+2028/U+2029/U+0085 — legal unescaped inside a JSON string and routine in text pasted from a PDF — while the test seam's String split did not, so no test could reach the delta production was dropping"
+}
