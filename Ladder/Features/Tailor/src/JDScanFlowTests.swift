@@ -364,4 +364,29 @@ struct JDScanFlowTests {
             try context.fetch(FetchDescriptor<Match>()).count == 1,
             "at most one Match per Application — no orphans")
     }
+
+    @Test("[TAILOR-73] a scan whose reply fails part-way tells the user what the service reported")
+    func scanSurfacesTheServiceReason() async throws {
+        let (_, application) = try makeWorld()
+        let store = JDScanStore(
+            keyStore: InMemoryAPIKeyStore(key: "test-key"),
+            makeIntelligence: { _ in
+                FailingScanService(
+                    error: .serviceError(type: "overloaded_error", message: "Overloaded"))
+            })
+
+        await store.scan(application)
+
+        #expect(
+            store.phase == .failed(
+                .requestFailed(detail: "the service reported overloaded_error: Overloaded")),
+            "the detail is interpolated mid-sentence, so it reads inside parentheses")
+        #expect(application.match == nil, "no Match is stored for a failed request")
+    }
+}
+
+private struct FailingScanService: IntelligenceService {
+    let error: AnthropicIntelligenceService.LiveServiceError
+
+    func complete(_ request: IntelligenceRequest) async throws -> Data { throw error }
 }

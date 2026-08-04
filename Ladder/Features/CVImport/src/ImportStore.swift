@@ -90,6 +90,8 @@ final class ImportStore {
             "HTTP \(status)"
         case AnthropicIntelligenceService.LiveServiceError.emptyResponse:
             "the service returned an empty response"
+        case AnthropicIntelligenceService.LiveServiceError.serviceError(let type, let message):
+            "the service reported \(type): \(message)"
         default:
             (error as NSError).localizedDescription
         }

@@ -578,6 +578,89 @@ struct TailorFlowTests {
         }
     }
 
+    /// The connection answered 200 before any of this, so the failure arrives
+    /// as an event rather than as a status — and the API closes straight
+    /// after it, leaving the reply half-written.
+    private func interruptedStream(errorType: String, message: String) -> Data {
+        Data(#"""
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_05","role":"assistant","content":[]}}
+
+        event: content_block_start
+        data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\"selected\":[\"a1\","}}
+
+        event: error
+        data: {"type":"error","error":{"type":"\#(errorType)","message":"\#(message)"}}
+        """#.utf8)
+    }
+
+    @Test("[TAILOR-73] a reply that fails part-way through returns none of what arrived")
+    func errorEventMidReplyThrowsRatherThanReturningTheHalfWrittenText() throws {
+        #expect(
+            throws: AnthropicIntelligenceService.LiveServiceError.serviceError(
+                type: "overloaded_error", message: "Overloaded")
+        ) {
+            try AnthropicIntelligenceService.assembledText(
+                fromEventBytes: interruptedStream(
+                    errorType: "overloaded_error", message: "Overloaded"))
+        }
+    }
+
+    @Test("[TAILOR-73] the failure carries the service's own words, not a canned reason")
+    func serviceErrorCarriesTheReportedTypeAndMessage() throws {
+        let reported = "Number of request tokens has exceeded your per-minute rate limit"
+
+        #expect(
+            throws: AnthropicIntelligenceService.LiveServiceError.serviceError(
+                type: "rate_limit_error", message: reported)
+        ) {
+            try AnthropicIntelligenceService.assembledText(
+                fromEventBytes: interruptedStream(
+                    errorType: "rate_limit_error", message: reported))
+        }
+    }
+
+    @Test("[TAILOR-73] a reply that fails before any text still fails with the reason it gave")
+    func errorEventBeforeAnyTextBeatsTheEmptyResponseGuard() throws {
+        let failedImmediately = #"""
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_06","role":"assistant","content":[]}}
+
+        event: error
+        data: {"type":"error","error":{"type":"api_error","message":"Internal server error"}}
+        """#
+
+        #expect(
+            throws: AnthropicIntelligenceService.LiveServiceError.serviceError(
+                type: "api_error", message: "Internal server error")
+        ) {
+            try AnthropicIntelligenceService.assembledText(fromEventBytes: Data(failedImmediately.utf8))
+        }
+    }
+
+    @Test("[TAILOR-73] a run whose reply fails part-way tells the user what the service reported")
+    func tailorRunSurfacesTheServiceReasonRatherThanCallingTheAnswerInvalid() async throws {
+        let store = TailorStore(
+            profileStore: try makeProfileStore(),
+            keyStore: InMemoryAPIKeyStore(key: "sk-test"),
+            makeIntelligence: { _ in
+                FailingIntelligenceService(
+                    error: .serviceError(type: "overloaded_error", message: "Overloaded"))
+            }
+        )
+
+        await store.startRun(jobDetails)
+
+        #expect(
+            store.phase == .failed(
+                .requestFailed(detail: "the service reported overloaded_error: Overloaded")),
+            "the detail is interpolated mid-sentence, so it reads inside parentheses")
+        #expect(store.review == nil, "no review is offered for a failed request")
+    }
+
     @Test("[TAILOR-69] a request opting into narration asks the model to summarize its thinking")
     func narratedRequestAsksForSummarizedThinking() throws {
         let request = IntelligenceRequest(
@@ -1206,6 +1289,12 @@ private struct OneAnswerService: IntelligenceService {
     let answer: Data
 
     func complete(_ request: IntelligenceRequest) async throws -> Data { answer }
+}
+
+private struct FailingIntelligenceService: IntelligenceService {
+    let error: AnthropicIntelligenceService.LiveServiceError
+
+    func complete(_ request: IntelligenceRequest) async throws -> Data { throw error }
 }
 
 // MARK: - Helpers shared by the slices that build a TailorResult

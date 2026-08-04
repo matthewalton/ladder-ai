@@ -21,6 +21,7 @@ struct AnthropicIntelligenceService: IntelligenceService {
         case httpFailure(status: Int)
         case emptyResponse
         case truncated
+        case serviceError(type: String, message: String)
     }
 
     static func urlRequest(for request: IntelligenceRequest, apiKey: String) throws -> URLRequest {
@@ -87,6 +88,7 @@ struct AnthropicIntelligenceService: IntelligenceService {
 
         private var text = ""
         private var stopReason: String?
+        private var reportedFailure: LiveServiceError?
         private var line: [UInt8] = []
 
         mutating func consume(byte: UInt8) -> IntelligenceDelta? {
@@ -106,6 +108,9 @@ struct AnthropicIntelligenceService: IntelligenceService {
                 StreamEvent.self, from: Data(frame.dropFirst(Self.dataPrefix.count))
             ) else { return nil }
             if let reason = event.delta?.stopReason { stopReason = reason }
+            if event.type == "error", let failure = event.error {
+                reportedFailure = .serviceError(type: failure.type, message: failure.message)
+            }
             switch event.delta?.type {
             case "text_delta":
                 guard let piece = event.delta?.text else { return nil }
@@ -120,6 +125,7 @@ struct AnthropicIntelligenceService: IntelligenceService {
         }
 
         func assembled() throws -> Data {
+            if let reportedFailure { throw reportedFailure }
             guard stopReason != "max_tokens" else { throw LiveServiceError.truncated }
             guard !text.isEmpty else { throw LiveServiceError.emptyResponse }
             return Data(text.utf8)
@@ -159,6 +165,11 @@ private struct MessagesRequest: Encodable {
 }
 
 private struct StreamEvent: Decodable {
+    struct Failure: Decodable {
+        var type: String
+        var message: String
+    }
+
     struct Delta: Decodable {
         var type: String?
         var text: String?
@@ -173,5 +184,7 @@ private struct StreamEvent: Decodable {
         }
     }
 
+    var type: String?
     var delta: Delta?
+    var error: Failure?
 }

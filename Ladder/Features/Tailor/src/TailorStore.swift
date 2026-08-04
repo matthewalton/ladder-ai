@@ -114,6 +114,8 @@ final class TailorStore {
             "the service returned an empty response"
         case AnthropicIntelligenceService.LiveServiceError.truncated:
             "the response was cut off before it finished"
+        case AnthropicIntelligenceService.LiveServiceError.serviceError(let type, let message):
+            "the service reported \(type): \(message)"
         default:
             (error as NSError).localizedDescription
         }
