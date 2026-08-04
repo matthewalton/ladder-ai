@@ -661,6 +661,84 @@ struct TailorFlowTests {
         #expect(store.review == nil, "no review is offered for a failed request")
     }
 
+    /// A graceful close: the events simply stop. Nothing throws out of the byte
+    /// sequence, so only the missing terminal event separates this from a reply
+    /// that finished.
+    private func closedEarlyStream() -> Data {
+        Data(#"""
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_07","role":"assistant","content":[]}}
+
+        event: content_block_start
+        data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\"selected\":[\"a1\","}}
+        """#.utf8)
+    }
+
+    @Test("[TAILOR-74] a reply that simply stops fails rather than returning what arrived")
+    func replyEndingWithoutATerminalEventFailsAsIncomplete() throws {
+        #expect(throws: AnthropicIntelligenceService.LiveServiceError.incompleteReply) {
+            try AnthropicIntelligenceService.assembledText(fromEventBytes: closedEarlyStream())
+        }
+    }
+
+    @Test("[TAILOR-74] either terminal event finishes a reply — a message_stop or a stop reason")
+    func bothTerminalFormsCountAsAFinishedReply() throws {
+        let endedByEvent = #"""
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\"ok\":true}"}}
+
+        event: message_stop
+        data: {"type":"message_stop"}
+        """#
+        let endedByStopReason = #"""
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\"ok\":true}"}}
+
+        data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}
+        """#
+
+        for recorded in [endedByEvent, endedByStopReason] {
+            #expect(
+                try AnthropicIntelligenceService.assembledText(fromEventBytes: Data(recorded.utf8))
+                    == Data(#"{"ok":true}"#.utf8),
+                "recorded replies end both ways, so insisting on one would reject a complete reply")
+        }
+    }
+
+    @Test("[TAILOR-74] a reply cut off at the token limit still fails as truncated")
+    func truncationKeepsPrecedenceOverAnIncompleteReply() throws {
+        let cutOffThenClosed = #"""
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\"selected\":[\"a1\","}}
+
+        event: message_delta
+        data: {"type":"message_delta","delta":{"stop_reason":"max_tokens"}}
+        """#
+
+        #expect(throws: AnthropicIntelligenceService.LiveServiceError.truncated) {
+            try AnthropicIntelligenceService.assembledText(
+                fromEventBytes: Data(cutOffThenClosed.utf8))
+        }
+    }
+
+    @Test("[TAILOR-74] a run whose reply ends early tells the user the connection closed")
+    func tailorRunSurfacesAnIncompleteReplyAsARequestFailure() async throws {
+        let store = TailorStore(
+            profileStore: try makeProfileStore(),
+            keyStore: InMemoryAPIKeyStore(key: "sk-test"),
+            makeIntelligence: { _ in FailingIntelligenceService(error: .incompleteReply) }
+        )
+
+        await store.startRun(jobDetails)
+
+        #expect(
+            store.phase == .failed(
+                .requestFailed(detail: "the connection closed before the reply finished")),
+            "the detail is interpolated mid-sentence, so it reads inside parentheses")
+        #expect(store.review == nil, "no review is offered for a failed request")
+    }
+
     @Test("[TAILOR-69] a request opting into narration asks the model to summarize its thinking")
     func narratedRequestAsksForSummarizedThinking() throws {
         let request = IntelligenceRequest(

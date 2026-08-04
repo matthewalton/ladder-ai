@@ -131,6 +131,8 @@ final class JDScanStore {
             "the service returned an empty response"
         case AnthropicIntelligenceService.LiveServiceError.serviceError(let type, let message):
             "the service reported \(type): \(message)"
+        case AnthropicIntelligenceService.LiveServiceError.incompleteReply:
+            "the connection closed before the reply finished"
         default:
             (error as NSError).localizedDescription
         }

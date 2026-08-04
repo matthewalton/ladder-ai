@@ -116,6 +116,8 @@ final class TailorStore {
             "the response was cut off before it finished"
         case AnthropicIntelligenceService.LiveServiceError.serviceError(let type, let message):
             "the service reported \(type): \(message)"
+        case AnthropicIntelligenceService.LiveServiceError.incompleteReply:
+            "the connection closed before the reply finished"
         default:
             (error as NSError).localizedDescription
         }

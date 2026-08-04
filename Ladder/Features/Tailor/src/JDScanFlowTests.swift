@@ -383,6 +383,22 @@ struct JDScanFlowTests {
             "the detail is interpolated mid-sentence, so it reads inside parentheses")
         #expect(application.match == nil, "no Match is stored for a failed request")
     }
+
+    @Test("[TAILOR-74] a scan whose reply ends early tells the user the connection closed")
+    func scanSurfacesAnIncompleteReplyAsARequestFailure() async throws {
+        let (_, application) = try makeWorld()
+        let store = JDScanStore(
+            keyStore: InMemoryAPIKeyStore(key: "test-key"),
+            makeIntelligence: { _ in FailingScanService(error: .incompleteReply) })
+
+        await store.scan(application)
+
+        #expect(
+            store.phase == .failed(
+                .requestFailed(detail: "the connection closed before the reply finished")),
+            "the detail is interpolated mid-sentence, so it reads inside parentheses")
+        #expect(application.match == nil, "no Match is stored for a failed request")
+    }
 }
 
 private struct FailingScanService: IntelligenceService {

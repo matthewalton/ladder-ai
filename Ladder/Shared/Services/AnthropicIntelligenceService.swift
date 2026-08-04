@@ -22,6 +22,7 @@ struct AnthropicIntelligenceService: IntelligenceService {
         case emptyResponse
         case truncated
         case serviceError(type: String, message: String)
+        case incompleteReply
     }
 
     static func urlRequest(for request: IntelligenceRequest, apiKey: String) throws -> URLRequest {
@@ -88,6 +89,7 @@ struct AnthropicIntelligenceService: IntelligenceService {
 
         private var text = ""
         private var stopReason: String?
+        private var sawTerminalEvent = false
         private var reportedFailure: LiveServiceError?
         private var line: [UInt8] = []
 
@@ -107,7 +109,11 @@ struct AnthropicIntelligenceService: IntelligenceService {
             guard let event = try? JSONDecoder().decode(
                 StreamEvent.self, from: Data(frame.dropFirst(Self.dataPrefix.count))
             ) else { return nil }
-            if let reason = event.delta?.stopReason { stopReason = reason }
+            if let reason = event.delta?.stopReason {
+                stopReason = reason
+                sawTerminalEvent = true
+            }
+            if event.type == "message_stop" { sawTerminalEvent = true }
             if event.type == "error", let failure = event.error {
                 reportedFailure = .serviceError(type: failure.type, message: failure.message)
             }
@@ -127,6 +133,7 @@ struct AnthropicIntelligenceService: IntelligenceService {
         func assembled() throws -> Data {
             if let reportedFailure { throw reportedFailure }
             guard stopReason != "max_tokens" else { throw LiveServiceError.truncated }
+            guard sawTerminalEvent else { throw LiveServiceError.incompleteReply }
             guard !text.isEmpty else { throw LiveServiceError.emptyResponse }
             return Data(text.utf8)
         }
