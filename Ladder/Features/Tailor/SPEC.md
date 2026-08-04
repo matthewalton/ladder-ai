@@ -786,3 +786,58 @@ silence instead and returns to 60 (decisions/0019).
 Sixty seconds of total silence is a dead connection, not a slow run. The
 interval is set on the built request, so it is asserted at the same
 request-building seam as [TAILOR-17], with no connection opened.
+
+## [TAILOR-73] When the service reports a failure part-way through a reply, the run fails with the reason it gave
+
+Streaming opened this door (decisions/0020). The Messages API reports a
+mid-stream failure as an `error` event on a connection that already answered
+`200` — `{"type":"error","error":{"type":"overloaded_error",…}}` — where
+unstreamed the same overload was an HTTP status the `200` guard caught before
+any text existed. The reader throws
+`LiveServiceError.serviceError(type:message:)` carrying the service's own error
+type and message, and returns none of the text that had accumulated.
+
+Left undetected it is a masquerade, not a missing message: the half-written JSON
+reaches validation, and the user is told the model's answer was invalid when the
+truth is that the request failed. That is what [TAILOR-68] and [CVIMPORT-19]
+prevent for a reply cut off at the token limit, and this reaches the same
+promise through the other door.
+
+Both this and [TAILOR-74] are transient request failures, so every store maps
+them through the `requestFailed(detail:)` it already has rather than a new
+store-level case — `truncated` earns its own case by being the one failure a
+retry cannot fix. Four stores carry a `requestFailureDetail` and each needs
+both: `TailorStore` and `JDScanStore` here, `ImportStore` (CVImport) and
+`TagSuggestionStore` (Profile). A case missing from any of them falls through to
+`(error as NSError).localizedDescription`, which for a plain Swift enum renders
+as `The operation couldn't be completed. (… error 3.)`. At least one caller
+interpolates the detail mid-sentence — import renders `The import request
+couldn't be completed (…). Check your connection and try again.` — so the
+wording has to read inside parentheses, mid-sentence.
+
+Deltas are the other channel and this criterion does not govern them, as with
+[TAILOR-68]: a caller watching them has already seen whatever text arrived
+before the failure. What is promised here is the returned result.
+
+Tests never open a connection. The reader is fed recorded event bytes through
+the same seam [TAILOR-67] and [TAILOR-68] use.
+
+## [TAILOR-74] When a reply ends without a terminal event, the run fails rather than returning what arrived
+
+A terminal event is `message_stop` or a stop reason on `message_delta` —
+either will do, and recorded replies in the suite end both ways, so a reader
+insisting on one particular event would reject replies that are perfectly
+complete. Ending with neither throws `LiveServiceError.incompleteReply`.
+
+What this catches is a **graceful** end: a server or proxy closing cleanly
+part-way through. A connection that drops at the socket already throws out of
+the byte sequence and fails correctly today — it is the clean close, which ends
+the sequence with no error at all, that otherwise hands a fragment back as a
+finished reply.
+
+[TAILOR-68] keeps precedence over this: a reply cut off at the token limit
+fails as truncated even though its stream is also incomplete, so the advice the
+user gets still names the length problem rather than the connection. Failure
+copy is the roll-call in [TAILOR-73] — this case needs the same four entries.
+
+Tests never open a connection here either; a recorded reply simply stops.

@@ -156,3 +156,9 @@ The model's own summarized account of its thinking, asked for per request and
 arriving as its own deltas ([TAILOR-69]). Distinct from the result: narration
 is never parsed, never validated, and never reaches a tailor result.
 _Avoid_: reasoning, thinking text, commentary, progress
+
+**Terminal event**:
+The event that marks a streamed reply finished — `message_stop`, or a stop
+reason on `message_delta`. Either will do; a reply that ends without one is
+incomplete however complete its text looks (decisions/0020).
+_Avoid_: end event, final event, close, done marker
