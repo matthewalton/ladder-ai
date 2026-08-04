@@ -96,7 +96,8 @@ final class TagSuggestionStore {
             } catch AnthropicIntelligenceService.LiveServiceError.truncated {
                 throw TagSuggestionError.responseTruncated
             } catch {
-                throw TagSuggestionError.requestFailed(detail: Self.requestFailureDetail(for: error))
+                throw TagSuggestionError.requestFailed(
+                    detail: AnthropicIntelligenceService.failureDetail(for: error))
             }
             proposals = try Self.proposals(from: response)
             phase = .review
@@ -141,21 +142,6 @@ final class TagSuggestionStore {
             _ = try profileStore.tag(achievement, skillNamed: name)
         case .project(let project):
             _ = try profileStore.tag(project, skillNamed: name)
-        }
-    }
-
-    private static func requestFailureDetail(for error: Error) -> String {
-        switch error {
-        case AnthropicIntelligenceService.LiveServiceError.httpFailure(let status):
-            "HTTP \(status)"
-        case AnthropicIntelligenceService.LiveServiceError.emptyResponse:
-            "the service returned an empty response"
-        case AnthropicIntelligenceService.LiveServiceError.serviceError(let type, let message):
-            "the service reported \(type): \(message)"
-        case AnthropicIntelligenceService.LiveServiceError.incompleteReply:
-            "the connection closed before the reply finished"
-        default:
-            (error as NSError).localizedDescription
         }
     }
 

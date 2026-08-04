@@ -81,7 +81,8 @@ final class JDScanStore {
             } catch AnthropicIntelligenceService.LiveServiceError.truncated {
                 throw JDScanError.responseTruncated
             } catch {
-                throw JDScanError.requestFailed(detail: Self.requestFailureDetail(for: error))
+                throw JDScanError.requestFailed(
+                        detail: AnthropicIntelligenceService.failureDetail(for: error))
             }
             let resolved: ResolvedScan
             do {
@@ -100,7 +101,8 @@ final class JDScanStore {
                 } catch AnthropicIntelligenceService.LiveServiceError.truncated {
                     throw JDScanError.responseTruncated
                 } catch {
-                    throw JDScanError.requestFailed(detail: Self.requestFailureDetail(for: error))
+                    throw JDScanError.requestFailed(
+                        detail: AnthropicIntelligenceService.failureDetail(for: error))
                 }
                 resolved = try Self.resolvedScan(from: repairResponse, pool: pool)
             }

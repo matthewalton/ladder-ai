@@ -12,13 +12,10 @@ the per-point relevance stats.
   `IntelligenceRequest`. Both are shared ground — nine slices call through them (ADR 0009)
 - `Ladder/Features/CVImport/SPEC.md` — [CVIMPORT-19]'s truncation guard is this slice's stop-reason
   handling seen from import; changing where that signal is read reaches its body
-- Every store that reads a `LiveServiceError` — a new case means failure copy in **four**
-  `requestFailureDetail` functions: `TailorStore` and `JDScanStore` here, plus
-  `Ladder/Features/CVImport/src/ImportStore.swift` and
-  `Ladder/Features/Profile/src/TagSuggestionStore.swift`. Miss one and it falls through to
-  `(error as NSError).localizedDescription`, which for a plain Swift enum puts
-  `The operation couldn't be completed. (… error 3.)` on screen. Debrief, PrepPack,
-  JourneySynthesis and `JobImportStore` read no detail at all, so they need nothing
+- A new `LiveServiceError` case needs its user-facing copy on the case itself, in
+  `LiveServiceError.detail` — the switch there is exhaustive, so a case without copy does not
+  compile (decisions/0021). Stores call `AnthropicIntelligenceService.failureDetail(for:)` and
+  write no copy of their own; the slices that do so are found by that call, not by a list here
 - `Ladder/Features/CVExport/src/Application.swift` — cv-export owns `Application`; the `Match` model
   this slice persists is in this slice's `src/`
 - `Ladder/Features/CVExport/src/Render/CVRenderTests.swift` — cv-export's render tests build a

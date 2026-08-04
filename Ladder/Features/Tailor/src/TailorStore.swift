@@ -102,24 +102,8 @@ final class TailorStore {
         } catch is TailorValidationFailure {
             phase = .failed(.resultInvalid)
         } catch {
-            phase = .failed(.requestFailed(detail: Self.requestFailureDetail(for: error)))
-        }
-    }
-
-    private static func requestFailureDetail(for error: Error) -> String {
-        switch error {
-        case AnthropicIntelligenceService.LiveServiceError.httpFailure(let status):
-            "HTTP \(status)"
-        case AnthropicIntelligenceService.LiveServiceError.emptyResponse:
-            "the service returned an empty response"
-        case AnthropicIntelligenceService.LiveServiceError.truncated:
-            "the response was cut off before it finished"
-        case AnthropicIntelligenceService.LiveServiceError.serviceError(let type, let message):
-            "the service reported \(type): \(message)"
-        case AnthropicIntelligenceService.LiveServiceError.incompleteReply:
-            "the connection closed before the reply finished"
-        default:
-            (error as NSError).localizedDescription
+            phase = .failed(
+                .requestFailed(detail: AnthropicIntelligenceService.failureDetail(for: error)))
         }
     }
 

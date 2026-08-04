@@ -67,7 +67,8 @@ final class ImportStore {
             } catch AnthropicIntelligenceService.LiveServiceError.truncated {
                 throw ImportError.responseTruncated
             } catch {
-                throw ImportError.requestFailed(detail: Self.requestFailureDetail(for: error))
+                throw ImportError.requestFailed(
+                    detail: AnthropicIntelligenceService.failureDetail(for: error))
             }
             var proposal = try ImportProposal(json: response)
             let detected = DetectedContact.detect(in: text, fileURL: url)
@@ -81,21 +82,6 @@ final class ImportStore {
                 (error as? ImportError)
                     ?? .proposalInvalid(reason: "the import prompt could not be loaded from the app bundle")
             )
-        }
-    }
-
-    private static func requestFailureDetail(for error: Error) -> String {
-        switch error {
-        case AnthropicIntelligenceService.LiveServiceError.httpFailure(let status):
-            "HTTP \(status)"
-        case AnthropicIntelligenceService.LiveServiceError.emptyResponse:
-            "the service returned an empty response"
-        case AnthropicIntelligenceService.LiveServiceError.serviceError(let type, let message):
-            "the service reported \(type): \(message)"
-        case AnthropicIntelligenceService.LiveServiceError.incompleteReply:
-            "the connection closed before the reply finished"
-        default:
-            (error as NSError).localizedDescription
         }
     }
 

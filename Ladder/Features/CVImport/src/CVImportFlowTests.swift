@@ -692,6 +692,43 @@ struct CVImportFlowTests {
         #expect(profileStore.profile?.roles.isEmpty == true, "the Profile is unchanged")
     }
 
+    @Test("[TAILOR-73] an import whose reply fails part-way reports what the service said")
+    func importSurfacesTheServiceReason() async throws {
+        let profileStore = try makeProfileStore()
+        let store = ImportStore(
+            profileStore: profileStore,
+            keyStore: InMemoryAPIKeyStore(key: "test-key"),
+            makeIntelligence: { _ in
+                ThrowingIntelligenceService(
+                    error: .serviceError(type: "overloaded_error", message: "Overloaded"))
+            }
+        )
+
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        #expect(
+            store.phase == .failed(
+                .requestFailed(detail: "the service reported overloaded_error: Overloaded")))
+        #expect(store.review == nil, "no review is offered")
+    }
+
+    @Test("[TAILOR-74] an import whose reply ends early reports the connection closing")
+    func importSurfacesAnIncompleteReply() async throws {
+        let profileStore = try makeProfileStore()
+        let store = ImportStore(
+            profileStore: profileStore,
+            keyStore: InMemoryAPIKeyStore(key: "test-key"),
+            makeIntelligence: { _ in ThrowingIntelligenceService(error: .incompleteReply) }
+        )
+
+        await store.startImport(of: try fixtureURL("sample-cv", "pdf"))
+
+        #expect(
+            store.phase == .failed(
+                .requestFailed(detail: "the connection closed before the reply finished")))
+        #expect(store.review == nil, "no review is offered")
+    }
+
     @Test("[CVIMPORT-17] a proposal validation failure carries the reason the proposal was rejected")
     func proposalValidationFailureCarriesTheReason() async throws {
         let profileStore = try makeProfileStore()

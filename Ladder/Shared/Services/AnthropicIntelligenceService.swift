@@ -23,6 +23,26 @@ struct AnthropicIntelligenceService: IntelligenceService {
         case truncated
         case serviceError(type: String, message: String)
         case incompleteReply
+
+        // Callers interpolate this mid-sentence, inside parentheses.
+        var detail: String {
+            switch self {
+            case .httpFailure(let status):
+                "HTTP \(status)"
+            case .emptyResponse:
+                "the service returned an empty response"
+            case .truncated:
+                "the response was cut off before it finished"
+            case .serviceError(let type, let message):
+                "the service reported \(type): \(message)"
+            case .incompleteReply:
+                "the connection closed before the reply finished"
+            }
+        }
+    }
+
+    static func failureDetail(for error: Error) -> String {
+        (error as? LiveServiceError)?.detail ?? (error as NSError).localizedDescription
     }
 
     static func urlRequest(for request: IntelligenceRequest, apiKey: String) throws -> URLRequest {

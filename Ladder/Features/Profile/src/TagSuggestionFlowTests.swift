@@ -327,6 +327,41 @@ struct TagSuggestionFlowTests {
         #expect(store.phase == .failed(.responseTruncated), "a length problem, not a transport one")
     }
 
+    @Test("[TAILOR-73] a suggestion run whose reply fails part-way reports what the service said")
+    func suggestionRunSurfacesTheServiceReason() async throws {
+        let (profileStore, achievement) = try makePopulatedProfile()
+        let store = TagSuggestionStore(
+            profileStore: profileStore,
+            keyStore: InMemoryAPIKeyStore(key: "test-key"),
+            makeIntelligence: { _ in
+                ThrowingSuggestionService(
+                    error: .serviceError(type: "overloaded_error", message: "Overloaded"))
+            }
+        )
+
+        await store.requestSuggestions(for: achievement)
+
+        #expect(
+            store.phase == .failed(
+                .requestFailed(detail: "the service reported overloaded_error: Overloaded")))
+    }
+
+    @Test("[TAILOR-74] a suggestion run whose reply ends early reports the connection closing")
+    func suggestionRunSurfacesAnIncompleteReply() async throws {
+        let (profileStore, achievement) = try makePopulatedProfile()
+        let store = TagSuggestionStore(
+            profileStore: profileStore,
+            keyStore: InMemoryAPIKeyStore(key: "test-key"),
+            makeIntelligence: { _ in ThrowingSuggestionService(error: .incompleteReply) }
+        )
+
+        await store.requestSuggestions(for: achievement)
+
+        #expect(
+            store.phase == .failed(
+                .requestFailed(detail: "the connection closed before the reply finished")))
+    }
+
     @Test("[PROFILE-31] a Project's suggestion request carries its own evidence")
     func projectRequestCarriesItsEvidence() async throws {
         let (profileStore, _) = try makePopulatedProfile()

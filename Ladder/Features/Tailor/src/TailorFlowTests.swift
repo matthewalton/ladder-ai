@@ -661,6 +661,30 @@ struct TailorFlowTests {
         #expect(store.review == nil, "no review is offered for a failed request")
     }
 
+    @Test("[TAILOR-73] every failure carries its own copy, so no store writes it a second time")
+    func everyLiveServiceErrorCaseCarriesItsOwnDetail() {
+        let expected: [(AnthropicIntelligenceService.LiveServiceError, String)] = [
+            (.httpFailure(status: 429), "HTTP 429"),
+            (.emptyResponse, "the service returned an empty response"),
+            (.truncated, "the response was cut off before it finished"),
+            (
+                .serviceError(type: "overloaded_error", message: "Overloaded"),
+                "the service reported overloaded_error: Overloaded"
+            ),
+            (.incompleteReply, "the connection closed before the reply finished"),
+        ]
+
+        for (error, copy) in expected {
+            #expect(AnthropicIntelligenceService.failureDetail(for: error) == copy)
+        }
+
+        struct TransportFailure: Error {}
+        #expect(
+            AnthropicIntelligenceService.failureDetail(for: TransportFailure())
+                == (TransportFailure() as NSError).localizedDescription,
+            "anything that is not a LiveServiceError still falls back to the system description")
+    }
+
     /// A graceful close: the events simply stop. Nothing throws out of the byte
     /// sequence, so only the missing terminal event separates this from a reply
     /// that finished.

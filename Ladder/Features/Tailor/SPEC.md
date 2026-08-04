@@ -806,14 +806,12 @@ promise through the other door.
 Both this and [TAILOR-74] are transient request failures, so every store maps
 them through the `requestFailed(detail:)` it already has rather than a new
 store-level case — `truncated` earns its own case by being the one failure a
-retry cannot fix. Four stores carry a `requestFailureDetail` and each needs
-both: `TailorStore` and `JDScanStore` here, `ImportStore` (CVImport) and
-`TagSuggestionStore` (Profile). A case missing from any of them falls through to
-`(error as NSError).localizedDescription`, which for a plain Swift enum renders
-as `The operation couldn't be completed. (… error 3.)`. At least one caller
-interpolates the detail mid-sentence — import renders `The import request
-couldn't be completed (…). Check your connection and try again.` — so the
-wording has to read inside parentheses, mid-sentence.
+retry cannot fix. The copy for each case belongs to `LiveServiceError` itself
+(decisions/0021), so a store asks the error how it reads rather than deciding
+again; a case with no copy does not compile. Callers interpolate the detail
+mid-sentence — import renders `The import request couldn't be completed (…).
+Check your connection and try again.` — so the wording has to read inside
+parentheses.
 
 Deltas are the other channel and this criterion does not govern them, as with
 [TAILOR-68]: a caller watching them has already seen whatever text arrived
@@ -836,8 +834,8 @@ the sequence with no error at all, that otherwise hands a fragment back as a
 finished reply.
 
 [TAILOR-68] keeps precedence over this: a reply cut off at the token limit
-fails as truncated even though its stream is also incomplete, so the advice the
-user gets still names the length problem rather than the connection. Failure
-copy is the roll-call in [TAILOR-73] — this case needs the same four entries.
+fails as truncated, so the advice the user gets still names the length problem
+rather than the connection. Failure copy reaches the user the way [TAILOR-73]
+describes, from the error's own `detail`.
 
 Tests never open a connection here either; a recorded reply simply stops.

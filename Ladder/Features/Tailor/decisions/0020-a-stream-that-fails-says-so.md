@@ -1,6 +1,7 @@
 # 0020 — A stream that fails says so, in its own words
 
-Status: accepted (agreed with the user at plan stage, 2026-08-04)
+Status: accepted (agreed with the user at plan stage, 2026-08-04). The
+four-copies consequence below is superseded by decisions/0021.
 
 ## Context
 
